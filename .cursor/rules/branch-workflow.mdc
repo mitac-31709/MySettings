@@ -1,0 +1,19 @@
+---
+description: 作業は main、完了後に chromebook へ同期する
+alwaysApply: true
+---
+
+# ブランチワークフロー
+
+- **作業ブランチは `main`**。機能追加・修正・コミットは基本的に `main` で行う。
+- **`chromebook` では直接開発しない**。Chromebook 向けの同期先として扱う。
+- **単位作業が終わったら `chromebook` に同期する**（例: `main` を `chromebook` にマージ／fast-forward して push）。
+- PR の base やリモートの既定ブランチが `chromebook` でも、ローカル作業の起点は `main` のままにする。
+
+```bash
+# 例: main の変更を chromebook に反映
+git checkout chromebook
+git merge --ff-only main
+git push origin chromebook
+git checkout main
+```
