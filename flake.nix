@@ -1,11 +1,16 @@
 {
-  description = "NixOS configuration for mitac (GNOME desktop)";
+  description = "NixOS configuration for mitac (GNOME desktop, Chromebook delbin)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
+    };
+    # ChromeOS ALSA UCM overlays (sof-rt5682 etc. for volteer/delbin)
+    alsa-ucm-conf-cros = {
+      url = "github:WeirdTreeThing/alsa-ucm-conf-cros/standalone";
+      flake = false;
     };
   };
 
@@ -14,14 +19,16 @@
       self,
       nixpkgs,
       home-manager,
+      alsa-ucm-conf-cros,
       ...
-    }:
+    }@inputs:
     let
       system = "x86_64-linux";
     in
     {
       nixosConfigurations.mitac = nixpkgs.lib.nixosSystem {
         inherit system;
+        specialArgs = { inherit inputs; };
         modules = [
           ./hosts/mitac
           home-manager.nixosModules.home-manager
