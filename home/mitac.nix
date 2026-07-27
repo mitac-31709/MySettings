@@ -68,6 +68,12 @@
     };
   };
 
+  # NumLock on at Plasma startup (0 = on, 1 = off, 2 = leave unchanged).
+  xdg.configFile."kcminputrc".text = ''
+    [Keyboard]
+    NumLock=0
+  '';
+
   # Neovim config → ~/.config/nvim
   xdg.configFile."nvim".source = ./nvim;
 
