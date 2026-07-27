@@ -9,6 +9,9 @@
   services.displayManager.gdm.enable = true;
   services.desktopManager.gnome.enable = true;
 
+  # Clipboard manager (daemon + GNOME Shell extension).
+  programs.gpaste.enable = true;
+
   services.pulseaudio.enable = false;
   security.rtkit.enable = true;
   services.pipewire = {

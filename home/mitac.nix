@@ -30,7 +30,7 @@
     enable = true;
     settings = {
       # Update to your own Bitwarden account email.
-      email = "mitac@example.com";
+      email = "mitac31709@gmail.com";
       # GNOME pinentry to prompt for the master password when unlocking.
       pinentry = pkgs.pinentry-gnome3;
       lock_timeout = 3600;
@@ -80,6 +80,9 @@
   # Terminal / monospace font for GNOME (nvim icons / Nerd Font glyphs).
   # Mozc must be listed in input-sources; installing ibus-mozc alone is not enough.
   dconf.settings = {
+    "org/gnome/shell" = {
+      enabled-extensions = [ "GPaste@gnome-shell-extensions.gnome.org" ];
+    };
     "org/gnome/desktop/interface" = {
       monospace-font-name = "JetBrainsMono Nerd Font 12";
     };
