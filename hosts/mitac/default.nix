@@ -7,6 +7,7 @@
     ../../modules/nixos/plasma.nix
     ../../modules/nixos/chromebook.nix
     ../../modules/nixos/backup.nix
+    ../../modules/nixos/release.nix
   ];
 
   # Match the NixOS release from the first install on this machine.

@@ -30,6 +30,7 @@ the daemon is not running — do step 1.
   `nix build .#nixosConfigurations.mitac.config.home-manager.users.mitac.programs.neovim.finalPackage`
 - Lint / format (this repo follows nixfmt RFC style):
   `nix run nixpkgs#nixfmt -- --check flake.nix hosts/mitac/*.nix modules/nixos/*.nix home/mitac.nix`
+  (includes `modules/nixos/release.nix` for generation labels / git-tag workflow)
   (drop `--check` to reformat in place).
 
 ### Known gotchas (durable)

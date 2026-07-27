@@ -33,6 +33,11 @@
           ./hosts/mitac
           home-manager.nixosModules.home-manager
           {
+            # Links this generation to a git commit (shows in
+            # `nixos-rebuild list-generations` / `nixos-version --json`).
+            # Uncommitted trees get dirtyRev / dirtyShortRev; clean trees get rev.
+            system.configurationRevision = self.rev or self.dirtyRev or "dirty";
+
             nixpkgs.config.allowUnfree = true;
             home-manager = {
               useGlobalPkgs = true;
