@@ -1,9 +1,9 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 
 {
   home.username = "mitac";
   home.homeDirectory = "/home/mitac";
-  home.stateVersion = "25.05";
+  home.stateVersion = "26.05";
 
   programs.home-manager.enable = true;
 
@@ -44,6 +44,7 @@
   ];
 
   # Terminal / monospace font for GNOME (nvim icons / Nerd Font glyphs).
+  # Mozc must be listed in input-sources; installing ibus-mozc alone is not enough.
   dconf.settings = {
     "org/gnome/desktop/interface" = {
       monospace-font-name = "JetBrainsMono Nerd Font 12";
@@ -51,6 +52,18 @@
     "org/gnome/Console" = {
       use-system-font = false;
       custom-font = "JetBrainsMono Nerd Font 12";
+    };
+    "org/gnome/desktop/input-sources" = {
+      sources = [
+        (lib.hm.gvariant.mkTuple [
+          "xkb"
+          "jp"
+        ])
+        (lib.hm.gvariant.mkTuple [
+          "ibus"
+          "mozc-jp"
+        ])
+      ];
     };
   };
 }

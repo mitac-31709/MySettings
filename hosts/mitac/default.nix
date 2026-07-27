@@ -8,6 +8,6 @@
     ../../modules/nixos/chromebook.nix
   ];
 
-  # Adjust to match the NixOS release used on first install if needed.
-  system.stateVersion = "25.05";
+  # Match the NixOS release from the first install on this machine.
+  system.stateVersion = "26.05";
 }
