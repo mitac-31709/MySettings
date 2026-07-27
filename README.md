@@ -53,6 +53,7 @@ git push origin "gen/NN-<slug>"
 | 12 | `gen/12-bluetooth` | `f2a271c` | Bluetooth + A2DP（PipeWire） |
 | 13 | `gen/13-rbw-eu` | `879c43c` | rbw を Bitwarden EU エンドポイントへ |
 | 14 | `gen/14-plasma-numlock` | `f72575e` | 初のラベル付き世代。NumLock 既定オン（ログイン＋Plasma）。`configurationRevision` 付き |
+| （rebuild 後） | `gen/NN-plasma-gnome-prefs` | （slug コミット） | 旧 GNOME dconf 相当を Plasma へ（タッチパッド／Konsole フォント／Ctrl+Alt+T） |
 
 タグ一覧: `git tag -l 'gen/*'` または GitHub の Tags ページ。
 
