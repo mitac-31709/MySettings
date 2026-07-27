@@ -1,0 +1,29 @@
+---
+description: NixOS 世代ラベルと Git タグ gen/NN-<slug> の運用
+alwaysApply: true
+---
+
+# 世代タグワークフロー
+
+意味のある構成変更を入れたら、コミットと NixOS 世代の対応を残す。
+
+## いつやるか
+
+- デスクトップ・主要パッケージ・ハードウェア・バックアップなど、**世代の「特徴」が変わる**変更のあと
+- タイポ・コメントのみ・ドキュメントのみならスキップ可
+
+## 手順
+
+1. 機能変更をコミットする
+2. `modules/nixos/release.nix` の `system.nixos.tags` を短いスラッグに更新（使用可: `a-zA-Z0-9:_.-` のみ。スペース不可）
+3. スラッグ更新をコミットする
+4. ユーザーに `sudo nixos-rebuild switch --flake .#mitac` を依頼（エージェントに sudo パスワードが無い場合は実行しない）
+5. `nixos-rebuild list-generations` で世代番号 `NN` を確認する
+6. `git tag -a "gen/NN-<slug>" -m "世代 NN: 短い特徴"` → `git push origin "gen/NN-<slug>"`
+7. `README.md` の「世代と Git タグ」対応表に行を追加する
+
+## 参照
+
+- スラッグ定義: `modules/nixos/release.nix`
+- `configurationRevision` は `flake.nix` で `self.rev` から自動設定（手で触らない）
+- 対応表・手順の詳細: `README.md` の「世代と Git タグ」
