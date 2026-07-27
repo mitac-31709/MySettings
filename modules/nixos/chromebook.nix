@@ -12,10 +12,10 @@ let
   # alsa-ucm-conf globally (avoids large rebuilds).
   alsa-ucm-conf-chromebook = pkgs.runCommand "alsa-ucm-conf-chromebook" { } ''
     mkdir -p $out/share/alsa/ucm2
-    cp -a ${pkgs.alsa-ucm-conf}/share/alsa/ucm2/. $out/share/alsa/ucm2/
-    cp -a ${inputs.alsa-ucm-conf-cros}/ucm2/. $out/share/alsa/ucm2/
+    cp -a --no-preserve=mode ${pkgs.alsa-ucm-conf}/share/alsa/ucm2/. $out/share/alsa/ucm2/
+    cp -a --no-preserve=mode ${inputs.alsa-ucm-conf-cros}/ucm2/. $out/share/alsa/ucm2/
     if [ -d ${inputs.alsa-ucm-conf-cros}/overrides ]; then
-      cp -a ${inputs.alsa-ucm-conf-cros}/overrides/. $out/share/alsa/ucm2/
+      cp -a --no-preserve=mode ${inputs.alsa-ucm-conf-cros}/overrides/. $out/share/alsa/ucm2/
     fi
   '';
 in
