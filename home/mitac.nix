@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 
 {
   home.username = "mitac";
@@ -69,9 +69,32 @@
   };
 
   # NumLock on at Plasma startup (0 = on, 1 = off, 2 = leave unchanged).
+  # Touchpad: traditional scrolling (finger up → content up), not "natural".
+  # Libinput section is for delbin's Elan Touchpad (0x04f3:0x00c2).
   xdg.configFile."kcminputrc".text = ''
     [Keyboard]
     NumLock=0
+
+    [Libinput/1267/194/Elan Touchpad]
+    NaturalScroll=false
+  '';
+
+  # Konsole default profile: JetBrainsMono Nerd Font 12 (was GNOME Console dconf).
+  xdg.configFile."konsolerc".text = ''
+    [Desktop Entry]
+    DefaultProfile=Mitac.profile
+
+    [General]
+    ConfigVersion=1
+  '';
+
+  xdg.dataFile."konsole/Mitac.profile".text = ''
+    [Appearance]
+    Font=JetBrainsMono Nerd Font,12,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+
+    [General]
+    Name=Mitac
+    Parent=FALLBACK/
   '';
 
   # Neovim config → ~/.config/nvim
@@ -79,6 +102,18 @@
 
   # Bundle lazy.nvim from nixpkgs (no git clone bootstrap).
   xdg.dataFile."nvim/lazy/lazy.nvim".source = "${pkgs.vimPlugins.lazy-nvim}";
+
+  # Plasma settings that live in shared KConfig files (merge, don't replace).
+  # - fixed font: system monospace (was org/gnome/desktop/interface)
+  # - Ctrl+Alt+T → Konsole (was GNOME Console / kgx custom keybinding)
+  home.activation.plasmaDesktopPrefs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    kwriteconfig6=${pkgs.kdePackages.kconfig}/bin/kwriteconfig6
+    $kwriteconfig6 --file kdeglobals --group General --key fixed \
+      "JetBrainsMono Nerd Font,12,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+    $kwriteconfig6 --file kglobalshortcutsrc \
+      --group services --group org.kde.konsole.desktop \
+      --key _launch "Ctrl+Alt+T"
+  '';
 
   home.packages = with pkgs; [
     btop

@@ -99,9 +99,17 @@ Fcitx5 + Mozc を有効化しています。パネルの入力インジケータ
 
 ## フォント
 
-- システムの等幅フォント既定: `JetBrainsMono Nerd Font`
-- Konsole などターミナルでは必要に応じて同じフォントを選んでください
+- システムの等幅フォント既定: `JetBrainsMono Nerd Font`（`fontconfig` + Plasma `kdeglobals` の `fixed`）
+- Konsole 既定プロファイルも同じフォント（12pt）を使用（`home/mitac.nix`）
 - Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行し、ログアウトして再ログイン
+
+## ターミナル
+
+**Ctrl+Alt+T** で Konsole を開きます（旧 GNOME Console ショートカット相当）。
+
+## タッチパッド
+
+ナチュラルスクロールはオフ（従来型: 指を上 → 内容が上）。delbin の Elan Touchpad 向けに `kcminputrc` で設定。
 
 ## クリップボード履歴
 
