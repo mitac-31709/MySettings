@@ -15,7 +15,7 @@ NixOS の世代番号はマシン固有です。コミットとの対応は **Gi
 
 | 場所 | 何がわかるか |
 |------|----------------|
-| ブートメニュー / `nixos-rebuild list-generations` | `system.nixos.label`（`tags` + NixOS バージョン）。例: `plasma-numlock-26.11....` |
+| ブートメニュー / `nixos-rebuild list-generations` | `system.nixos.label`（`tags` + NixOS バージョン）。例: `plasma-gnome-prefs-26.11....` |
 | `nixos-version --json` の `configurationRevision` | その世代をビルドした git コミット（フル SHA） |
 | GitHub タグ `gen/NN-<slug>` | 「世代 NN 相当」のマイルストーンコミットと注釈（特徴の説明） |
 
