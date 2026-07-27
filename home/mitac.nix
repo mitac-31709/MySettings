@@ -100,5 +100,16 @@
         ])
       ];
     };
+    # Ctrl+Alt+T → GNOME Console
+    "org/gnome/settings-daemon/plugins/media-keys" = {
+      custom-keybindings = [
+        "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/"
+      ];
+    };
+    "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0" = {
+      name = "Console";
+      command = "kgx";
+      binding = "<Control><Alt>t";
+    };
   };
 }
