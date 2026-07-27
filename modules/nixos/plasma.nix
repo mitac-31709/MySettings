@@ -6,11 +6,9 @@
     layout = "jp";
     variant = "";
   };
-  services.displayManager.gdm.enable = true;
-  services.desktopManager.gnome.enable = true;
 
-  # Clipboard manager (daemon + GNOME Shell extension).
-  programs.gpaste.enable = true;
+  services.desktopManager.plasma6.enable = true;
+  services.displayManager.plasma-login-manager.enable = true;
 
   services.pulseaudio.enable = false;
   security.rtkit.enable = true;
@@ -24,8 +22,4 @@
   services.printing.enable = true;
 
   services.power-profiles-daemon.enable = true;
-
-  environment.gnome.excludePackages = with pkgs; [
-    gnome-tour
-  ];
 }

@@ -45,10 +45,6 @@ in
     rbw
   ];
 
-  # rbw uses a GNOME pinentry to prompt for the Bitwarden master password; gcr
-  # provides the D-Bus pieces it needs. (See home/mitac.nix programs.rbw.)
-  services.dbus.packages = [ pkgs.gcr ];
-
   services.restic.backups.home = {
     inherit user repository rcloneConfigFile;
 

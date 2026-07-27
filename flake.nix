@@ -1,5 +1,5 @@
 {
-  description = "NixOS configuration for mitac (GNOME desktop, Chromebook delbin)";
+  description = "NixOS configuration for mitac (KDE Plasma desktop, Chromebook delbin)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";

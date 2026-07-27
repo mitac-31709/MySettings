@@ -1,4 +1,4 @@
-{ pkgs, lib, ... }:
+{ pkgs, ... }:
 
 {
   home.username = "mitac";
@@ -31,8 +31,8 @@
     settings = {
       # Update to your own Bitwarden account email.
       email = "mitac31709@gmail.com";
-      # GNOME pinentry to prompt for the master password when unlocking.
-      pinentry = pkgs.pinentry-gnome3;
+      # Qt pinentry for Plasma.
+      pinentry = pkgs.pinentry-qt;
       lock_timeout = 3600;
     };
   };
@@ -71,51 +71,8 @@
   home.packages = with pkgs; [
     btop
     firefox
-    gnome-tweaks
     code-cursor
     parsec-bin
     vivaldi
   ];
-
-  # Terminal / monospace font for GNOME (nvim icons / Nerd Font glyphs).
-  # Mozc must be listed in input-sources; installing ibus-mozc alone is not enough.
-  dconf.settings = {
-    "org/gnome/shell" = {
-      enabled-extensions = [ "GPaste@gnome-shell-extensions.gnome.org" ];
-    };
-    "org/gnome/desktop/interface" = {
-      monospace-font-name = "JetBrainsMono Nerd Font 12";
-    };
-    "org/gnome/Console" = {
-      use-system-font = false;
-      custom-font = "JetBrainsMono Nerd Font 12";
-    };
-    # Traditional scrolling (finger up → content up), not "natural"/reverse.
-    "org/gnome/desktop/peripherals/touchpad" = {
-      natural-scroll = false;
-    };
-    "org/gnome/desktop/input-sources" = {
-      sources = [
-        (lib.hm.gvariant.mkTuple [
-          "xkb"
-          "jp"
-        ])
-        (lib.hm.gvariant.mkTuple [
-          "ibus"
-          "mozc-jp"
-        ])
-      ];
-    };
-    # Ctrl+Alt+T → GNOME Console
-    "org/gnome/settings-daemon/plugins/media-keys" = {
-      custom-keybindings = [
-        "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/"
-      ];
-    };
-    "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0" = {
-      name = "Console";
-      command = "kgx";
-      binding = "<Control><Alt>t";
-    };
-  };
 }

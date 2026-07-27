@@ -1,6 +1,6 @@
 # MySettings — NixOS flake（mitac）
 
-ホスト／ユーザー `mitac` 向けの Flakes + Home Manager 構成（GNOME）。
+ホスト／ユーザー `mitac` 向けの Flakes + Home Manager 構成（KDE Plasma）。
 
 ## ブランチ
 
@@ -41,21 +41,24 @@ passwd mitac
 - **Parsec** — `parsec-bin`
 - **Steam** — `programs.steam.enable`
 - **Vivaldi** — `vivaldi`
-- **Mozc** — IBus エンジン（日本語入力）
+- **Mozc** — Fcitx5 エンジン（日本語入力）
 - **フォント** — JetBrainsMono Nerd Font（ターミナル／等幅の既定）
 - **暗号化バックアップ** — `restic` + `rclone` で `/home` を Google Drive へ。鍵は Bitwarden（`rbw`）。詳細は下記。
 
 ## 日本語入力（Mozc）
 
-IBus + Mozc を有効化し、GNOME の入力ソースに **Japanese (Mozc)** を dconf で追加しています。
-パネルの入力インジケータ、または **Super+Space** で切り替えできます。
-ショートカットは **設定 → キーボード → キーボードショートカット → 入力** で変更可能です。
+Fcitx5 + Mozc を有効化しています。パネルの入力インジケータ、または **Super+Space**（Fcitx5 既定）で切り替えできます。
+設定は **Fcitx5 設定**（`fcitx5-configtool`）から変更可能です。
 
 ## フォント
 
 - システムの等幅フォント既定: `JetBrainsMono Nerd Font`
-- GNOME Console も dconf 経由で同じフォントを使用
+- Konsole などターミナルでは必要に応じて同じフォントを選んでください
 - Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行し、ログアウトして再ログイン
+
+## クリップボード履歴
+
+Plasma 標準の **クリップボード**（システムトレイ、または **Meta+V**）を使います。
 
 ## Encrypted /home backup
 
@@ -88,7 +91,7 @@ snapshots (`--keep-daily 7 --keep-weekly 5 --keep-monthly 12`).
    password is a strong passphrase:
    ```bash
    rbw login          # uses the email from home/mitac.nix
-   rbw unlock         # GNOME pinentry prompts for your master password
+   rbw unlock         # pinentry prompts for your master password
    # Create the item (or add it in the Bitwarden app); its password IS the restic key:
    rbw generate 40 restic-home
    rbw get restic-home   # should print the key
@@ -160,7 +163,7 @@ aplay -l
 flake.nix
 hosts/mitac/
 modules/nixos/common.nix      # locale、ユーザー、mozc、フォント
-modules/nixos/gnome.nix
+modules/nixos/plasma.nix
 modules/nixos/chromebook.nix  # delbin 専用
 modules/nixos/backup.nix      # encrypted /home → Google Drive (restic/rclone/rbw)
 home/mitac.nix

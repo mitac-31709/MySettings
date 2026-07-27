@@ -4,7 +4,7 @@
   imports = [
     ./hardware-configuration.nix
     ../../modules/nixos/common.nix
-    ../../modules/nixos/gnome.nix
+    ../../modules/nixos/plasma.nix
     ../../modules/nixos/chromebook.nix
     ../../modules/nixos/backup.nix
   ];
