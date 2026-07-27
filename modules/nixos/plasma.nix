@@ -17,6 +17,13 @@
     alsa.enable = true;
     alsa.support32Bit = true;
     pulse.enable = true;
+    wireplumber.enable = true;
+  };
+
+  # Bluetooth + A2DP audio (PipeWire / WirePlumber). Plasma uses Bluedevil for pairing.
+  hardware.bluetooth = {
+    enable = true;
+    powerOnBoot = true;
   };
 
   services.printing.enable = true;
