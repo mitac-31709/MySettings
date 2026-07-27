@@ -20,7 +20,7 @@
     # Update these to your own identity.
     settings.user = {
       name = "mitac";
-      email = "mitac@example.com";
+      email = "mitac31709@gmail.com";
     };
   };
 
@@ -29,8 +29,13 @@
   programs.rbw = {
     enable = true;
     settings = {
-      # Update to your own Bitwarden account email.
       email = "mitac31709@gmail.com";
+      # Official Bitwarden EU cloud (defaults are .com / US).
+      # No trailing slashes — rbw is picky about these.
+      base_url = "https://api.bitwarden.eu";
+      identity_url = "https://identity.bitwarden.eu";
+      ui_url = "https://vault.bitwarden.eu";
+      notifications_url = "https://notifications.bitwarden.eu";
       # Qt pinentry for Plasma.
       pinentry = pkgs.pinentry-qt;
       lock_timeout = 3600;
