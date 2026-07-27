@@ -54,6 +54,10 @@
       use-system-font = false;
       custom-font = "JetBrainsMono Nerd Font 12";
     };
+    # Traditional scrolling (finger up → content up), not "natural"/reverse.
+    "org/gnome/desktop/peripherals/touchpad" = {
+      natural-scroll = false;
+    };
     "org/gnome/desktop/input-sources" = {
       sources = [
         (lib.hm.gvariant.mkTuple [
