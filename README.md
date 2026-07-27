@@ -6,8 +6,8 @@
 
 | ブランチ | 用途 |
 |----------|------|
-| `main` | 汎用デスクトップ／ノート PC |
-| `chromebook` | **ASUS CX5500FE（delbin / DELBIN_XHVI）** — keyd、SOF オーディオ、Flip 用 quirks |
+| `main` | **作業・適用の既定**。汎用デスクトップ／ノート、および delbin Chromebook 向け設定を含む |
+| `chromebook` | レガシー。新規作業には使わない |
 
 ## 前提条件
 
@@ -20,7 +20,7 @@
 
 ```bash
 # NixOS マシン上で、このリポジトリから:
-git checkout chromebook   # CX5500FE — または: git checkout main
+git checkout main
 
 # ハードウェア設定を差し替え（必須）:
 sudo nixos-generate-config --show-hardware-config > hosts/mitac/hardware-configuration.nix
@@ -65,7 +65,7 @@ IBus + Mozc を有効化し、GNOME の入力ソースに **Japanese (Mozc)** �
 
 プラグインは `lua/plugins/` 以下に追加します。lazy.nvim 自体は Home Manager が `pkgs.vimPlugins.lazy-nvim` からインストールします（git clone によるブートストラップは不要）。
 
-## Chromebook（このブランチ）— ASUS CX5500FE / delbin
+## Chromebook — ASUS CX5500FE / delbin
 
 | 項目 | 詳細 |
 |------|------|
@@ -90,7 +90,7 @@ aplay -l
 
 ### モジュール
 
-`modules/nixos/chromebook.nix` は、このブランチでのみ `hosts/mitac/default.nix` から import されます。
+`modules/nixos/chromebook.nix` は `hosts/mitac/default.nix` から import されます。
 
 ## 構成
 
@@ -99,7 +99,7 @@ flake.nix
 hosts/mitac/
 modules/nixos/common.nix      # locale、ユーザー、mozc、フォント
 modules/nixos/gnome.nix
-modules/nixos/chromebook.nix  # delbin 専用（このブランチ）
+modules/nixos/chromebook.nix  # delbin 専用
 home/mitac.nix
 home/nvim/
 ```

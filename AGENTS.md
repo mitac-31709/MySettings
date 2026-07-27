@@ -3,7 +3,7 @@
 ## Cursor Cloud specific instructions
 
 This repo is a **NixOS system-configuration flake** (host/user `mitac`, GNOME desktop,
-ASUS CX5500FE "delbin" Chromebook on the `chromebook` branch). It is **not** a long-running
+ASUS CX5500FE "delbin" Chromebook support on `main`). It is **not** a long-running
 app/server: "running" it means evaluating and building the system configuration with Nix.
 Applying it for real (`sudo nixos-rebuild switch --flake .#mitac`) only works on the actual
 target NixOS machine — see `README.md`.
@@ -46,5 +46,5 @@ the daemon is not running — do step 1.
 
 ### Branch workflow
 
-Do primary work on `main` and sync to `chromebook` with a merge commit (`--no-ff`); do not
-develop directly on `chromebook`. See `.cursor/rules/branch-workflow.mdc`.
+Do all work on `main` (commits, PRs). Do not develop on `chromebook`. See
+`.cursor/rules/branch-workflow.mdc`.
