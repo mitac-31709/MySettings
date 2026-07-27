@@ -13,7 +13,7 @@
 
 - Flakes が有効な NixOS マシン（この flake でも有効化します）
 - 初回 rebuild の**前に**、`hosts/mitac/hardware-configuration.nix` を自分のマシンで生成したファイルに差し替えること
-- 非フリーパッケージ（`code-cursor`、`parsec-bin`）は `flake.nix` で許可済み
+- 非フリーパッケージ（`code-cursor`、`parsec-bin`、`steam`、`vivaldi`）は `flake.nix` で許可済み
 - Chromebook: MrChromebox（または同等）の UEFI／WP 無効を想定。ファームウェアの書き込みはこのリポジトリの範囲外
 
 ## 適用手順
@@ -39,6 +39,8 @@ passwd mitac
 - **Neovim** — 設定は `home/nvim`、プラグインは **lazy.nvim**（nixpkgs から同梱）
 - **Cursor** — `code-cursor`
 - **Parsec** — `parsec-bin`
+- **Steam** — `programs.steam.enable`
+- **Vivaldi** — `vivaldi`
 - **Mozc** — IBus エンジン（日本語入力）
 - **フォント** — JetBrainsMono Nerd Font（ターミナル／等幅の既定）
 
