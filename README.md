@@ -1,101 +1,101 @@
-# MySettings — NixOS flake (mitac)
+# MySettings — NixOS flake（mitac）
 
-Flakes + Home Manager configuration for host/user `mitac` with GNOME.
+ホスト／ユーザー `mitac` 向けの Flakes + Home Manager 構成（GNOME）。
 
-## Branches
+## ブランチ
 
-| Branch | Use |
-|--------|-----|
-| `main` | Generic desktop / laptop |
-| `chromebook` | **ASUS CX5500FE (delbin / DELBIN_XHVI)** — keyd, SOF audio, Flip quirks |
+| ブランチ | 用途 |
+|----------|------|
+| `main` | 汎用デスクトップ／ノート PC |
+| `chromebook` | **ASUS CX5500FE（delbin / DELBIN_XHVI）** — keyd、SOF オーディオ、Flip 用 quirks |
 
-## Prerequisites
+## 前提条件
 
-- NixOS machine with flakes enabled (this flake also enables them)
-- Replace `hosts/mitac/hardware-configuration.nix` with your machine’s generated file **before** the first rebuild
-- Unfree packages (`code-cursor`, `parsec-bin`) are allowed in `flake.nix`
-- Chromebook: MrChromebox (or equivalent) UEFI / WP disabled is assumed; firmware flashing is out of scope for this repo
+- Flakes が有効な NixOS マシン（この flake でも有効化します）
+- 初回 rebuild の**前に**、`hosts/mitac/hardware-configuration.nix` を自分のマシンで生成したファイルに差し替えること
+- 非フリーパッケージ（`code-cursor`、`parsec-bin`）は `flake.nix` で許可済み
+- Chromebook: MrChromebox（または同等）の UEFI／WP 無効を想定。ファームウェアの書き込みはこのリポジトリの範囲外
 
-## Apply
+## 適用手順
 
 ```bash
-# On the NixOS machine, from this repository:
-git checkout chromebook   # CX5500FE — or: git checkout main
+# NixOS マシン上で、このリポジトリから:
+git checkout chromebook   # CX5500FE — または: git checkout main
 
-# Replace hardware config (required):
+# ハードウェア設定を差し替え（必須）:
 sudo nixos-generate-config --show-hardware-config > hosts/mitac/hardware-configuration.nix
 
-# Build and switch:
+# ビルドして切り替え:
 sudo nixos-rebuild switch --flake .#mitac
 
-# If needed:
+# 必要なら:
 passwd mitac
 ```
 
-`flake.lock` is created on the first evaluation/rebuild on a machine that has Nix.
+`flake.lock` は、Nix があるマシンで初回の評価／rebuild 時に作成されます。
 
-## Included software
+## 同梱ソフトウェア
 
-- **Neovim** — config in `home/nvim`, plugins via **lazy.nvim** (bundled from nixpkgs)
+- **Neovim** — 設定は `home/nvim`、プラグインは **lazy.nvim**（nixpkgs から同梱）
 - **Cursor** — `code-cursor`
 - **Parsec** — `parsec-bin`
-- **Mozc** — IBus engine (Japanese input)
-- **Font** — JetBrainsMono Nerd Font (terminal / monospace default)
+- **Mozc** — IBus エンジン（日本語入力）
+- **フォント** — JetBrainsMono Nerd Font（ターミナル／等幅の既定）
 
-## Japanese input (Mozc)
+## 日本語入力（Mozc）
 
-After login, open **Settings → Keyboard → Input Sources**, add **Japanese (Mozc)**, and set a switch shortcut if desired.
+ログイン後、**設定 → キーボード → 入力ソース** を開き、**Japanese (Mozc)** を追加し、必要なら切り替えショートカットを設定してください。
 
-## Fonts
+## フォント
 
-- System monospace default: `JetBrainsMono Nerd Font`
-- GNOME Console uses the same font via dconf
-- If Nerd Font icons look blank: run `fc-cache -rf`, then log out and back in
+- システムの等幅フォント既定: `JetBrainsMono Nerd Font`
+- GNOME Console も dconf 経由で同じフォントを使用
+- Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行し、ログアウトして再ログイン
 
-## Neovim config
+## Neovim 設定
 
-| Path | Role |
+| パス | 役割 |
 |------|------|
-| `home/nvim/init.lua` | Options + lazy bootstrap |
-| `home/nvim/lua/plugins/` | Plugin specs |
+| `home/nvim/init.lua` | オプション + lazy のブートストラップ |
+| `home/nvim/lua/plugins/` | プラグイン仕様 |
 
-Add plugins under `lua/plugins/`. lazy.nvim itself is installed by Home Manager from `pkgs.vimPlugins.lazy-nvim` (no git clone bootstrap).
+プラグインは `lua/plugins/` 以下に追加します。lazy.nvim 自体は Home Manager が `pkgs.vimPlugins.lazy-nvim` からインストールします（git clone によるブートストラップは不要）。
 
-## Chromebook (this branch) — ASUS CX5500FE / delbin
+## Chromebook（このブランチ）— ASUS CX5500FE / delbin
 
-| Item | Detail |
-|------|--------|
-| Board | `delbin` (`DELBIN_XHVI`) |
-| Platform | `volteer` (Intel Tiger Lake) |
-| Audio | SOF + `sof-rt5682` / `max98373` via `alsa-ucm-conf-cros` + `sof-firmware` |
-| Keyboard | `keyd` maps top-row to ChromeOS-style media keys |
-| Flip | libinput quirk `ModelTabletModeNoSuspend=1` for tablet mode |
+| 項目 | 詳細 |
+|------|------|
+| ボード | `delbin`（`DELBIN_XHVI`） |
+| プラットフォーム | `volteer`（Intel Tiger Lake） |
+| オーディオ | SOF + `sof-rt5682` / `max98373`（`alsa-ucm-conf-cros` + `sof-firmware`） |
+| キーボード | `keyd` が最上段を ChromeOS 風メディアキーに割り当て |
+| Flip | タブレットモード向け libinput quirk `ModelTabletModeNoSuspend=1` |
 
-### Audio check
+### オーディオ確認
 
 ```bash
 aplay -l
-# Expect something like sof-rt5682 / SOF-related card names
+# sof-rt5682 / SOF 関連のカード名のような表示を期待
 ```
 
-If there is no sound after boot, see comments in `modules/nixos/chromebook.nix` for optional `alsactl init` and modprobe tweaks.
+起動後に音が出ない場合は、`modules/nixos/chromebook.nix` 内のコメントにある任意の `alsactl init` や modprobe の調整を参照してください。
 
-### Keyboard check
+### キーボード確認
 
-Top-row keys should act as Back / Forward / Refresh / Fullscreen / Brightness / Volume (not plain F1–F10).
+最上段キーは Back / Forward / Refresh / Fullscreen / Brightness / Volume として動作するはずです（単なる F1–F10 ではありません）。
 
-### Module
+### モジュール
 
-`modules/nixos/chromebook.nix` is imported only on this branch from `hosts/mitac/default.nix`.
+`modules/nixos/chromebook.nix` は、このブランチでのみ `hosts/mitac/default.nix` から import されます。
 
-## Layout
+## 構成
 
 ```
 flake.nix
 hosts/mitac/
-modules/nixos/common.nix      # locale, user, mozc, fonts
+modules/nixos/common.nix      # locale、ユーザー、mozc、フォント
 modules/nixos/gnome.nix
-modules/nixos/chromebook.nix  # delbin only (this branch)
+modules/nixos/chromebook.nix  # delbin 専用（このブランチ）
 home/mitac.nix
 home/nvim/
 ```
