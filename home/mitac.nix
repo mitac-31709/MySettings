@@ -67,6 +67,7 @@
   xdg.dataFile."nvim/lazy/lazy.nvim".source = "${pkgs.vimPlugins.lazy-nvim}";
 
   home.packages = with pkgs; [
+    btop
     firefox
     gnome-tweaks
     code-cursor
