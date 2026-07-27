@@ -5,8 +5,18 @@
 }:
 
 {
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.efi.canTouchEfiVariables = true;
+
   networking.hostName = "mitac";
   networking.networkmanager.enable = true;
+
+  # Avoid leaving networking down if activation stops NM then fails mid-switch
+  # (seen with switch-to-configuration exit 101).
+  systemd.services.NetworkManager = {
+    wantedBy = [ "multi-user.target" ];
+    stopIfChanged = false;
+  };
 
   time.timeZone = "Asia/Tokyo";
 
@@ -23,7 +33,7 @@
     LC_TIME = "ja_JP.UTF-8";
   };
 
-  # IBus + Mozc (add Japanese (Mozc) in GNOME Settings → Keyboard → Input Sources)
+  # IBus + Mozc (GNOME sources set in home/mitac.nix dconf)
   i18n.inputMethod = {
     enable = true;
     type = "ibus";

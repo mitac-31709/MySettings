@@ -1,0 +1,7 @@
+# Nix build outputs
+result
+result-*
+
+# Machine-specific hardware config (keep the stub in git; override locally)
+# Uncomment if you prefer never committing a generated file:
+# hosts/mitac/hardware-configuration.nix

@@ -2,6 +2,10 @@
 
 {
   services.xserver.enable = true;
+  services.xserver.xkb = {
+    layout = "jp";
+    variant = "";
+  };
   services.displayManager.gdm.enable = true;
   services.desktopManager.gnome.enable = true;
 

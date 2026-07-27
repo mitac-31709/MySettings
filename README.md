@@ -43,7 +43,9 @@ passwd mitac
 
 ## Japanese input (Mozc)
 
-After login, open **Settings → Keyboard → Input Sources**, add **Japanese (Mozc)**, and set a switch shortcut if desired.
+IBus + Mozc is enabled, and **Japanese (Mozc)** is added to GNOME input sources via dconf.
+Switch with the panel indicator or **Super+Space**.
+Shortcuts can be changed in **Settings → Keyboard → Keyboard Shortcuts → Typing**.
 
 ## Fonts
 
