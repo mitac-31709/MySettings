@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "plasma-numlock" ];
+  system.nixos.tags = [ "plasma-gnome-prefs" ];
 }
