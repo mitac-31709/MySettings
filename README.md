@@ -52,7 +52,7 @@ git push origin "gen/NN-<slug>"
 | 11 | `gen/11-plasma` | `3d85378` | GNOME → KDE Plasma 6（この世代は Bluetooth 無効） |
 | 12 | `gen/12-bluetooth` | `f2a271c` | Bluetooth + A2DP（PipeWire） |
 | 13 | `gen/13-rbw-eu` | `879c43c` | rbw を Bitwarden EU エンドポイントへ |
-| 14+ | （rebuild 後） | HEAD | `plasma-bt-rbw-eu` ラベル + `configurationRevision` 付き |
+| 14 | `gen/14-plasma-bt-rbw-eu` | `3ef6e57` | ラベル機構導入（`plasma-bt-rbw-eu` + `configurationRevision`）。**適用は `sudo nixos-rebuild switch --flake .#mitac`** |
 
 タグ一覧: `git tag -l 'gen/*'` または GitHub の Tags ページ。
 
