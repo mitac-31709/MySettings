@@ -34,7 +34,7 @@ git tag -a "gen/NN-<slug>" -m "世代 NN: 短い特徴の説明"
 git push origin "gen/NN-<slug>"
 ```
 
-### このマシン上の対応表（2026-07-27 時点）
+### このマシン上の対応表（2026-07-28 時点）
 
 ラベル導入前の世代は `Configuration Revision` が Unknown です。近いコミットをタグで示します。
 
@@ -52,8 +52,7 @@ git push origin "gen/NN-<slug>"
 | 11 | `gen/11-plasma` | `3d85378` | GNOME → KDE Plasma 6（この世代は Bluetooth 無効） |
 | 12 | `gen/12-bluetooth` | `f2a271c` | Bluetooth + A2DP（PipeWire） |
 | 13 | `gen/13-rbw-eu` | `879c43c` | rbw を Bitwarden EU エンドポイントへ |
-| 14 | `gen/14-plasma-bt-rbw-eu` | `3ef6e57` | ラベル機構導入（`plasma-bt-rbw-eu` + `configurationRevision`） |
-| （rebuild 後） | `gen/NN-plasma-numlock` | （slug コミット） | NumLock 既定オン（Plasma Login Manager + セッション）。`list-generations` で NN を確定してタグ |
+| 14 | `gen/14-plasma-numlock` | `f72575e` | 初のラベル付き世代。NumLock 既定オン（ログイン＋Plasma）。`configurationRevision` 付き |
 
 タグ一覧: `git tag -l 'gen/*'` または GitHub の Tags ページ。
 
