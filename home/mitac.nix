@@ -30,6 +30,23 @@
     # Plugins are managed by lazy.nvim (see ./nvim), not Home Manager.
   };
 
+  # Keep XDG dirs in English even with ja_JP.UTF-8 locale.
+  xdg.userDirs = {
+    enable = true;
+    createDirectories = true;
+    desktop = "$HOME/Desktop";
+    documents = "$HOME/Documents";
+    download = "$HOME/Downloads";
+    music = "$HOME/Music";
+    pictures = "$HOME/Pictures";
+    publicShare = "$HOME/Public";
+    templates = "$HOME/Templates";
+    videos = "$HOME/Videos";
+    extraConfig = {
+      XDG_PROJECTS_DIR = "$HOME/Projects";
+    };
+  };
+
   # Neovim config → ~/.config/nvim
   xdg.configFile."nvim".source = ./nvim;
 
