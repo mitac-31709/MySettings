@@ -22,6 +22,19 @@
     userEmail = "mitac@example.com";
   };
 
+  # Bitwarden client (rbw). Holds the restic backup encryption key; see
+  # modules/nixos/backup.nix. Log in once with `rbw login` after first switch.
+  programs.rbw = {
+    enable = true;
+    settings = {
+      # Update to your own Bitwarden account email.
+      email = "mitac@example.com";
+      # GNOME pinentry to prompt for the master password when unlocking.
+      pinentry = pkgs.pinentry-gnome3;
+      lock_timeout = 3600;
+    };
+  };
+
   programs.neovim = {
     enable = true;
     defaultEditor = true;
