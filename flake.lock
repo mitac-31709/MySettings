@@ -1,5 +1,22 @@
 {
   "nodes": {
+    "alsa-ucm-conf-cros": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784850344,
+        "narHash": "sha256-eARLyVzMI84SRNkts8l9jjloWfnZ5gH+0EhFxNa0EY4=",
+        "owner": "WeirdTreeThing",
+        "repo": "alsa-ucm-conf-cros",
+        "rev": "a46dd193ab81ed71c4465453f5297f21e413769f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "WeirdTreeThing",
+        "ref": "standalone",
+        "repo": "alsa-ucm-conf-cros",
+        "type": "github"
+      }
+    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -38,6 +55,7 @@
     },
     "root": {
       "inputs": {
+        "alsa-ucm-conf-cros": "alsa-ucm-conf-cros",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs"
       }
