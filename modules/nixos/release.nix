@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "plasma-bt-rbw-eu" ];
+  system.nixos.tags = [ "plasma-numlock" ];
 }

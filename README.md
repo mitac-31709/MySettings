@@ -15,7 +15,7 @@ NixOS の世代番号はマシン固有です。コミットとの対応は **Gi
 
 | 場所 | 何がわかるか |
 |------|----------------|
-| ブートメニュー / `nixos-rebuild list-generations` | `system.nixos.label`（`tags` + NixOS バージョン）。例: `plasma-bt-rbw-eu-26.11....` |
+| ブートメニュー / `nixos-rebuild list-generations` | `system.nixos.label`（`tags` + NixOS バージョン）。例: `plasma-numlock-26.11....` |
 | `nixos-version --json` の `configurationRevision` | その世代をビルドした git コミット（フル SHA） |
 | GitHub タグ `gen/NN-<slug>` | 「世代 NN 相当」のマイルストーンコミットと注釈（特徴の説明） |
 
@@ -52,7 +52,8 @@ git push origin "gen/NN-<slug>"
 | 11 | `gen/11-plasma` | `3d85378` | GNOME → KDE Plasma 6（この世代は Bluetooth 無効） |
 | 12 | `gen/12-bluetooth` | `f2a271c` | Bluetooth + A2DP（PipeWire） |
 | 13 | `gen/13-rbw-eu` | `879c43c` | rbw を Bitwarden EU エンドポイントへ |
-| 14 | `gen/14-plasma-bt-rbw-eu` | `3ef6e57` | ラベル機構導入（`plasma-bt-rbw-eu` + `configurationRevision`）。**適用は `sudo nixos-rebuild switch --flake .#mitac`** |
+| 14 | `gen/14-plasma-bt-rbw-eu` | `3ef6e57` | ラベル機構導入（`plasma-bt-rbw-eu` + `configurationRevision`） |
+| （rebuild 後） | `gen/NN-plasma-numlock` | （slug コミット） | NumLock 既定オン（Plasma Login Manager + セッション）。`list-generations` で NN を確定してタグ |
 
 タグ一覧: `git tag -l 'gen/*'` または GitHub の Tags ページ。
 
