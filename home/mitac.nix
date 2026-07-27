@@ -41,6 +41,7 @@
     gnome-tweaks
     code-cursor
     parsec-bin
+    vivaldi
   ];
 
   # Terminal / monospace font for GNOME (nvim icons / Nerd Font glyphs).

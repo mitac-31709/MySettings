@@ -13,7 +13,7 @@ Flakes + Home Manager configuration for host/user `mitac` with GNOME.
 
 - NixOS machine with flakes enabled (this flake also enables them)
 - Replace `hosts/mitac/hardware-configuration.nix` with your machine’s generated file **before** the first rebuild
-- Unfree packages (`code-cursor`, `parsec-bin`) are allowed in `flake.nix`
+- Unfree packages (`code-cursor`, `parsec-bin`, `steam`, `vivaldi`) are allowed in `flake.nix`
 
 ## Apply
 
@@ -38,6 +38,8 @@ passwd mitac
 - **Neovim** — config in `home/nvim`, plugins via **lazy.nvim** (bundled from nixpkgs)
 - **Cursor** — `code-cursor`
 - **Parsec** — `parsec-bin`
+- **Steam** — `programs.steam.enable`
+- **Vivaldi** — `vivaldi`
 - **Mozc** — IBus engine (Japanese input)
 - **Font** — JetBrainsMono Nerd Font (terminal / monospace default)
 

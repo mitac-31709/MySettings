@@ -71,6 +71,9 @@
     curl
   ];
 
+  # Steam needs the NixOS module (32-bit libs, FHS, steam-hardware).
+  programs.steam.enable = true;
+
   hardware.enableRedistributableFirmware = true;
 
   services.openssh.enable = false;
