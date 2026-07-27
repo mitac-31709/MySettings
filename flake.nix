@@ -37,6 +37,9 @@
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
+              # Rename colliding existing files instead of failing activation
+              # (e.g. ~/.config/user-dirs.dirs from xdg-user-dirs).
+              backupFileExtension = "backup";
               users.mitac = import ./home/mitac.nix;
             };
           }

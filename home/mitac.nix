@@ -18,8 +18,10 @@
   programs.git = {
     enable = true;
     # Update these to your own identity.
-    userName = "mitac";
-    userEmail = "mitac@example.com";
+    settings.user = {
+      name = "mitac";
+      email = "mitac@example.com";
+    };
   };
 
   # Bitwarden client (rbw). Holds the restic backup encryption key; see
