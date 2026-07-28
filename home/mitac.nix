@@ -152,6 +152,8 @@ in
   # Plasma settings that live in shared KConfig files (merge, don't replace).
   # - fixed font: system monospace (was org/gnome/desktop/interface)
   # - Ctrl+Alt+T → Konsole (was GNOME Console / kgx custom keybinding)
+  # - Chromebook lock key (XF86ScreenSaver): show leave dialog instead of
+  #   locking immediately (Meta+L still locks on purpose).
   home.activation.plasmaDesktopPrefs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     kwriteconfig6=${pkgs.kdePackages.kconfig}/bin/kwriteconfig6
     $kwriteconfig6 --file kdeglobals --group General --key fixed \
@@ -159,6 +161,10 @@ in
     $kwriteconfig6 --file kglobalshortcutsrc \
       --group services --group org.kde.konsole.desktop \
       --key _launch "Ctrl+Alt+T"
+    $kwriteconfig6 --file kglobalshortcutsrc --group ksmserver \
+      --key "Lock Session" "Meta+L,Meta+L,スクリーンをロック"
+    $kwriteconfig6 --file kglobalshortcutsrc --group ksmserver \
+      --key "Log Out" "Ctrl+Alt+Del	Screensaver,Ctrl+Alt+Del,ログアウト画面を表示"
   '';
 
   # Play Windows XP startup sound once Plasma/PulseAudio are up.
