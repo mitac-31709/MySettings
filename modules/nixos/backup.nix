@@ -33,11 +33,14 @@ let
   # Bitwarden item whose password field holds the restic encryption key.
   bitwardenItem = "restic-home";
 
-  # Wrapper so systemd's minimal PATH still finds rbw-agent, and the user
-  # session socket under XDG_RUNTIME_DIR is reachable.
+  # Wrapper so systemd's minimal PATH still finds rbw-agent. Always talk to
+  # mitac's session agent (do not trust %U / id -u here: ExecStartPre can see
+  # uid 0 and systemd %U has been observed to expand to 0 on this unit).
   resticPasswordCommand = pkgs.writeShellScript "restic-home-password" ''
-    export PATH="${lib.makeBinPath [ pkgs.rbw ]}:$PATH"
-    export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
+    export PATH="${lib.makeBinPath [ pkgs.rbw pkgs.coreutils pkgs.getent ]}:$PATH"
+    uid="$(getent passwd ${user} | cut -d: -f3)"
+    export XDG_RUNTIME_DIR="/run/user/''${uid}"
+    export HOME="/home/${user}"
     exec ${lib.getExe pkgs.rbw} get ${bitwardenItem}
   '';
 
@@ -101,16 +104,12 @@ in
   };
 
   # Systemd's default PATH for this unit does not include profile bins; restic
-  # needs rclone on PATH, and rbw needs rbw-agent. Also point at the logged-in
-  # user's runtime dir so rbw can talk to an unlocked agent (%U = User= uid).
+  # needs rclone on PATH, and rbw needs rbw-agent.
   systemd.services.restic-backups-home = {
     path = [
       pkgs.rbw
       pkgs.rclone
       pkgs.openssh
     ];
-    serviceConfig = {
-      Environment = [ "XDG_RUNTIME_DIR=/run/user/%U" ];
-    };
   };
 }
