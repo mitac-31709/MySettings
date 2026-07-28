@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "auto-cpufreq" ];
+  system.nixos.tags = [ "pulse-sof-fix" ];
 }
