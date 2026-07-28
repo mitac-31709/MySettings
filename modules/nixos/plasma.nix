@@ -34,53 +34,32 @@
     };
   };
 
-  services.pulseaudio.enable = false;
-  security.rtkit.enable = true;
+  # delbin / sof-rt5682: PipeWire's ALSA backend hits a known Tiger Lake SOF
+  # failure mode (spa.alsa Broken pipe → last buffer loops forever on the amp).
+  # Keep PipeWire for Plasma Wayland (screencast etc.), but use PulseAudio for
+  # actual sound — the workaround documented for this class of Chromebooks.
   services.pipewire = {
     enable = true;
-    alsa.enable = true;
-    alsa.support32Bit = true;
-    pulse.enable = true;
-    # Slightly larger default quantum reduces SOF DSP underruns that can leave
-    # the card in a Broken-pipe / stuck-buffer state on Tiger Lake Chromebooks.
-    extraConfig.pipewire."99-sof-clock" = {
-      "context.properties" = {
-        "default.clock.quantum" = 1024;
-        "default.clock.min-quantum" = 256;
-        "default.clock.max-quantum" = 2048;
-      };
-    };
-    wireplumber = {
-      enable = true;
-      # delbin / sof-rt5682: PipeWire idle-suspend + tight ALSA buffering is a
-      # common cause of intermittent speaker glitches (same class of bugs as
-      # WeirdTreeThing/chromebook-linux-audio#2 — Broken pipe after recover).
-      extraConfig."51-sof-chromebook" = {
-        "monitor.alsa.rules" = [
-          {
-            matches = [
-              {
-                "node.name" = "~alsa_output.pci-0000_00_1f.3-platform-tgl_rt5682_def.*";
-              }
-              {
-                "node.name" = "~alsa_input.pci-0000_00_1f.3-platform-tgl_rt5682_def.*";
-              }
-            ];
-            actions = {
-              update-props = {
-                # Keep the PCM open; SOF often fails to recover after suspend.
-                "session.suspend-timeout-seconds" = 0;
-                # Extra headroom for DSP batch DMA (avoids XRUN → Broken pipe).
-                "api.alsa.headroom" = 1024;
-              };
-            };
-          }
-        ];
-      };
+    audio.enable = false;
+    alsa.enable = false;
+    pulse.enable = false;
+    wireplumber.enable = true;
+  };
+  services.pulseaudio = {
+    enable = true;
+    support32Bit = true;
+    # A2DP / HSP need the full build (codec modules).
+    package = pkgs.pulseaudioFull;
+    # Slightly larger fragments reduce SOF underruns vs PipeWire's aggressive
+    # scheduling on this DSP.
+    daemon.config = {
+      default-fragments = 8;
+      default-fragment-size-msec = 25;
     };
   };
+  security.rtkit.enable = true;
 
-  # Bluetooth + A2DP audio (PipeWire / WirePlumber). Plasma uses Bluedevil for pairing.
+  # Bluetooth + A2DP audio (PulseAudio). Plasma uses Bluedevil for pairing.
   hardware.bluetooth = {
     enable = true;
     powerOnBoot = true;

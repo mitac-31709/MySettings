@@ -23,6 +23,8 @@ in
       ll = "ls -la";
       rebuild = "sudo nixos-rebuild switch --flake ${flakeUri}";
       generations = "nixos-rebuild list-generations";
+      # Emergency: stop looping SOF amp playback (Broken pipe / stuck buffer).
+      audio-panic = "amixer -c 0 sset 'Left Digital' 0% && amixer -c 0 sset 'Right Digital' 0% && amixer -c 0 sset 'Left Spk' off && amixer -c 0 sset 'Right Spk' off && systemctl --user restart pulseaudio.service 2>/dev/null; systemctl --user restart pipewire.service wireplumber.service 2>/dev/null; true";
     };
     # Top ~10 lines: command output; bottom: btop. Usage: runbtop <cmd> [args...]
     initExtra = ''

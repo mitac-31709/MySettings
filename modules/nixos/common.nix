@@ -102,6 +102,7 @@
     git
     wget
     curl
+    alsa-utils # amixer/alsactl — mute SOF amps if audio wedges
     libva-utils # vainfo — verify VA-API / Parsec hw encode
   ];
 

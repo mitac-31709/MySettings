@@ -216,10 +216,13 @@ wpctl status
 # Speaker がデフォルトシンクであること
 ```
 
-SOF（Tiger Lake）では PipeWire のアイドル suspend やタイトなバッファが原因で、スピーカーが途中で止まったり最後の音がループしたりすることがあります。対策は次のとおりです。
+SOF（Tiger Lake）では PipeWire の ALSA バックエンドが `Broken pipe` になり、スピーカーが最後の音をループし続ける既知不具合があります（WeirdTreeThing/chromebook-linux-audio#2）。
 
-- `modules/nixos/plasma.nix`: WirePlumber で sof-rt5682 ノードの `session.suspend-timeout-seconds = 0` と `api.alsa.headroom`
-- `modules/nixos/chromebook.nix`: 起動時／レジューム時の `alsactl init`、UCM を `environment.variables` にも公開
+対策:
+
+- **音声は PulseAudio**（`services.pulseaudio`）、**PipeWire はデスクトップ用のみ**（`services.pipewire.audio.enable = false`）
+- `modules/nixos/chromebook.nix`: 起動時／レジューム時の `alsactl init`
+- 緊急停止: `audio-panic`（`Left/Right Digital` を 0%、Spk off）
 
 起動直後に無音なら `systemctl status chromebook-alsactl-init` を確認してください。dmesg の `DMIC16kHz` IPC `-22` は NHLT に DMIC が無い場合の既知ノイズで、スピーカー不具合とは別件です。
 
