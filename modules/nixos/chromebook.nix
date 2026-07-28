@@ -32,29 +32,32 @@ in
     extraPackages = with pkgs; [ intel-media-driver ];
   };
 
+  # Session + system env so PipeWire/WirePlumber and early tools both see UCM.
   environment.sessionVariables = {
     ALSA_CONFIG_UCM2 = "${alsa-ucm-conf-chromebook}/share/alsa/ucm2";
     LIBVA_DRIVER_NAME = "iHD";
   };
+  environment.variables.ALSA_CONFIG_UCM2 = "${alsa-ucm-conf-chromebook}/share/alsa/ucm2";
 
-  # Optional SOF / codec tweaks for volteer-class boards.
-  # Uncomment or extend if speakers/headphones need extra options after checking
-  # Chrultrabook setup-audio for tgl/volteer.
-  # boot.extraModprobeConfig = ''
-  #   options snd-sof-pci fw_path="intel/sof"
-  # '';
+  # Apply UCM BootSequence (rt5682 / max98373 mixer state) once the card exists.
+  # Without this, speakers can come up muted or on the wrong route until something
+  # else opens the UCM profile.
+  systemd.services.chromebook-alsactl-init = {
+    description = "Initialize Chromebook ALSA card state";
+    after = [ "sound.target" ];
+    wantedBy = [ "sound.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.alsa-utils}/bin/alsactl init";
+      RemainAfterExit = true;
+    };
+  };
 
-  # If the card is silent until alsactl init, enable the service below:
-  # systemd.services.chromebook-alsactl-init = {
-  #   description = "Initialize Chromebook ALSA card state";
-  #   after = [ "sound.target" ];
-  #   wantedBy = [ "sound.target" ];
-  #   serviceConfig = {
-  #     Type = "oneshot";
-  #     ExecStart = "${pkgs.alsa-utils}/bin/alsactl init";
-  #     RemainAfterExit = true;
-  #   };
-  # };
+  # SOF + max98373 often need a fresh codec init after S3; WirePlumber alone
+  # may not re-run UCM BootSequence cleanly on resume.
+  powerManagement.resumeCommands = ''
+    ${pkgs.alsa-utils}/bin/alsactl init || true
+  '';
 
   # --- Keyboard: ChromeOS-style top row via keyd ---
   # Search key often appears as leftmeta; keep meta and map F-keys to media actions.

@@ -18,6 +18,21 @@
     stopIfChanged = false;
   };
 
+  # Prefer reclaiming user/session memory under pressure before the whole machine
+  # thrashing (8 GiB Chromebook + Plasma + browsers).
+  systemd.oomd = {
+    enable = true;
+    enableRootSlice = true;
+    enableSystemSlice = true;
+    enableUserSlices = true;
+  };
+
+  # Keep journald from filling the modest root partition.
+  services.journald.extraConfig = ''
+    SystemMaxUse=200M
+    RuntimeMaxUse=100M
+  '';
+
   time.timeZone = "Asia/Tokyo";
 
   i18n.defaultLocale = "ja_JP.UTF-8";

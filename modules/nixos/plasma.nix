@@ -41,7 +41,43 @@
     alsa.enable = true;
     alsa.support32Bit = true;
     pulse.enable = true;
-    wireplumber.enable = true;
+    # Slightly larger default quantum reduces SOF DSP underruns that can leave
+    # the card in a Broken-pipe / stuck-buffer state on Tiger Lake Chromebooks.
+    extraConfig.pipewire."99-sof-clock" = {
+      "context.properties" = {
+        "default.clock.quantum" = 1024;
+        "default.clock.min-quantum" = 256;
+        "default.clock.max-quantum" = 2048;
+      };
+    };
+    wireplumber = {
+      enable = true;
+      # delbin / sof-rt5682: PipeWire idle-suspend + tight ALSA buffering is a
+      # common cause of intermittent speaker glitches (same class of bugs as
+      # WeirdTreeThing/chromebook-linux-audio#2 — Broken pipe after recover).
+      extraConfig."51-sof-chromebook" = {
+        "monitor.alsa.rules" = [
+          {
+            matches = [
+              {
+                "node.name" = "~alsa_output.pci-0000_00_1f.3-platform-tgl_rt5682_def.*";
+              }
+              {
+                "node.name" = "~alsa_input.pci-0000_00_1f.3-platform-tgl_rt5682_def.*";
+              }
+            ];
+            actions = {
+              update-props = {
+                # Keep the PCM open; SOF often fails to recover after suspend.
+                "session.suspend-timeout-seconds" = 0;
+                # Extra headroom for DSP batch DMA (avoids XRUN → Broken pipe).
+                "api.alsa.headroom" = 1024;
+              };
+            };
+          }
+        ];
+      };
+    };
   };
 
   # Bluetooth + A2DP audio (PipeWire / WirePlumber). Plasma uses Bluedevil for pairing.

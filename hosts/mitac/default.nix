@@ -16,6 +16,15 @@
   zramSwap = {
     enable = true;
     memoryPercent = 100;
+    algorithm = "zstd";
+  };
+
+  # zram-friendly VM knobs: swap earlier into cheap compressed RAM, avoid
+  # reading ahead multiple pages from zram (page-cluster=0).
+  boot.kernel.sysctl = {
+    "vm.swappiness" = 180;
+    "vm.page-cluster" = 0;
+    "vm.vfs_cache_pressure" = 50;
   };
 
   # Match the NixOS release from the first install on this machine.

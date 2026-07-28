@@ -206,9 +206,17 @@ restic-home restore latest --target /tmp/restore
 ```bash
 aplay -l
 # sof-rt5682 / SOF 関連のカード名のような表示を期待
+
+wpctl status
+# Speaker がデフォルトシンクであること
 ```
 
-起動後に音が出ない場合は、`modules/nixos/chromebook.nix` 内のコメントにある任意の `alsactl init` や modprobe の調整を参照してください。
+SOF（Tiger Lake）では PipeWire のアイドル suspend やタイトなバッファが原因で、スピーカーが途中で止まったり最後の音がループしたりすることがあります。対策は次のとおりです。
+
+- `modules/nixos/plasma.nix`: WirePlumber で sof-rt5682 ノードの `session.suspend-timeout-seconds = 0` と `api.alsa.headroom`
+- `modules/nixos/chromebook.nix`: 起動時／レジューム時の `alsactl init`、UCM を `environment.variables` にも公開
+
+起動直後に無音なら `systemctl status chromebook-alsactl-init` を確認してください。dmesg の `DMIC16kHz` IPC `-22` は NHLT に DMIC が無い場合の既知ノイズで、スピーカー不具合とは別件です。
 
 ### VA-API / Parsec 確認
 
