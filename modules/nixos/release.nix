@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "onlyoffice-zram" ];
+  system.nixos.tags = [ "onlyoffice-zram-runbtop" ];
 }
