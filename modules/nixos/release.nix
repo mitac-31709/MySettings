@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "tp-while-typing" ];
+  system.nixos.tags = [ "tp-clickfinger" ];
 }
