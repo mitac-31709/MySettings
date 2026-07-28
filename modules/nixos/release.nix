@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "onlyoffice-zram-runbtop" ];
+  system.nixos.tags = [ "tp-while-typing" ];
 }
