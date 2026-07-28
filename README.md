@@ -54,7 +54,7 @@ git push origin "gen/NN-<slug>"
 | 13 | `gen/13-rbw-eu` | `879c43c` | rbw を Bitwarden EU エンドポイントへ |
 | 14 | `gen/14-plasma-numlock` | `f72575e` | 初のラベル付き世代。NumLock 既定オン（ログイン＋Plasma）。`configurationRevision` 付き |
 | 15 | `gen/15-plasma-gnome-prefs` | `32034aa` | 旧 GNOME dconf 相当を Plasma へ（タッチパッド／Konsole フォント／Ctrl+Alt+T） |
-| 16 | （適用後にタグ予定） | `parsec-vaapi` ラベル | 2本指右クリック + Intel VA-API（Parsec HW エンコード）。`sudo nixos-rebuild switch` 後に `gen/16-parsec-vaapi` を打つ |
+| 16 | （適用後にタグ予定） | `jquake` ラベル | Parsec VA-API + JQuake。`sudo nixos-rebuild switch` 後に `gen/16-jquake` を打つ |
 
 タグ一覧: `git tag -l 'gen/*'` または GitHub の Tags ページ。
 

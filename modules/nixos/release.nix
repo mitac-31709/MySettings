@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "parsec-vaapi" ];
+  system.nixos.tags = [ "jquake" ];
 }
