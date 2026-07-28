@@ -138,7 +138,14 @@
     btop
     firefox
     code-cursor
-    jquake
+    # Pin 1.8.4 (nixpkgs currently ships 1.8.5). Same upstream zip layout.
+    (jquake.overrideAttrs (_old: {
+      version = "1.8.4";
+      src = fetchurl {
+        url = "https://github.com/fleneindre/fleneindre.github.io/raw/master/downloads/JQuake_1.8.4_linux.zip";
+        hash = "sha256-oIYkYmI8uG4zjnm1Jq1mzIcSwRlKbWJqvACygQyp9sA=";
+      };
+    }))
     onlyoffice-desktopeditors
     parsec-bin
     tmux

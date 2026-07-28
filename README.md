@@ -90,7 +90,7 @@ passwd mitac
 - **Parsec** — `parsec-bin`（Intel VA-API / `intel-media-driver` でハードウェアエンコード）
 - **Steam** — `programs.steam.enable`
 - **Vivaldi** — `vivaldi`
-- **JQuake** — `jquake`（日本のリアルタイム地震マップ）
+- **JQuake** — `jquake` 1.8.4（日本のリアルタイム地震マップ）
 - **ONLYOFFICE** — `onlyoffice-desktopeditors`（文書・表計算・プレゼン）
 - **tmux** — `runbtop <cmd>` で上部に実行出力（約 10 行）、下部に `btop`
 - **Mozc** — Fcitx5 エンジン（日本語入力）
