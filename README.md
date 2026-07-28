@@ -77,12 +77,15 @@ sudo nixos-generate-config --show-hardware-config > hosts/mitac/hardware-configu
 
 # ビルドして切り替え:
 sudo nixos-rebuild switch --flake .#mitac
+# または（Home Manager 適用後）どのディレクトリからでも:
+#   rebuild
+# → sudo nixos-rebuild switch --flake ~/MySettings#mitac
 
 # 必要なら:
 passwd mitac
 ```
 
-`flake.lock` は、Nix があるマシンで初回の評価／rebuild 時に作成されます。
+`flake.lock` は、Nix があるマシンで初回の評価／rebuild 時に作成されます。シェルエイリアス `rebuild` / `generations` は `home/mitac.nix` で定義され、flake パスは `~/MySettings` 固定です（ホーム直下など、リポジトリ外からも実行可）。
 
 ## 同梱ソフトウェア
 

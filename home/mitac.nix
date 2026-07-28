@@ -1,5 +1,15 @@
-{ pkgs, lib, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  ...
+}:
 
+let
+  # Absolute flake path so `rebuild` works from $HOME (or any cwd), not only
+  # when the shell is already inside the MySettings checkout.
+  flakeUri = "${config.home.homeDirectory}/MySettings#mitac";
+in
 {
   home.username = "mitac";
   home.homeDirectory = "/home/mitac";
@@ -11,7 +21,7 @@
     enable = true;
     shellAliases = {
       ll = "ls -la";
-      rebuild = "sudo nixos-rebuild switch --flake .#mitac";
+      rebuild = "sudo nixos-rebuild switch --flake ${flakeUri}";
       generations = "nixos-rebuild list-generations";
     };
     # Top ~10 lines: command output; bottom: btop. Usage: runbtop <cmd> [args...]
