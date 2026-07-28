@@ -113,7 +113,7 @@ Fcitx5 + Mozc を有効化しています。パネルの入力インジケータ
 
 ## タッチパッド
 
-ナチュラルスクロールはオフ（従来型: 指を上 → 内容が上）。delbin の Elan Touchpad 向けに `kcminputrc` で設定。
+ナチュラルスクロールはオフ（従来型: 指を上 → 内容が上）。キーボード入力中もタッチパッドは有効（`DisableWhileTyping=false`）。delbin の Elan Touchpad 向けに `kcminputrc` で設定。
 
 ## クリップボード履歴
 

@@ -84,13 +84,14 @@
   };
 
   # NumLock on at Plasma startup (0 = on, 1 = off, 2 = leave unchanged).
-  # Touchpad: traditional scrolling (finger up → content up), not "natural".
+  # Touchpad: traditional scrolling; keep pointer active while typing.
   # Libinput section is for delbin's Elan Touchpad (0x04f3:0x00c2).
   xdg.configFile."kcminputrc".text = ''
     [Keyboard]
     NumLock=0
 
     [Libinput/1267/194/Elan Touchpad]
+    DisableWhileTyping=false
     NaturalScroll=false
   '';
 
