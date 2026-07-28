@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "plasma-gnome-prefs" ];
+  system.nixos.tags = [ "onlyoffice" ];
 }
