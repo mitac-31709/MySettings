@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "tp-clickfinger" ];
+  system.nixos.tags = [ "parsec-vaapi" ];
 }
