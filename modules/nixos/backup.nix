@@ -14,12 +14,14 @@
 # See README.md → "Encrypted /home backup" for the one-time setup.
 {
   config,
+  lib,
   pkgs,
   ...
 }:
 
 let
   user = "mitac";
+  uid = toString config.users.users.${user}.uid;
 
   # Google Drive destination: rclone remote "gdrive" plus a subpath. The remote
   # is configured out-of-band with `rclone config` (interactive OAuth).
@@ -32,10 +34,18 @@ let
   # Bitwarden item whose password field holds the restic encryption key.
   bitwardenItem = "restic-home";
 
+  # Wrapper so systemd's minimal PATH still finds rbw-agent, and the user
+  # session socket under XDG_RUNTIME_DIR is reachable.
+  resticPasswordCommand = pkgs.writeShellScript "restic-home-password" ''
+    export PATH="${lib.makeBinPath [ pkgs.rbw ]}:$PATH"
+    export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/${uid}}"
+    exec ${lib.getExe pkgs.rbw} get ${bitwardenItem}
+  '';
+
   # Non-secret: only tells restic to ask Bitwarden (via rbw) for the password.
   # Safe to keep in the Nix store — it contains no key material.
   resticEnvFile = pkgs.writeText "restic-home.env" ''
-    RESTIC_PASSWORD_COMMAND=${pkgs.rbw}/bin/rbw get ${bitwardenItem}
+    RESTIC_PASSWORD_COMMAND=${resticPasswordCommand}
   '';
 in
 {
@@ -64,7 +74,7 @@ in
       "/home/${user}/.local/state/nvim/swap"
     ];
 
-    # Provides RESTIC_PASSWORD_COMMAND=`rbw get <item>` → key stays in Bitwarden.
+    # Provides RESTIC_PASSWORD_COMMAND → key stays in Bitwarden.
     environmentFile = "${resticEnvFile}";
 
     # Create the restic repository on Google Drive on first run.
@@ -89,5 +99,19 @@ in
     # you can list snapshots or restore without re-specifying anything, e.g.:
     #   restic-home snapshots
     #   restic-home restore latest --target /tmp/restore
+  };
+
+  # Systemd's default PATH for this unit does not include profile bins; restic
+  # needs rclone on PATH, and rbw needs rbw-agent. Also point at the logged-in
+  # user's runtime dir so rbw can talk to an unlocked agent.
+  systemd.services.restic-backups-home = {
+    path = [
+      pkgs.rbw
+      pkgs.rclone
+      pkgs.openssh
+    ];
+    serviceConfig = {
+      Environment = [ "XDG_RUNTIME_DIR=/run/user/${uid}" ];
+    };
   };
 }
