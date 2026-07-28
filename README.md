@@ -54,7 +54,7 @@ git push origin "gen/NN-<slug>"
 | 13 | `gen/13-rbw-eu` | `879c43c` | rbw を Bitwarden EU エンドポイントへ |
 | 14 | `gen/14-plasma-numlock` | `f72575e` | 初のラベル付き世代。NumLock 既定オン（ログイン＋Plasma）。`configurationRevision` 付き |
 | 15 | `gen/15-plasma-gnome-prefs` | `32034aa` | 旧 GNOME dconf 相当を Plasma へ（タッチパッド／Konsole フォント／Ctrl+Alt+T） |
-| 16 | （適用後にタグ予定） | `onlyoffice` ラベル | ONLYOFFICE Desktop Editors。`sudo nixos-rebuild switch` 後に `gen/16-onlyoffice` を打つ |
+| 16 | （適用後にタグ予定） | `onlyoffice-zram` ラベル | ONLYOFFICE + zram スワップ（8 GiB RAM 相当）。`sudo nixos-rebuild switch` 後に `gen/16-onlyoffice-zram` を打つ |
 
 タグ一覧: `git tag -l 'gen/*'` または GitHub の Tags ページ。
 
