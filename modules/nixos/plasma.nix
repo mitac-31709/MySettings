@@ -56,6 +56,18 @@
       default-fragments = 8;
       default-fragment-size-msec = 25;
     };
+    # sof-rt5682: module-alsa-card + use_ucm=yes fails ("no working profile")
+    # because UCM Mic/DMIC probes error out, leaving only the null sink.
+    # Bind speaker PCM (hw:0,0) and headset mic (hw:0,1) directly instead.
+    extraConfig = ''
+      .nofail
+      unload-module module-udev-detect
+      unload-module module-alsa-card
+      unload-module module-null-sink
+      load-module module-alsa-sink device=hw:0,0 sink_name=speaker sink_properties=device.description=Speakers tsched=false
+      load-module module-alsa-source device=hw:0,1 source_name=headset_mic source_properties=device.description=Headset\ Microphone tsched=false
+      set-default-sink speaker
+    '';
   };
   security.rtkit.enable = true;
 

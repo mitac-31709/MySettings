@@ -41,7 +41,8 @@ in
 
   # Apply UCM BootSequence (rt5682 / max98373 mixer state) once the card exists.
   # Without this, speakers can come up muted or on the wrong route until something
-  # else opens the UCM profile.
+  # else opens the UCM profile. Also raise max98373 digital/speaker levels — with
+  # PulseAudio we open hw:0,0 directly (no UCM Speaker enable path).
   systemd.services.chromebook-alsactl-init = {
     description = "Initialize Chromebook ALSA card state";
     after = [ "sound.target" ];
@@ -49,14 +50,30 @@ in
     serviceConfig = {
       Type = "oneshot";
       ExecStart = "${pkgs.alsa-utils}/bin/alsactl init";
+      ExecStartPost = pkgs.writeShellScript "chromebook-speaker-levels" ''
+        set +e
+        amixer=${pkgs.alsa-utils}/bin/amixer
+        $amixer -c 0 sset 'Left Digital' 80%
+        $amixer -c 0 sset 'Right Digital' 80%
+        $amixer -c 0 sset 'Left Spk' on
+        $amixer -c 0 sset 'Right Spk' on
+        $amixer -c 0 sset 'Left Speaker' 8
+        $amixer -c 0 sset 'Right Speaker' 8
+        true
+      '';
       RemainAfterExit = true;
     };
   };
 
-  # SOF + max98373 often need a fresh codec init after S3; WirePlumber alone
-  # may not re-run UCM BootSequence cleanly on resume.
+  # SOF + max98373 often need a fresh codec init after S3.
   powerManagement.resumeCommands = ''
     ${pkgs.alsa-utils}/bin/alsactl init || true
+    ${pkgs.alsa-utils}/bin/amixer -c 0 sset 'Left Digital' 80% || true
+    ${pkgs.alsa-utils}/bin/amixer -c 0 sset 'Right Digital' 80% || true
+    ${pkgs.alsa-utils}/bin/amixer -c 0 sset 'Left Spk' on || true
+    ${pkgs.alsa-utils}/bin/amixer -c 0 sset 'Right Spk' on || true
+    ${pkgs.alsa-utils}/bin/amixer -c 0 sset 'Left Speaker' 8 || true
+    ${pkgs.alsa-utils}/bin/amixer -c 0 sset 'Right Speaker' 8 || true
   '';
 
   # --- Keyboard: ChromeOS-style top row via keyd ---

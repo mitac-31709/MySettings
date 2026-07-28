@@ -221,11 +221,17 @@ SOF（Tiger Lake）では PipeWire の ALSA バックエンドが `Broken pipe` 
 
 対策:
 
-- **音声は PulseAudio**（`services.pulseaudio`）、**PipeWire はデスクトップ用のみ**（`services.pipewire.audio.enable = false`）
-- `modules/nixos/chromebook.nix`: 起動時／レジューム時の `alsactl init`
-- 緊急停止: `audio-panic`（`Left/Right Digital` を 0%、Spk off）
+- **音声は PulseAudio**（PipeWire はデスクトップ用のみ）
+- sof-rt5682 は UCM プロファイル探索に失敗するため、**`hw:0,0`（Speaker）を直接** `module-alsa-sink` でバインド
+- 起動／レジューム時に `alsactl init` + max98373 の Digital/Spk レベル設定
+- 緊急停止: `audio-panic`
 
-起動直後に無音なら `systemctl status chromebook-alsactl-init` を確認してください。dmesg の `DMIC16kHz` IPC `-22` は NHLT に DMIC が無い場合の既知ノイズで、スピーカー不具合とは別件です。
+```bash
+pactl list short sinks   # speaker が見えること
+speaker-test -c 2 -t wav -l 1
+```
+
+dmesg の `DMIC16kHz` IPC `-22` は NHLT に DMIC が無い場合の既知ノイズで、スピーカー不具合とは別件です。
 
 ### VA-API / Parsec 確認
 
