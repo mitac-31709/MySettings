@@ -21,7 +21,6 @@
 
 let
   user = "mitac";
-  uid = toString config.users.users.${user}.uid;
 
   # Google Drive destination: rclone remote "gdrive" plus a subpath. The remote
   # is configured out-of-band with `rclone config` (interactive OAuth).
@@ -38,7 +37,7 @@ let
   # session socket under XDG_RUNTIME_DIR is reachable.
   resticPasswordCommand = pkgs.writeShellScript "restic-home-password" ''
     export PATH="${lib.makeBinPath [ pkgs.rbw ]}:$PATH"
-    export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/${uid}}"
+    export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
     exec ${lib.getExe pkgs.rbw} get ${bitwardenItem}
   '';
 
@@ -103,7 +102,7 @@ in
 
   # Systemd's default PATH for this unit does not include profile bins; restic
   # needs rclone on PATH, and rbw needs rbw-agent. Also point at the logged-in
-  # user's runtime dir so rbw can talk to an unlocked agent.
+  # user's runtime dir so rbw can talk to an unlocked agent (%U = User= uid).
   systemd.services.restic-backups-home = {
     path = [
       pkgs.rbw
@@ -111,7 +110,7 @@ in
       pkgs.openssh
     ];
     serviceConfig = {
-      Environment = [ "XDG_RUNTIME_DIR=/run/user/${uid}" ];
+      Environment = [ "XDG_RUNTIME_DIR=/run/user/%U" ];
     };
   };
 }
