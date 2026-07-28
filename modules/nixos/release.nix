@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "sof-audio-stable" ];
+  system.nixos.tags = [ "auto-cpufreq" ];
 }

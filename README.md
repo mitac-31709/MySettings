@@ -56,6 +56,7 @@ git push origin "gen/NN-<slug>"
 | 15 | `gen/15-plasma-gnome-prefs` | `32034aa` | 旧 GNOME dconf 相当を Plasma へ（タッチパッド／Konsole フォント／Ctrl+Alt+T） |
 | 16 | （適用後にタグ予定） | `jquake` ラベル | Parsec VA-API + JQuake。`sudo nixos-rebuild switch` 後に `gen/16-jquake` を打つ |
 | 17 | （適用後にタグ予定） | `sof-audio-stable` ラベル | SOF 音声安定化（WP suspend 無効・alsactl init）+ zram/oomd。`sudo nixos-rebuild switch` 後に `gen/17-sof-audio-stable` を打つ |
+| 18 | （適用後にタグ予定） | `auto-cpufreq` ラベル | auto-cpufreq（PPD 無効）。`sudo nixos-rebuild switch` 後に `gen/18-auto-cpufreq` を打つ |
 
 タグ一覧: `git tag -l 'gen/*'` または GitHub の Tags ページ。
 
