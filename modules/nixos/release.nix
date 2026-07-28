@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "jquake" ];
+  system.nixos.tags = [ "sof-audio-stable" ];
 }
