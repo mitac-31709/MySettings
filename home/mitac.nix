@@ -138,6 +138,7 @@
     onlyoffice-desktopeditors
     parsec-bin
     tmux
+    trayscale
     vivaldi
   ];
 }

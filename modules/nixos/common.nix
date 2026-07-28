@@ -87,6 +87,12 @@
     curl
   ];
 
+  # Cloudflare WARP (1.1.1.1) client daemon + CLI (warp-cli / warp-diag).
+  services.cloudflare-warp.enable = true;
+
+  # Tailscale daemon; Trayscale (GUI) is in home.packages.
+  services.tailscale.enable = true;
+
   # Steam needs the NixOS module (32-bit libs, FHS, steam-hardware).
   programs.steam.enable = true;
 
