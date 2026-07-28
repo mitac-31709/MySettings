@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "pulse-sof-fix" ];
+  system.nixos.tags = [ "pulse-hw-sink" ];
 }
