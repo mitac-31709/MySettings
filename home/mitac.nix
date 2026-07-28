@@ -138,6 +138,7 @@
     btop
     firefox
     code-cursor
+    jquake
     onlyoffice-desktopeditors
     parsec-bin
     tmux

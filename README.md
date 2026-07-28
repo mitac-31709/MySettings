@@ -62,7 +62,7 @@ git push origin "gen/NN-<slug>"
 
 - Flakes が有効な NixOS マシン（この flake でも有効化します）
 - 初回 rebuild の**前に**、`hosts/mitac/hardware-configuration.nix` を自分のマシンで生成したファイルに差し替えること
-- 非フリーパッケージ（`code-cursor`、`parsec-bin`、`steam`、`vivaldi`）は `flake.nix` で許可済み
+- 非フリーパッケージ（`code-cursor`、`jquake`、`parsec-bin`、`steam`、`vivaldi`）は `flake.nix` で許可済み
 - Chromebook: MrChromebox（または同等）の UEFI／WP 無効を想定。ファームウェアの書き込みはこのリポジトリの範囲外
 
 ## 適用手順
@@ -90,6 +90,7 @@ passwd mitac
 - **Parsec** — `parsec-bin`（Intel VA-API / `intel-media-driver` でハードウェアエンコード）
 - **Steam** — `programs.steam.enable`
 - **Vivaldi** — `vivaldi`
+- **JQuake** — `jquake`（日本のリアルタイム地震マップ）
 - **ONLYOFFICE** — `onlyoffice-desktopeditors`（文書・表計算・プレゼン）
 - **tmux** — `runbtop <cmd>` で上部に実行出力（約 10 行）、下部に `btop`
 - **Mozc** — Fcitx5 エンジン（日本語入力）
