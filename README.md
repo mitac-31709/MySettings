@@ -54,7 +54,7 @@ git push origin "gen/NN-<slug>"
 | 13 | `gen/13-rbw-eu` | `879c43c` | rbw を Bitwarden EU エンドポイントへ |
 | 14 | `gen/14-plasma-numlock` | `f72575e` | 初のラベル付き世代。NumLock 既定オン（ログイン＋Plasma）。`configurationRevision` 付き |
 | 15 | `gen/15-plasma-gnome-prefs` | `32034aa` | 旧 GNOME dconf 相当を Plasma へ（タッチパッド／Konsole フォント／Ctrl+Alt+T） |
-| 16 | （適用後にタグ予定） | `onlyoffice-zram` ラベル | ONLYOFFICE + zram スワップ（8 GiB RAM 相当）。`sudo nixos-rebuild switch` 後に `gen/16-onlyoffice-zram` を打つ |
+| 16 | （適用後にタグ予定） | `onlyoffice-zram-runbtop` ラベル | ONLYOFFICE + zram + `runbtop`（tmux）。`sudo nixos-rebuild switch` 後に `gen/16-onlyoffice-zram-runbtop` を打つ |
 
 タグ一覧: `git tag -l 'gen/*'` または GitHub の Tags ページ。
 
@@ -91,6 +91,7 @@ passwd mitac
 - **Steam** — `programs.steam.enable`
 - **Vivaldi** — `vivaldi`
 - **ONLYOFFICE** — `onlyoffice-desktopeditors`（文書・表計算・プレゼン）
+- **tmux** — `runbtop <cmd>` で上部に実行出力（約 10 行）、下部に `btop`
 - **Mozc** — Fcitx5 エンジン（日本語入力）
 - **フォント** — JetBrainsMono Nerd Font（ターミナル／等幅の既定）
 - **暗号化バックアップ** — `restic` + `rclone` で `/home` を Google Drive へ。鍵は Bitwarden（`rbw`）。詳細は下記。

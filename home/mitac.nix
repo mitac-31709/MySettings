@@ -14,6 +14,21 @@
       rebuild = "sudo nixos-rebuild switch --flake .#mitac";
       generations = "nixos-rebuild list-generations";
     };
+    # Top ~10 lines: command output; bottom: btop. Usage: runbtop <cmd> [args...]
+    initExtra = ''
+      runbtop() {
+        if [ "$#" -eq 0 ]; then
+          printf 'usage: runbtop <command> [args...]\n' >&2
+          return 1
+        fi
+        tmux new-session \; \
+          send-keys -- "$(printf '%q ' "$@")" C-m \; \
+          split-window -v -- btop \; \
+          select-pane -t '{top}' \; \
+          resize-pane -y 10 \; \
+          select-pane -t '{bottom}'
+      }
+    '';
   };
 
   programs.git = {
@@ -121,6 +136,7 @@
     code-cursor
     onlyoffice-desktopeditors
     parsec-bin
+    tmux
     vivaldi
   ];
 }
