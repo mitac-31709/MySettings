@@ -59,6 +59,7 @@ git push origin "gen/NN-<slug>"
 | 18 | （適用後にタグ予定） | `auto-cpufreq` ラベル | auto-cpufreq（PPD 無効）。`sudo nixos-rebuild switch` 後に `gen/18-auto-cpufreq` を打つ |
 | 19 | （適用後にタグ予定） | `pulse-sof-fix` ラベル | 音声を PulseAudio へ（SOF Broken-pipe ループ回避）。`sudo nixos-rebuild switch` 後に `gen/19-pulse-sof-fix` を打つ |
 | 20 | （適用後にタグ予定） | `pulse-hw-sink` ラベル | Pulse で sof スピーカーを hw:0,0 直結。`sudo nixos-rebuild switch` 後に `gen/20-pulse-hw-sink` を打つ |
+| 21 | （適用後にタグ予定） | `xp-startup` ラベル | ログイン後に Windows XP 起動音。`sudo nixos-rebuild switch` 後に `gen/21-xp-startup` を打つ |
 
 タグ一覧: `git tag -l 'gen/*'` または GitHub の Tags ページ。
 

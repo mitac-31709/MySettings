@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "pulse-hw-sink" ];
+  system.nixos.tags = [ "xp-startup" ];
 }
