@@ -87,7 +87,7 @@ passwd mitac
 
 - **Neovim** — 設定は `home/nvim`、プラグインは **lazy.nvim**（nixpkgs から同梱）
 - **Cursor** — `code-cursor`
-- **Parsec** — `parsec-bin`
+- **Parsec** — `parsec-bin`（Intel VA-API / `intel-media-driver` でハードウェアエンコード）
 - **Steam** — `programs.steam.enable`
 - **Vivaldi** — `vivaldi`
 - **ONLYOFFICE** — `onlyoffice-desktopeditors`（文書・表計算・プレゼン）
@@ -195,6 +195,7 @@ restic-home restore latest --target /tmp/restore
 |------|------|
 | ボード | `delbin`（`DELBIN_XHVI`） |
 | プラットフォーム | `volteer`（Intel Tiger Lake） |
+| GPU | Iris Xe（i3-1115G4）。`intel-media-driver` + `LIBVA_DRIVER_NAME=iHD`（Parsec 等の VA-API） |
 | オーディオ | SOF + `sof-rt5682` / `max98373`（`alsa-ucm-conf-cros` + `sof-firmware`） |
 | キーボード | `keyd` が最上段を ChromeOS 風メディアキーに割り当て |
 | Flip | タブレットモード向け libinput quirk `ModelTabletModeNoSuspend=1` |
@@ -207,6 +208,15 @@ aplay -l
 ```
 
 起動後に音が出ない場合は、`modules/nixos/chromebook.nix` 内のコメントにある任意の `alsactl init` や modprobe の調整を参照してください。
+
+### VA-API / Parsec 確認
+
+```bash
+vainfo
+# iHD ドライバと H.264 の EncSlice / VLD が出ることを期待
+```
+
+Parsec を開き直してハードウェアエンコーダーが選べるか確認します。
 
 ### キーボード確認
 

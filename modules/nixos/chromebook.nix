@@ -24,8 +24,18 @@ in
   hardware.enableRedistributableFirmware = true;
   hardware.firmware = [ pkgs.sof-firmware ];
 
-  environment.sessionVariables.ALSA_CONFIG_UCM2 =
-    "${alsa-ucm-conf-chromebook}/share/alsa/ucm2";
+  # Intel Tiger Lake iGPU (i3-1115G4 / device 0x9a78): VA-API for Parsec's
+  # FFMPEG hardware encode/decode. Without intel-media-driver there is no
+  # iHD_drv_video.so under /run/opengl-driver and Parsec falls back to software.
+  hardware.graphics = {
+    enable = true;
+    extraPackages = with pkgs; [ intel-media-driver ];
+  };
+
+  environment.sessionVariables = {
+    ALSA_CONFIG_UCM2 = "${alsa-ucm-conf-chromebook}/share/alsa/ucm2";
+    LIBVA_DRIVER_NAME = "iHD";
+  };
 
   # Optional SOF / codec tweaks for volteer-class boards.
   # Uncomment or extend if speakers/headphones need extra options after checking

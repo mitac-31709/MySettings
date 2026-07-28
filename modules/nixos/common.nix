@@ -75,6 +75,8 @@
     description = "mitac";
     extraGroups = [
       "networkmanager"
+      "render"
+      "video"
       "wheel"
     ];
     # Set a password after first boot: passwd mitac
@@ -85,6 +87,7 @@
     git
     wget
     curl
+    libva-utils # vainfo — verify VA-API / Parsec hw encode
   ];
 
   # Cloudflare WARP (1.1.1.1) client daemon + CLI (warp-cli / warp-diag).
