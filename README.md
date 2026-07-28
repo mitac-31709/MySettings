@@ -89,6 +89,7 @@ passwd mitac
 - **Parsec** — `parsec-bin`
 - **Steam** — `programs.steam.enable`
 - **Vivaldi** — `vivaldi`
+- **ONLYOFFICE** — `onlyoffice-desktopeditors`（文書・表計算・プレゼン）
 - **Mozc** — Fcitx5 エンジン（日本語入力）
 - **フォント** — JetBrainsMono Nerd Font（ターミナル／等幅の既定）
 - **暗号化バックアップ** — `restic` + `rclone` で `/home` を Google Drive へ。鍵は Bitwarden（`rbw`）。詳細は下記。

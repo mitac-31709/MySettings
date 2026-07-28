@@ -119,6 +119,7 @@
     btop
     firefox
     code-cursor
+    onlyoffice-desktopeditors
     parsec-bin
     vivaldi
   ];
