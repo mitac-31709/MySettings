@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "console-apps" ];
+  system.nixos.tags = [ "restic-notify" ];
 }
