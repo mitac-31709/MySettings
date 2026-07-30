@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "end4-qt5compat" ];
+  system.nixos.tags = [ "end4-qml-sw" ];
 }
