@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "multi-session-greetd" ];
+  system.nixos.tags = [ "bottles" ];
 }

@@ -74,6 +74,7 @@ git push origin "gen/NN-<slug>"
 | 20 | （適用後にタグ予定） | `pulse-hw-sink` ラベル | Pulse で sof スピーカーを hw:0,0 直結。`sudo nixos-rebuild switch` 後に `gen/20-pulse-hw-sink` を打つ |
 | 21 | （適用後にタグ予定） | `xp-startup` ラベル | ログイン後に Windows XP 起動音。`sudo nixos-rebuild switch` 後に `gen/21-xp-startup` を打つ |
 | 22 | （適用後にタグ予定） | `multi-session-greetd` ラベル | greetd+tuigreet・Console(cage)・Plasma・Caelestia-AW・end4-pC。`sudo nixos-rebuild switch` 後に `gen/22-multi-session-greetd` を打つ |
+| 23 | （適用後にタグ予定） | `bottles` ラベル | Bottles（Windows アプリ用 Wine）。`sudo nixos-rebuild switch` 後に `gen/23-bottles` を打つ |
 
 タグ一覧: `git tag -l 'gen/*'` または GitHub の Tags ページ。
 
