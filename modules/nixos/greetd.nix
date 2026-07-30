@@ -123,6 +123,12 @@ let
       cp -f ${sessionData}/share/xsessions/*.desktop "$out/xsessions/" 2>/dev/null || true
     fi
   '';
+
+  # tuigreet default is `startx /usr/bin/env`, but NixOS only provides startx
+  # when displayManager.startx.enable is on — and greeter PATH can still miss it.
+  xsessionWrapper = pkgs.writeShellScript "tuigreet-xsession-wrapper" ''
+    exec ${pkgs.xinit}/bin/startx ${pkgs.coreutils}/bin/env "$@"
+  '';
 in
 {
   services.greetd = {
@@ -141,6 +147,8 @@ in
           "${curatedSessions}/wayland-sessions"
           "--xsessions"
           "${curatedSessions}/xsessions"
+          "--xsession-wrapper"
+          "${xsessionWrapper}"
         ];
       };
     };

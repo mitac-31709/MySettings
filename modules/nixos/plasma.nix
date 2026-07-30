@@ -7,6 +7,11 @@
     variant = "";
   };
 
+  # greetd/tuigreet wraps X11 sessions as `startx /usr/bin/env <Exec>`.
+  # Without this, `startx` is missing and Plasma (X11) exits immediately
+  # (journal: session type=x11 then closed within ~1s, no Xorg log).
+  services.xserver.displayManager.startx.enable = true;
+
   services.desktopManager.plasma6.enable = true;
   # Session chooser is greetd+tuigreet (see greetd.nix); keep Plasma as a
   # selectable desktop only.
