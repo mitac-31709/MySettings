@@ -75,6 +75,7 @@ git push origin "gen/NN-<slug>"
 | 21 | （適用後にタグ予定） | `xp-startup` ラベル | ログイン後に Windows XP 起動音。`sudo nixos-rebuild switch` 後に `gen/21-xp-startup` を打つ |
 | 22 | （適用後にタグ予定） | `multi-session-greetd` ラベル | greetd+tuigreet・Console(cage)・Plasma・Caelestia-AW・end4-pC。`sudo nixos-rebuild switch` 後に `gen/22-multi-session-greetd` を打つ |
 | 23 | （適用後にタグ予定） | `bottles` ラベル | Bottles（Windows アプリ用 Wine）。`sudo nixos-rebuild switch` 後に `gen/23-bottles` を打つ |
+| 24 | （適用後にタグ予定） | `console-apps` ラベル | Console 用 `apps`（fzf アプリ一覧／起動）。`sudo nixos-rebuild switch` 後に `gen/24-console-apps` を打つ |
 
 タグ一覧: `git tag -l 'gen/*'` または GitHub の Tags ページ。
 

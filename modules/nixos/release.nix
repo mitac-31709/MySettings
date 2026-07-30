@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "bottles" ];
+  system.nixos.tags = [ "console-apps" ];
 }
