@@ -71,6 +71,12 @@ let
   # is used — not a minimal .conf that skips the II startup path.
   #
   # Fall back to end4.conf if lua is missing (older HM generations / partial sync).
+  #
+  # Prefer aggregated system QML tree (packages listed in hyprland.nix).
+  # Do NOT replace with a short store-path list — that hides other KDE QML
+  # modules already linked into /run/current-system/sw (syntax-highlighting, …).
+  qmlImportPath = "/run/current-system/sw/lib/qt-6/qml";
+
   # Wait for Hyprland's Wayland socket, then start qs if II's hyprland.start
   # did not. Must NOT run qs before WAYLAND_DISPLAY exists — that crashes Qt
   # ("Failed to create wl_display") and leaves a blank desktop.
@@ -87,7 +93,7 @@ let
           printf '[%s] safety-net: WAYLAND_DISPLAY=%s — ensuring qs\n' "$(date -Is)" "$WAYLAND_DISPLAY"
           # -n: no-op if II already started this config.
           qs -n -c end4-pC >>"$qs_log" 2>&1 &
-          return 0
+          exit 0
         fi
       done
       i=$((i + 1))
@@ -95,15 +101,6 @@ let
     done
     printf '[%s] safety-net: no Wayland/Hyprland socket after 45s\n' "$(date -Is)"
   '';
-
-  # QML path for qs under Hyprland (Plasma already injects these).
-  # See https://github.com/end-4/dots-hyprland/issues/1750
-  qmlImportPath = lib.concatStringsSep ":" [
-    "${pkgs.kdePackages.qt5compat}/lib/qt-6/qml"
-    "${pkgs.kdePackages.qtpositioning}/lib/qt-6/qml"
-    "${pkgs.kdePackages.qtmultimedia}/lib/qt-6/qml"
-    "${pkgs.kdePackages.qtimageformats}/lib/qt-6/qml"
-  ];
 
   hyprlandStartup = pkgs.writeShellApplication {
     name = "hyprland-startup";
