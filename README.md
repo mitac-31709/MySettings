@@ -15,7 +15,7 @@
 
 | セッション | 内容 |
 |------------|------|
-| **Console** | DE なし（TTY）。GUI は `gui <app>` またはエイリアス（`firefox` など）で **cage** によりアプリ単位起動。終了で TTY に戻る |
+| **Console** | DE なし（TTY）。`apps` でアプリ一覧／選択。GUI は `gui <app>` またはエイリアス（`firefox` など）で **cage** によりアプリ単位起動。終了で TTY に戻る |
 | **Plasma** | 既存の KDE Plasma 6 |
 | **Caelestia-AW** | Hyprland + Caelestia shell（動画壁紙対応フォーク） |
 | **end4-pC** | Hyprland + Quickshell の end4-pC 設定 |
@@ -121,7 +121,8 @@ passwd mitac
 - **フォント** — JetBrainsMono Nerd Font（ターミナル／等幅の既定）
 - **暗号化バックアップ** — `restic` + `rclone` で `/home` を Google Drive へ。鍵は Bitwarden（`rbw`）。詳細は下記。
 - **マルチセッション** — greetd + tuigreet（Console / Plasma / Caelestia-AW / end4-pC）
-- **gui** — Console 用。`cage` で単一 GUI アプリを起動（`gui firefox` など）
+- **gui** — Console 用。`cage` で単一 GUI アプリを起動（`gui firefox` など）。引数なしは `apps` を起動
+- **apps** — Console／TTY 用アプリ一覧（`fzf`）。`apps --list` で一覧のみ、選択で `gui` 経由起動
 - **Caelestia-AW** — Hyprland シェル（動画壁紙）。flake: `caelestia-shell-aw` / `caelestia-cli-aw`
 - **end4-pC** — Quickshell 設定（`~/.config/quickshell/end4-pC`）
 

@@ -39,7 +39,7 @@ let
   consoleSession = mkWaylandSession {
     id = "00-console";
     name = "Console";
-    comment = "Text console without desktop environment (use: gui <app>)";
+    comment = "Text console without desktop environment (use: apps / gui <app>)";
     exec = "${pkgs.bashInteractive}/bin/bash -l";
     desktopNames = "Console";
   };
