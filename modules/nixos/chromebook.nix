@@ -24,6 +24,15 @@ in
   hardware.enableRedistributableFirmware = true;
   hardware.firmware = [ pkgs.sof-firmware ];
 
+  # Chromebook side power button: default HandlePowerKey=poweroff makes a short
+  # press shut down immediately (seen repeatedly in journal as "Power key pressed
+  # short" → "System is powering down"). Match laptop/ChromeOS-ish behavior:
+  # short → suspend, long → poweroff. (Hardware EC still force-cuts after ~10s.)
+  services.logind.settings.Login = {
+    HandlePowerKey = "suspend";
+    HandlePowerKeyLongPress = "poweroff";
+  };
+
   # Intel Tiger Lake iGPU (i3-1115G4 / device 0x9a78): VA-API for Parsec's
   # FFMPEG hardware encode/decode. Without intel-media-driver there is no
   # iHD_drv_video.so under /run/opengl-driver and Parsec falls back to software.
