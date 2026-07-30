@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "end4-qs-wayland-wait" ];
+  system.nixos.tags = [ "end4-qt5compat" ];
 }
