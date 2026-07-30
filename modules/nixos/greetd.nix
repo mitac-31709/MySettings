@@ -71,6 +71,31 @@ let
   # is used — not a minimal .conf that skips the II startup path.
   #
   # Fall back to end4.conf if lua is missing (older HM generations / partial sync).
+  # Wait for Hyprland's Wayland socket, then start qs if II's hyprland.start
+  # did not. Must NOT run qs before WAYLAND_DISPLAY exists — that crashes Qt
+  # ("Failed to create wl_display") and leaves a blank desktop.
+  waitAndStartQs = ''
+    runtime="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+    qs_log="''${XDG_CACHE_HOME:-$HOME/.cache}/qs-end4.log"
+    i=0
+    while [ "$i" -lt 45 ]; do
+      for sock in wayland-1 wayland-0; do
+        if [ -S "$runtime/$sock" ] && ls "$runtime"/hypr/*/ >/dev/null 2>&1; then
+          export WAYLAND_DISPLAY="$sock"
+          # Give hyprland.start a moment to spawn qs first.
+          sleep 3
+          printf '[%s] safety-net: WAYLAND_DISPLAY=%s — ensuring qs\n' "$(date -Is)" "$WAYLAND_DISPLAY"
+          # -n: no-op if II already started this config.
+          qs -n -c end4-pC >>"$qs_log" 2>&1 &
+          return 0
+        fi
+      done
+      i=$((i + 1))
+      sleep 1
+    done
+    printf '[%s] safety-net: no Wayland/Hyprland socket after 45s\n' "$(date -Is)"
+  '';
+
   hyprlandStartup = pkgs.writeShellApplication {
     name = "hyprland-startup";
     runtimeInputs = [
@@ -98,12 +123,10 @@ let
       conf="$hypr_cfg/end4.conf"
 
       if [ -f "$lua" ]; then
-        printf 'using Illogical Impulse lua directly: %s\n' "$lua"
-        # Safety net: if hyprland.start hooks fail to spawn Quickshell, start it
-        # once shortly after compositor init.
-        ( sleep 2; qs -n -c end4-pC ) &
-        export HYPRLAND_CONFIG="$lua"
-        exec Hyprland --config "$lua"
+        printf 'using Illogical Impulse lua via start-hyprland: %s\n' "$lua"
+        (${waitAndStartQs}) &
+        unset HYPRLAND_CONFIG || true
+        exec start-hyprland
       fi
 
       if [ -f "$conf" ]; then
@@ -146,12 +169,10 @@ let
       conf="$hypr_cfg/end4.conf"
 
       if [ -f "$lua" ]; then
-        printf 'using Illogical Impulse lua directly\n'
-        # Safety net: if hyprland.start hooks fail to spawn Quickshell, start it
-        # once shortly after compositor init.
-        ( sleep 2; qs -n -c end4-pC ) &
-        export HYPRLAND_CONFIG="$lua"
-        exec Hyprland --config "$lua"
+        printf 'using Illogical Impulse lua via start-hyprland\n'
+        (${waitAndStartQs}) &
+        unset HYPRLAND_CONFIG || true
+        exec start-hyprland
       fi
 
       if [ -f "$conf" ]; then

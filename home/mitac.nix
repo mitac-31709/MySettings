@@ -143,6 +143,12 @@ let
         -- Mitac: end4-pC Quickshell instead of stock illogical-impulse "ii".
         hl.env("qsConfig", "end4-pC")
         EOF
+                # Hardcode qs so $qsConfig expansion cannot miss; log to cache.
+                cat > "$out/custom/execs.lua" <<'EOF'
+        hl.on("hyprland.start", function ()
+            hl.exec_cmd("bash -lc 'qs -c end4-pC >>\"$HOME/.cache/qs-end4.log\" 2>&1'")
+        end)
+        EOF
       '';
 in
 {
