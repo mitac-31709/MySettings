@@ -115,6 +115,7 @@
   services.tailscale.enable = true;
 
   # Steam needs the NixOS module (32-bit libs, FHS, steam-hardware).
+  # Also pulls in hardware.graphics.enable32Bit, which Bottles/Wine need.
   programs.steam.enable = true;
 
   hardware.enableRedistributableFirmware = true;

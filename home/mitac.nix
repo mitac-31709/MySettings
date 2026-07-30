@@ -129,6 +129,7 @@ in
       onlyoffice-desktopeditors = "gui onlyoffice-desktopeditors";
       jquake = "gui jquake";
       parsec = "gui parsecd";
+      bottles = "gui bottles";
       trayscale = "gui trayscale";
     };
     # Top ~10 lines: command output; bottom: btop. Usage: runbtop <cmd> [args...]
@@ -304,6 +305,9 @@ in
     }))
     onlyoffice-desktopeditors
     parsec-bin
+    # Wineprefix manager for Windows apps/games (FHS-wrapped). Suppresses the
+    # upstream "unsupported on NixOS" startup dialog.
+    (bottles.override { removeWarningPopup = true; })
     tmux
     trayscale
     vivaldi

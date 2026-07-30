@@ -111,6 +111,7 @@ passwd mitac
 - **Cursor** — `code-cursor`
 - **Parsec** — `parsec-bin`（Intel VA-API / `intel-media-driver` でハードウェアエンコード）
 - **Steam** — `programs.steam.enable`
+- **Bottles** — Wine プレフィックス管理（一般の Windows アプリ用）。`home.packages`
 - **Vivaldi** — `vivaldi`
 - **JQuake** — `jquake` 1.8.4（日本のリアルタイム地震マップ）
 - **ONLYOFFICE** — `onlyoffice-desktopeditors`（文書・表計算・プレゼン）
