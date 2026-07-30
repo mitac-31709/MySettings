@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "power-chords" ];
+  system.nixos.tags = [ "plasma-x11-startx" ];
 }
