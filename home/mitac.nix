@@ -2,6 +2,7 @@
   pkgs,
   lib,
   config,
+  inputs,
   ...
 }:
 
@@ -24,13 +25,93 @@ let
       ''
         ffmpeg -y -i ${windowsXpStartupMp3} -ar 44100 -ac 2 $out
       '';
+
+  # Minimal Hyprland configs for dedicated greetd sessions.
+  hyprlandCaelestiaConf = ''
+    monitor=,preferred,auto,1
+
+    exec-once = dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
+    exec-once = caelestia shell -d
+
+    input {
+      kb_layout = jp
+      follow_mouse = 1
+      touchpad {
+        natural_scroll = false
+        tap-to-click = true
+      }
+    }
+
+    general {
+      gaps_in = 4
+      gaps_out = 8
+      border_size = 2
+    }
+
+    decoration {
+      rounding = 8
+    }
+
+    bind = SUPER, Return, exec, ${pkgs.kdePackages.konsole}/bin/konsole
+    bind = SUPER, Q, killactive,
+    bind = SUPER SHIFT, E, exit,
+    bind = SUPER, F, fullscreen,
+    bind = SUPER, Space, exec, caelestia shell drawers toggle launcher
+  '';
+
+  hyprlandEnd4Conf = ''
+    monitor=,preferred,auto,1
+
+    exec-once = dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
+    exec-once = qs -c end4-pC
+
+    input {
+      kb_layout = jp
+      follow_mouse = 1
+      touchpad {
+        natural_scroll = false
+        tap-to-click = true
+      }
+    }
+
+    general {
+      gaps_in = 4
+      gaps_out = 8
+      border_size = 2
+    }
+
+    decoration {
+      rounding = 8
+    }
+
+    bind = SUPER, Return, exec, ${pkgs.kdePackages.konsole}/bin/konsole
+    bind = SUPER, Q, killactive,
+    bind = SUPER SHIFT, E, exit,
+    bind = SUPER, F, fullscreen,
+    bind = SUPER, Escape, global, quickshell:settingsToggle
+  '';
 in
 {
+  imports = [
+    inputs.caelestia-shell-aw.homeManagerModules.default
+  ];
+
   home.username = "mitac";
   home.homeDirectory = "/home/mitac";
   home.stateVersion = "26.05";
 
   programs.home-manager.enable = true;
+
+  # Caelestia-AW: package + CLI on PATH. Start from Hyprland exec-once, not under
+  # every graphical-session (would also fire on Plasma).
+  programs.caelestia = {
+    enable = true;
+    systemd.enable = false;
+    cli.enable = true;
+    settings = {
+      paths.wallpaperDir = "~/Pictures/Wallpapers";
+    };
+  };
 
   programs.bash = {
     enable = true;
@@ -40,6 +121,15 @@ in
       generations = "nixos-rebuild list-generations";
       # Emergency: stop looping SOF amp playback (Broken pipe / stuck buffer).
       audio-panic = "amixer -c 0 sset 'Left Digital' 0% && amixer -c 0 sset 'Right Digital' 0% && amixer -c 0 sset 'Left Spk' off && amixer -c 0 sset 'Right Spk' off && systemctl --user restart pulseaudio.service 2>/dev/null; systemctl --user restart pipewire.service wireplumber.service 2>/dev/null; true";
+      # Console session: wrap common GUI apps with cage when no display is up.
+      firefox = "gui firefox";
+      vivaldi = "gui vivaldi";
+      cursor = "gui cursor";
+      code-cursor = "gui cursor";
+      onlyoffice-desktopeditors = "gui onlyoffice-desktopeditors";
+      jquake = "gui jquake";
+      parsec = "gui parsecd";
+      trayscale = "gui trayscale";
     };
     # Top ~10 lines: command output; bottom: btop. Usage: runbtop <cmd> [args...]
     initExtra = ''
@@ -149,6 +239,13 @@ in
   # Bundle lazy.nvim from nixpkgs (no git clone bootstrap).
   xdg.dataFile."nvim/lazy/lazy.nvim".source = "${pkgs.vimPlugins.lazy-nvim}";
 
+  # Hyprland session configs (selected via greetd: Caelestia-AW / end4-pC).
+  xdg.configFile."hypr/caelestia.conf".text = hyprlandCaelestiaConf;
+  xdg.configFile."hypr/end4.conf".text = hyprlandEnd4Conf;
+
+  # end4-pC Quickshell config (does not overwrite other qs configs).
+  xdg.configFile."quickshell/end4-pC".source = inputs.end4-pc;
+
   # Plasma settings that live in shared KConfig files (merge, don't replace).
   # - fixed font: system monospace (was org/gnome/desktop/interface)
   # - Ctrl+Alt+T → Konsole (was GNOME Console / kgx custom keybinding)
@@ -165,6 +262,11 @@ in
       --key "Lock Session" "Meta+L,Meta+L,スクリーンをロック"
     $kwriteconfig6 --file kglobalshortcutsrc --group ksmserver \
       --key "Log Out" "Ctrl+Alt+Del	Screensaver,Ctrl+Alt+Del,ログアウト画面を表示"
+  '';
+
+  # Ensure Caelestia animated-wallpaper directory exists.
+  home.activation.caelestiaWallpaperDirs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    mkdir -p "${config.home.homeDirectory}/Pictures/Wallpapers/Animated"
   '';
 
   # Play Windows XP startup sound once Plasma/PulseAudio are up.
@@ -205,5 +307,8 @@ in
     tmux
     trayscale
     vivaldi
+    # Caelestia-AW video wallpaper thumbnails / decode helpers
+    ffmpeg
+    python3Packages.pillow
   ];
 }

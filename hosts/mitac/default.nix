@@ -5,6 +5,9 @@
     ./hardware-configuration.nix
     ../../modules/nixos/common.nix
     ../../modules/nixos/plasma.nix
+    ../../modules/nixos/greetd.nix
+    ../../modules/nixos/console-gui.nix
+    ../../modules/nixos/hyprland.nix
     ../../modules/nixos/chromebook.nix
     ../../modules/nixos/backup.nix
     ../../modules/nixos/release.nix

@@ -1,6 +1,6 @@
 # MySettings — NixOS flake（mitac）
 
-ホスト／ユーザー `mitac` 向けの Flakes + Home Manager 構成（KDE Plasma）。
+ホスト／ユーザー `mitac` 向けの Flakes + Home Manager 構成。ログインは **greetd + tuigreet** で、複数セッションを切り替え可能。
 
 ## ブランチ
 
@@ -8,6 +8,19 @@
 |----------|------|
 | `main` | **作業・適用の既定**。汎用デスクトップ／ノート、および delbin Chromebook 向け設定を含む |
 | `chromebook` | レガシー。新規作業には使わない |
+
+## セッション（greetd + tuigreet）
+
+起動後の tuigreet でセッションを選びます（`--remember-session` で前回選択を記憶）。
+
+| セッション | 内容 |
+|------------|------|
+| **Console** | DE なし（TTY）。GUI は `gui <app>` またはエイリアス（`firefox` など）で **cage** によりアプリ単位起動。終了で TTY に戻る |
+| **Plasma** | 既存の KDE Plasma 6 |
+| **Caelestia-AW** | Hyprland + Caelestia shell（動画壁紙対応フォーク） |
+| **end4-pC** | Hyprland + Quickshell の end4-pC 設定 |
+
+Caelestia の動画壁紙は `~/Pictures/Wallpapers/Animated/` に配置（`.mp4` / `.webm` / `.mkv` / `.gif`）。
 
 ## 世代と Git タグ
 
@@ -60,6 +73,7 @@ git push origin "gen/NN-<slug>"
 | 19 | （適用後にタグ予定） | `pulse-sof-fix` ラベル | 音声を PulseAudio へ（SOF Broken-pipe ループ回避）。`sudo nixos-rebuild switch` 後に `gen/19-pulse-sof-fix` を打つ |
 | 20 | （適用後にタグ予定） | `pulse-hw-sink` ラベル | Pulse で sof スピーカーを hw:0,0 直結。`sudo nixos-rebuild switch` 後に `gen/20-pulse-hw-sink` を打つ |
 | 21 | （適用後にタグ予定） | `xp-startup` ラベル | ログイン後に Windows XP 起動音。`sudo nixos-rebuild switch` 後に `gen/21-xp-startup` を打つ |
+| 22 | （適用後にタグ予定） | `multi-session-greetd` ラベル | greetd+tuigreet・Console(cage)・Plasma・Caelestia-AW・end4-pC。`sudo nixos-rebuild switch` 後に `gen/22-multi-session-greetd` を打つ |
 
 タグ一覧: `git tag -l 'gen/*'` または GitHub の Tags ページ。
 
@@ -104,6 +118,10 @@ passwd mitac
 - **Mozc** — Fcitx5 エンジン（日本語入力）
 - **フォント** — JetBrainsMono Nerd Font（ターミナル／等幅の既定）
 - **暗号化バックアップ** — `restic` + `rclone` で `/home` を Google Drive へ。鍵は Bitwarden（`rbw`）。詳細は下記。
+- **マルチセッション** — greetd + tuigreet（Console / Plasma / Caelestia-AW / end4-pC）
+- **gui** — Console 用。`cage` で単一 GUI アプリを起動（`gui firefox` など）
+- **Caelestia-AW** — Hyprland シェル（動画壁紙）。flake: `caelestia-shell-aw` / `caelestia-cli-aw`
+- **end4-pC** — Quickshell 設定（`~/.config/quickshell/end4-pC`）
 
 ## 日本語入力（Mozc）
 

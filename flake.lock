@@ -17,6 +17,94 @@
         "type": "github"
       }
     },
+    "caelestia-cli-aw": {
+      "inputs": {
+        "caelestia-shell": "caelestia-shell",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1785373827,
+        "narHash": "sha256-j7VG6CNVI44RkcItGZOHlMEf7YfciH6sPeH2s19v31Q=",
+        "owner": "AdiAmbassador",
+        "repo": "caelestia-cli-aw",
+        "rev": "558e2e36c13274befe6bfe629ce0d385ae5950e3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "AdiAmbassador",
+        "repo": "caelestia-cli-aw",
+        "type": "github"
+      }
+    },
+    "caelestia-shell": {
+      "inputs": {
+        "caelestia-cli": [
+          "caelestia-cli-aw"
+        ],
+        "m3shapes": "m3shapes",
+        "nixpkgs": [
+          "caelestia-cli-aw",
+          "nixpkgs"
+        ],
+        "quickshell": "quickshell"
+      },
+      "locked": {
+        "lastModified": 1785337843,
+        "narHash": "sha256-8/tOYeRQGbsbsOZcaVbPrelVzQtrNDnzKPOUDdOSzKc=",
+        "owner": "caelestia-dots",
+        "repo": "shell",
+        "rev": "06b4fe077ba1f0510fa75cf19bfb18614ca15868",
+        "type": "github"
+      },
+      "original": {
+        "owner": "caelestia-dots",
+        "repo": "shell",
+        "type": "github"
+      }
+    },
+    "caelestia-shell-aw": {
+      "inputs": {
+        "caelestia-cli": [
+          "caelestia-cli-aw"
+        ],
+        "m3shapes": "m3shapes_2",
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "quickshell": "quickshell_2"
+      },
+      "locked": {
+        "lastModified": 1784456114,
+        "narHash": "sha256-1SeoDvevLfTim0LlfhZG3EfJ+Zn2Fo8+QusxLNTLTbM=",
+        "owner": "AdiAmbassador",
+        "repo": "caelestia-shell-aw",
+        "rev": "20f95a6a331d8b479630a493ae07954e887a821a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "AdiAmbassador",
+        "repo": "caelestia-shell-aw",
+        "type": "github"
+      }
+    },
+    "end4-pc": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785266248,
+        "narHash": "sha256-4ZAZtjeMnMC4lnpJ8BYnONOJWgu0HncWkl/1Ga34pVo=",
+        "owner": "pctrade",
+        "repo": "end4-pC",
+        "rev": "e2cb161f2d6c57168f7287e3d39eb8e124a842fe",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pctrade",
+        "repo": "end4-pC",
+        "type": "github"
+      }
+    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -37,6 +125,40 @@
         "type": "github"
       }
     },
+    "m3shapes": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1781017666,
+        "narHash": "sha256-kfHyzZaPHgqZML48OA+5JwBOsLdQJ2ci/aGPShvUB4Y=",
+        "owner": "soramanew",
+        "repo": "m3shapes",
+        "rev": "bdc327b29f95394a732baf3c9b19658ba23755b6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "soramanew",
+        "repo": "m3shapes",
+        "rev": "bdc327b29f95394a732baf3c9b19658ba23755b6",
+        "type": "github"
+      }
+    },
+    "m3shapes_2": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1781017666,
+        "narHash": "sha256-kfHyzZaPHgqZML48OA+5JwBOsLdQJ2ci/aGPShvUB4Y=",
+        "owner": "soramanew",
+        "repo": "m3shapes",
+        "rev": "bdc327b29f95394a732baf3c9b19658ba23755b6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "soramanew",
+        "repo": "m3shapes",
+        "rev": "bdc327b29f95394a732baf3c9b19658ba23755b6",
+        "type": "github"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1785090369,
@@ -53,9 +175,55 @@
         "type": "github"
       }
     },
+    "quickshell": {
+      "inputs": {
+        "nixpkgs": [
+          "caelestia-cli-aw",
+          "caelestia-shell",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1784799776,
+        "narHash": "sha256-6AM0doj8hSNav9qkX4dOHOp1LSjegdQ+VmzDz9MnWAs=",
+        "ref": "refs/heads/master",
+        "rev": "10b439fc6e3fd65c15fe1c486271b31da05ed023",
+        "revCount": 833,
+        "type": "git",
+        "url": "https://git.outfoxxed.me/outfoxxed/quickshell"
+      },
+      "original": {
+        "type": "git",
+        "url": "https://git.outfoxxed.me/outfoxxed/quickshell"
+      }
+    },
+    "quickshell_2": {
+      "inputs": {
+        "nixpkgs": [
+          "caelestia-shell-aw",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1783673918,
+        "narHash": "sha256-cFG5vnmjJcZRVCSUaqQLOdwkX6iqF6bY8IvvmBSGSRs=",
+        "ref": "refs/heads/master",
+        "rev": "4df562dfb2475a9057f0f33a8db75808efad8670",
+        "revCount": 830,
+        "type": "git",
+        "url": "https://git.outfoxxed.me/outfoxxed/quickshell"
+      },
+      "original": {
+        "type": "git",
+        "url": "https://git.outfoxxed.me/outfoxxed/quickshell"
+      }
+    },
     "root": {
       "inputs": {
         "alsa-ucm-conf-cros": "alsa-ucm-conf-cros",
+        "caelestia-cli-aw": "caelestia-cli-aw",
+        "caelestia-shell-aw": "caelestia-shell-aw",
+        "end4-pc": "end4-pc",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs"
       }

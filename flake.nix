@@ -1,5 +1,5 @@
 {
-  description = "NixOS configuration for mitac (KDE Plasma desktop, Chromebook delbin)";
+  description = "NixOS configuration for mitac (multi-session: Console/Plasma/Hyprland, Chromebook delbin)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -10,6 +10,21 @@
     # ChromeOS ALSA UCM overlays (sof-rt5682 etc. for volteer/delbin)
     alsa-ucm-conf-cros = {
       url = "github:WeirdTreeThing/alsa-ucm-conf-cros/standalone";
+      flake = false;
+    };
+    # Caelestia shell with animated/video wallpaper support
+    caelestia-cli-aw = {
+      url = "github:AdiAmbassador/caelestia-cli-aw";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    caelestia-shell-aw = {
+      url = "github:AdiAmbassador/caelestia-shell-aw";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.caelestia-cli.follows = "caelestia-cli-aw";
+    };
+    # end-4 Quickshell fork (illogical-impulse inspired)
+    end4-pc = {
+      url = "github:pctrade/end4-pC";
       flake = false;
     };
   };
@@ -45,6 +60,7 @@
               # Rename colliding existing files instead of failing activation
               # (e.g. ~/.config/user-dirs.dirs from xdg-user-dirs).
               backupFileExtension = "backup";
+              extraSpecialArgs = { inherit inputs; };
               users.mitac = import ./home/mitac.nix;
             };
           }
