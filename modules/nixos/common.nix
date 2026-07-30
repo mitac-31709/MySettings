@@ -93,6 +93,7 @@
       "render"
       "video"
       "wheel"
+      "systemd-journal" # restic backup notify reads unit logs for progress/summary
     ];
     # Set a password after first boot: passwd mitac
   };

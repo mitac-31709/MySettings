@@ -162,7 +162,9 @@ Plasma 標準の **クリップボード**（システムトレイ、または *
   `home/mitac.nix` (`programs.rbw`).
 
 A daily `systemd` timer (`restic-backups-home.timer`) runs the backup and prunes old
-snapshots (`--keep-daily 7 --keep-weekly 5 --keep-monthly 12`).
+snapshots (`--keep-daily 7 --keep-weekly 5 --keep-monthly 12`). While a graphical
+session is logged in, Plasma desktop notifications show start / progress / finish
+(or failure) via `libnotify` (`restic-backups-home-progress.service`).
 
 ### One-time setup (secrets stay out of git / the Nix store)
 
