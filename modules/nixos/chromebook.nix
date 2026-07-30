@@ -77,7 +77,10 @@ in
   '';
 
   # --- Keyboard: ChromeOS-style top row via keyd ---
-  # Search key often appears as leftmeta; keep meta and map F-keys to media actions.
+  # Bare top-row keys → media / ChromeOS actions (as printed on the keycaps).
+  # Hold Search (leftmeta / meta layer) + top row → real F1–F12 (tuigreet
+  # session menu is F3 by default: Search+F3 / Search+更新キー).
+  # Ctrl+Alt+top row → VT switch (C-A-Fn), still needed after media remaps.
   services.keyd = {
     enable = true;
     keyboards = {
@@ -95,8 +98,35 @@ in
             f8 = "mute";
             f9 = "volumedown";
             f10 = "volumeup";
-            # Search (leftmeta) stays meta; hold for overlay if desired:
-            # leftmeta = "layer(meta)";
+          };
+          # Search held: emit real function keys (keyd's default meta layer).
+          meta = {
+            f1 = "f1";
+            f2 = "f2";
+            f3 = "f3";
+            f4 = "f4";
+            f5 = "f5";
+            f6 = "f6";
+            f7 = "f7";
+            f8 = "f8";
+            f9 = "f9";
+            f10 = "f10";
+            f11 = "f11";
+            f12 = "f12";
+          };
+          "control+alt" = {
+            f1 = "C-A-f1";
+            f2 = "C-A-f2";
+            f3 = "C-A-f3";
+            f4 = "C-A-f4";
+            f5 = "C-A-f5";
+            f6 = "C-A-f6";
+            f7 = "C-A-f7";
+            f8 = "C-A-f8";
+            f9 = "C-A-f9";
+            f10 = "C-A-f10";
+            f11 = "C-A-f11";
+            f12 = "C-A-f12";
           };
         };
       };

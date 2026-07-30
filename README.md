@@ -226,7 +226,7 @@ restic-home restore latest --target /tmp/restore
 | プラットフォーム | `volteer`（Intel Tiger Lake） |
 | GPU | Iris Xe（i3-1115G4）。`intel-media-driver` + `LIBVA_DRIVER_NAME=iHD`（Parsec 等の VA-API） |
 | オーディオ | SOF + `sof-rt5682` / `max98373`（`alsa-ucm-conf-cros` + `sof-firmware`） |
-| キーボード | `keyd` が最上段を ChromeOS 風メディアキーに割り当て |
+| キーボード | `keyd`: 最上段は ChromeOS 風メディアキー。**Search 押しながら**最上段で F1–F12（tuigreet のセッション選択は Search+F3） |
 | Flip | タブレットモード向け libinput quirk `ModelTabletModeNoSuspend=1` |
 
 ### オーディオ確認
