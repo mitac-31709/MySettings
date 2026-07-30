@@ -116,17 +116,30 @@ let
 
   iiHypr = "${inputs.dots-hyprland}/dots/.config/hypr";
 
-  # Upstream custom/ with qsConfig pointed at end4-pC (stock defaults to "ii").
-  hyprCustomEnd4 =
-    pkgs.runCommand "hypr-custom-end4"
+  # Hyprland resolves hyprland.lua through symlinks into the Nix store. Lua
+  # `require("custom.*")` then loads siblings of that resolved path — NOT
+  # ~/.config/hypr/custom. If hyprland.lua points at the raw dots-hyprland
+  # tree, stock empty custom/ wins and qsConfig stays "ii" → blank desktop
+  # (no ~/.config/quickshell/ii). Bundle lua + hyprland/ + custom/ together.
+  hyprEnd4Root =
+    pkgs.runCommand "hypr-end4-root"
       {
         preferLocalBuild = true;
       }
       ''
                 mkdir -p "$out"
-                cp -a ${iiHypr}/custom/. "$out/"
+                cp -a ${iiHypr}/hyprland.lua "$out/"
+                cp -a ${iiHypr}/hyprland "$out/"
+                cp -a ${iiHypr}/hypridle.conf "$out/"
+                cp -a ${iiHypr}/hyprlock.conf "$out/"
+                cp -a ${iiHypr}/hyprlock "$out/"
+                cp -a ${iiHypr}/custom "$out/"
                 chmod -R u+w "$out"
-                cat > "$out/variables.lua" <<'EOF'
+                cat > "$out/custom/env.lua" <<'EOF'
+        -- Loaded before execs; keep qsConfig on end4-pC even if variables load late.
+        hl.env("qsConfig", "end4-pC")
+        EOF
+                cat > "$out/custom/variables.lua" <<'EOF'
         -- Mitac: end4-pC Quickshell instead of stock illogical-impulse "ii".
         hl.env("qsConfig", "end4-pC")
         EOF
@@ -287,17 +300,18 @@ in
   # end4-pC classic fallback (see hyprlandEnd4Conf comment above).
   xdg.configFile."hypr/end4.conf".text = hyprlandEnd4Conf;
 
-  # end4-pC: Illogical Impulse Hyprland Lua tree. hyprland-startup / start-hyprland
-  # loads hyprland.lua, whose hyprland.start hook runs qs -c $qsConfig (end4-pC).
-  xdg.configFile."hypr/hyprland.lua".source = "${iiHypr}/hyprland.lua";
-  xdg.configFile."hypr/hyprland".source = "${iiHypr}/hyprland";
-  xdg.configFile."hypr/custom".source = hyprCustomEnd4;
-  xdg.configFile."hypr/hypridle.conf".source = "${iiHypr}/hypridle.conf";
-  xdg.configFile."hypr/hyprlock.conf".source = "${iiHypr}/hyprlock.conf";
-  xdg.configFile."hypr/hyprlock".source = "${iiHypr}/hyprlock";
+  # end4-pC: Illogical Impulse Hyprland tree (single store root — see hyprEnd4Root).
+  xdg.configFile."hypr/hyprland.lua".source = "${hyprEnd4Root}/hyprland.lua";
+  xdg.configFile."hypr/hyprland".source = "${hyprEnd4Root}/hyprland";
+  xdg.configFile."hypr/custom".source = "${hyprEnd4Root}/custom";
+  xdg.configFile."hypr/hypridle.conf".source = "${hyprEnd4Root}/hypridle.conf";
+  xdg.configFile."hypr/hyprlock.conf".source = "${hyprEnd4Root}/hyprlock.conf";
+  xdg.configFile."hypr/hyprlock".source = "${hyprEnd4Root}/hyprlock";
 
-  # end4-pC Quickshell config (does not overwrite other qs configs).
+  # end4-pC Quickshell config. Also expose as "ii" so a mistaken qsConfig=ii
+  # still launches a shell instead of a blank compositor.
   xdg.configFile."quickshell/end4-pC".source = inputs.end4-pc;
+  xdg.configFile."quickshell/ii".source = inputs.end4-pc;
 
   # Plasma XDG autostart also tries to spawn pulseaudio while systemd already
   # runs pulseaudio.service → app-pulseaudio@autostart.service exit-code.
