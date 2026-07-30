@@ -66,8 +66,11 @@ let
     '';
   };
 
-  hyprlandEnd4 = pkgs.writeShellApplication {
-    name = "hyprland-end4";
+  # end4-pC needs Illogical Impulse's hyprland.lua (hl.on("hyprland.start", …)
+  # starts qs, hypridle, clipboard, …). Launch via start-hyprland so that file
+  # is used — not a minimal .conf that skips the II startup path.
+  hyprlandStartup = pkgs.writeShellApplication {
+    name = "hyprland-startup";
     runtimeInputs = [
       pkgs.hyprland
       pkgs.quickshell
@@ -80,15 +83,22 @@ let
       export MITAC_SESSION=end4
       export qsConfig=end4-pC
       export QT_QPA_PLATFORM=wayland
-      conf="''${XDG_CONFIG_HOME:-$HOME/.config}/hypr/end4.conf"
-      if [ ! -f "$conf" ]; then
-        printf 'missing Hyprland config: %s\n' "$conf" >&2
+      hypr_cfg="''${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
+      if [ ! -f "$hypr_cfg/hyprland.lua" ]; then
+        printf 'missing Illogical Impulse config: %s/hyprland.lua\n' "$hypr_cfg" >&2
         exit 1
       fi
-      export HYPRLAND_CONFIG="$conf"
-      exec Hyprland --config "$conf"
+      # Do not force a classic .conf; start-hyprland loads ~/.config/hypr/hyprland.lua.
+      unset HYPRLAND_CONFIG || true
+      exec start-hyprland
     '';
   };
+
+  # Keep old name as an alias for manual starts / remembered habits.
+  hyprlandEnd4 = pkgs.runCommand "hyprland-end4" { } ''
+    mkdir -p "$out/bin"
+    ln -s ${hyprlandStartup}/bin/hyprland-startup "$out/bin/hyprland-end4"
+  '';
 
   caelestiaSession = mkWaylandSession {
     id = "caelestia-aw";
@@ -100,8 +110,8 @@ let
   end4Session = mkWaylandSession {
     id = "end4-pc";
     name = "end4-pC";
-    comment = "Hyprland with end4-pC Quickshell";
-    exec = "${hyprlandEnd4}/bin/hyprland-end4";
+    comment = "Hyprland with end4-pC Quickshell (II hyprland-startup)";
+    exec = "${hyprlandStartup}/bin/hyprland-startup";
   };
 
   # Only expose the sessions we support — hide stock hyprland / hyprland-uwsm
@@ -177,6 +187,7 @@ in
   # Wrappers on PATH for manual starts from an existing shell.
   environment.systemPackages = [
     hyprlandCaelestia
+    hyprlandStartup
     hyprlandEnd4
   ];
 }

@@ -19,7 +19,7 @@
 | **Plasma** | 既存の KDE Plasma 6 |
 | **GNOME** | GNOME Shell（Wayland）。greetd から選択 |
 | **Caelestia-AW** | Hyprland + Caelestia shell（動画壁紙対応フォーク） |
-| **end4-pC** | Hyprland + Quickshell の end4-pC 設定 |
+| **end4-pC** | Hyprland + Quickshell の end4-pC（Illogical Impulse の `hyprland.lua` / `hyprland-startup`） |
 
 Caelestia の動画壁紙は `~/Pictures/Wallpapers/Animated/` に配置（`.mp4` / `.webm` / `.mkv` / `.gif`）。
 
@@ -126,7 +126,7 @@ passwd mitac
 - **gui** — Console 用。`cage` で単一 GUI アプリを起動（`gui firefox` など）。引数なしは `apps` を起動
 - **apps** — Console／TTY 用アプリ一覧（`fzf`）。`apps --list` で一覧のみ、選択で `gui` 経由起動
 - **Caelestia-AW** — Hyprland シェル（動画壁紙）。flake: `caelestia-shell-aw` / `caelestia-cli-aw`
-- **end4-pC** — Quickshell 設定（`~/.config/quickshell/end4-pC`）
+- **end4-pC** — Quickshell 設定（`~/.config/quickshell/end4-pC`）+ Illogical Impulse の Hyprland 設定（`hyprland-startup` → `start-hyprland`）
 
 ## 日本語入力（Mozc）
 

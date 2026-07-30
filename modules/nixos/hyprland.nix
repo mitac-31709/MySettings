@@ -39,9 +39,16 @@
     };
   };
 
+  # Runtime deps for Illogical Impulse / end4-pC hyprland.start autostart.
   environment.systemPackages = with pkgs; [
     quickshell
     wl-clipboard
     hyprpicker
+    cliphist
+    hypridle
+    hyprsunset
+    brightnessctl
+    bibata-cursors
+    python3
   ];
 }
