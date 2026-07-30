@@ -69,6 +69,51 @@ let
     bind = SUPER, Space, exec, caelestia shell drawers toggle launcher
   '';
 
+  # Classic .conf fallback for end4-pC. greetd sets restartIfChanged=false, so
+  # after a switch it may keep running an older hyprland-end4 that still expects
+  # this file (II lua path only applies once greetd picks up the new sessions).
+  hyprlandEnd4Conf = ''
+    monitor=,preferred,auto,1
+
+    env = XDG_CURRENT_DESKTOP,Hyprland
+    env = XDG_SESSION_TYPE,wayland
+    env = QT_QPA_PLATFORM,wayland
+    env = qsConfig,end4-pC
+
+    exec-once = dbus-update-activation-environment --systemd --all
+    exec-once = qs -c end4-pC
+
+    input {
+      kb_layout = jp
+      follow_mouse = 1
+      touchpad {
+        natural_scroll = false
+        tap-to-click = true
+      }
+    }
+
+    general {
+      gaps_in = 4
+      gaps_out = 8
+      border_size = 2
+    }
+
+    decoration {
+      rounding = 8
+    }
+
+    misc {
+      disable_hyprland_logo = true
+      force_default_wallpaper = 0
+    }
+
+    bind = SUPER, Return, exec, ${pkgs.kdePackages.konsole}/bin/konsole
+    bind = SUPER, Q, killactive,
+    bind = SUPER SHIFT, E, exit,
+    bind = SUPER, F, fullscreen,
+    bind = SUPER, Escape, global, quickshell:settingsToggle
+  '';
+
   iiHypr = "${inputs.dots-hyprland}/dots/.config/hypr";
 
   # Upstream custom/ with qsConfig pointed at end4-pC (stock defaults to "ii").
@@ -238,6 +283,9 @@ in
 
   # Caelestia-AW: dedicated classic .conf (greetd wrapper passes --config).
   xdg.configFile."hypr/caelestia.conf".text = hyprlandCaelestiaConf;
+
+  # end4-pC classic fallback (see hyprlandEnd4Conf comment above).
+  xdg.configFile."hypr/end4.conf".text = hyprlandEnd4Conf;
 
   # end4-pC: Illogical Impulse Hyprland Lua tree. hyprland-startup / start-hyprland
   # loads hyprland.lua, whose hyprland.start hook runs qs -c $qsConfig (end4-pC).

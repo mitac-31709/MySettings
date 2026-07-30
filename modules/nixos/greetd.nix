@@ -69,12 +69,15 @@ let
   # end4-pC needs Illogical Impulse's hyprland.lua (hl.on("hyprland.start", …)
   # starts qs, hypridle, clipboard, …). Launch via start-hyprland so that file
   # is used — not a minimal .conf that skips the II startup path.
+  #
+  # Fall back to end4.conf if lua is missing (older HM generations / partial sync).
   hyprlandStartup = pkgs.writeShellApplication {
     name = "hyprland-startup";
     runtimeInputs = [
       pkgs.hyprland
       pkgs.quickshell
       pkgs.systemd
+      pkgs.coreutils
     ];
     text = ''
       export XDG_CURRENT_DESKTOP=Hyprland
@@ -83,22 +86,78 @@ let
       export MITAC_SESSION=end4
       export qsConfig=end4-pC
       export QT_QPA_PLATFORM=wayland
+
+      log_dir="''${XDG_CACHE_HOME:-$HOME/.cache}"
+      mkdir -p "$log_dir"
+      log_file="$log_dir/hyprland-startup.log"
+      exec >>"$log_file" 2>&1
+      printf '[%s] hyprland-startup begin\n' "$(date -Is)"
+
       hypr_cfg="''${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
-      if [ ! -f "$hypr_cfg/hyprland.lua" ]; then
-        printf 'missing Illogical Impulse config: %s/hyprland.lua\n' "$hypr_cfg" >&2
-        exit 1
+      lua="$hypr_cfg/hyprland.lua"
+      conf="$hypr_cfg/end4.conf"
+
+      if [ -f "$lua" ]; then
+        printf 'using Illogical Impulse lua: %s\n' "$lua"
+        unset HYPRLAND_CONFIG || true
+        exec start-hyprland
       fi
-      # Do not force a classic .conf; start-hyprland loads ~/.config/hypr/hyprland.lua.
-      unset HYPRLAND_CONFIG || true
-      exec start-hyprland
+
+      if [ -f "$conf" ]; then
+        printf 'lua missing; falling back to classic conf: %s\n' "$conf"
+        export HYPRLAND_CONFIG="$conf"
+        exec Hyprland --config "$conf"
+      fi
+
+      printf 'missing both %s and %s\n' "$lua" "$conf"
+      exit 1
     '';
   };
 
-  # Keep old name as an alias for manual starts / remembered habits.
-  hyprlandEnd4 = pkgs.runCommand "hyprland-end4" { } ''
-    mkdir -p "$out/bin"
-    ln -s ${hyprlandStartup}/bin/hyprland-startup "$out/bin/hyprland-end4"
-  '';
+  # Stable name used by older greetd session .desktop files. Prefer II startup,
+  # else classic end4.conf (greetd does not restart on switch by design).
+  hyprlandEnd4 = pkgs.writeShellApplication {
+    name = "hyprland-end4";
+    runtimeInputs = [
+      pkgs.hyprland
+      pkgs.quickshell
+      pkgs.systemd
+      pkgs.coreutils
+    ];
+    text = ''
+      export XDG_CURRENT_DESKTOP=Hyprland
+      export XDG_SESSION_DESKTOP=Hyprland
+      export XDG_SESSION_TYPE=wayland
+      export MITAC_SESSION=end4
+      export qsConfig=end4-pC
+      export QT_QPA_PLATFORM=wayland
+
+      log_dir="''${XDG_CACHE_HOME:-$HOME/.cache}"
+      mkdir -p "$log_dir"
+      log_file="$log_dir/hyprland-startup.log"
+      exec >>"$log_file" 2>&1
+      printf '[%s] hyprland-end4 begin\n' "$(date -Is)"
+
+      hypr_cfg="''${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
+      lua="$hypr_cfg/hyprland.lua"
+      conf="$hypr_cfg/end4.conf"
+
+      if [ -f "$lua" ] && command -v start-hyprland >/dev/null; then
+        printf 'using Illogical Impulse lua via start-hyprland\n'
+        unset HYPRLAND_CONFIG || true
+        exec start-hyprland
+      fi
+
+      if [ -f "$conf" ]; then
+        printf 'using classic conf: %s\n' "$conf"
+        export HYPRLAND_CONFIG="$conf"
+        exec Hyprland --config "$conf"
+      fi
+
+      printf 'missing Hyprland config: need %s or %s\n' "$lua" "$conf"
+      exit 1
+    '';
+  };
 
   caelestiaSession = mkWaylandSession {
     id = "caelestia-aw";
