@@ -7,8 +7,8 @@
     xwayland.enable = true;
   };
 
-  # Desktop-specific portals: Plasma uses KDE; Hyprland uses xdph + gtk.
-  # Without this, both stacks fight under every session (duplicate D-Bus names,
+  # Desktop-specific portals: Plasma=KDE, GNOME=gnome, Hyprland=xdph+gtk.
+  # Without this, stacks fight under every session (duplicate D-Bus names,
   # "Could not register app ID" spam).
   xdg.portal = {
     enable = true;
@@ -27,6 +27,12 @@
       kde = {
         default = [
           "kde"
+          "gtk"
+        ];
+      };
+      gnome = {
+        default = [
+          "gnome"
           "gtk"
         ];
       };

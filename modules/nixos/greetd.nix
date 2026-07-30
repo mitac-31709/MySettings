@@ -115,9 +115,12 @@ let
     do
       cp -f "$f" "$out/wayland-sessions/"
     done
-    # Plasma (and any other DE we keep)
+    # Plasma / GNOME (and any other DE we keep)
     if [ -f ${sessionData}/share/wayland-sessions/plasma.desktop ]; then
       cp -f ${sessionData}/share/wayland-sessions/plasma.desktop "$out/wayland-sessions/"
+    fi
+    if [ -f ${sessionData}/share/wayland-sessions/gnome.desktop ]; then
+      cp -f ${sessionData}/share/wayland-sessions/gnome.desktop "$out/wayland-sessions/"
     fi
     if [ -d ${sessionData}/share/xsessions ]; then
       cp -f ${sessionData}/share/xsessions/*.desktop "$out/xsessions/" 2>/dev/null || true
