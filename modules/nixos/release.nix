@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "end4-direct-hyprland" ];
+  system.nixos.tags = [ "end4-qs-wayland-wait" ];
 }
