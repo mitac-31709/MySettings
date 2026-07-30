@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "end4-qsconfig" ];
+  system.nixos.tags = [ "end4-direct-hyprland" ];
 }
