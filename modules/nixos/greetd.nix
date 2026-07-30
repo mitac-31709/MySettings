@@ -96,6 +96,15 @@ let
     printf '[%s] safety-net: no Wayland/Hyprland socket after 45s\n' "$(date -Is)"
   '';
 
+  # QML path for qs under Hyprland (Plasma already injects these).
+  # See https://github.com/end-4/dots-hyprland/issues/1750
+  qmlImportPath = lib.concatStringsSep ":" [
+    "${pkgs.kdePackages.qt5compat}/lib/qt-6/qml"
+    "${pkgs.kdePackages.qtpositioning}/lib/qt-6/qml"
+    "${pkgs.kdePackages.qtmultimedia}/lib/qt-6/qml"
+    "${pkgs.kdePackages.qtimageformats}/lib/qt-6/qml"
+  ];
+
   hyprlandStartup = pkgs.writeShellApplication {
     name = "hyprland-startup";
     runtimeInputs = [
@@ -111,6 +120,7 @@ let
       export MITAC_SESSION=end4
       export qsConfig=end4-pC
       export QT_QPA_PLATFORM=wayland
+      export QML2_IMPORT_PATH="${qmlImportPath}''${QML2_IMPORT_PATH:+:$QML2_IMPORT_PATH}"
 
       log_dir="''${XDG_CACHE_HOME:-$HOME/.cache}"
       mkdir -p "$log_dir"
@@ -157,6 +167,7 @@ let
       export MITAC_SESSION=end4
       export qsConfig=end4-pC
       export QT_QPA_PLATFORM=wayland
+      export QML2_IMPORT_PATH="${qmlImportPath}''${QML2_IMPORT_PATH:+:$QML2_IMPORT_PATH}"
 
       log_dir="''${XDG_CACHE_HOME:-$HOME/.cache}"
       mkdir -p "$log_dir"
@@ -186,18 +197,21 @@ let
     '';
   };
 
+  # Use /run/current-system paths so tuigreet --remember-session does not keep
+  # an old absolute /nix/store/.../hyprland-startup from a previous generation
+  # (that still launched Hyprland without start-hyprland / without QML paths).
   caelestiaSession = mkWaylandSession {
     id = "caelestia-aw";
     name = "Caelestia-AW";
     comment = "Hyprland with Caelestia shell (animated wallpapers)";
-    exec = "${hyprlandCaelestia}/bin/hyprland-caelestia";
+    exec = "/run/current-system/sw/bin/hyprland-caelestia";
   };
 
   end4Session = mkWaylandSession {
     id = "end4-pc";
     name = "end4-pC";
     comment = "Hyprland with end4-pC Quickshell (II hyprland-startup)";
-    exec = "${hyprlandStartup}/bin/hyprland-startup";
+    exec = "/run/current-system/sw/bin/hyprland-startup";
   };
 
   # Only expose the sessions we support — hide stock hyprland / hyprland-uwsm

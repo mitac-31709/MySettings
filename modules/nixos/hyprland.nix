@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 
 {
   programs.hyprland = {
@@ -39,9 +39,15 @@
     };
   };
 
-  # Runtime deps for Illogical Impulse / end4-pC hyprland.start autostart.
+  # end4-pC / Illogical Impulse Quickshell needs Qt5Compat.GraphicalEffects under
+  # Hyprland. Plasma injects QML paths; bare Hyprland does not
+  # (https://github.com/end-4/dots-hyprland/issues/1750).
   environment.systemPackages = with pkgs; [
     quickshell
+    kdePackages.qt5compat
+    kdePackages.qtpositioning
+    kdePackages.qtmultimedia
+    kdePackages.qtimageformats
     wl-clipboard
     hyprpicker
     cliphist
@@ -51,4 +57,15 @@
     bibata-cursors
     python3
   ];
+
+  # Prepend QML modules for qs. Plasma sessions usually already provide a
+  # richer path; mkDefault lets DE modules override if needed.
+  environment.sessionVariables.QML2_IMPORT_PATH = lib.mkDefault (
+    lib.concatStringsSep ":" [
+      "${pkgs.kdePackages.qt5compat}/lib/qt-6/qml"
+      "${pkgs.kdePackages.qtpositioning}/lib/qt-6/qml"
+      "${pkgs.kdePackages.qtmultimedia}/lib/qt-6/qml"
+      "${pkgs.kdePackages.qtimageformats}/lib/qt-6/qml"
+    ]
+  );
 }
