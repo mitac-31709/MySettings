@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "plasma-x11-startx" ];
+  system.nixos.tags = [ "gnome-session" ];
 }
