@@ -4,6 +4,7 @@
 {
   pkgs,
   inputs,
+  config,
   ...
 }:
 
@@ -18,19 +19,46 @@ let
       cp -a --no-preserve=mode ${inputs.alsa-ucm-conf-cros}/overrides/. $out/share/alsa/ucm2/
     fi
   '';
+
+  # Power button is a separate ACPI input device from the keyboard, so keyd
+  # cannot chord power+Back. This watcher implements ChromeOS-like combos.
+  chromebook-power-chords = pkgs.writers.writePython3Bin "chromebook-power-chords" {
+    libraries = [ pkgs.python3Packages.evdev ];
+    flakeIgnore = [
+      "E501"
+      "W503"
+    ];
+  } (builtins.readFile ./chromebook-power-chords.py);
 in
 {
   # --- Firmware / power (volteer uses SOF) ---
   hardware.enableRedistributableFirmware = true;
   hardware.firmware = [ pkgs.sof-firmware ];
 
-  # Chromebook side power button: default HandlePowerKey=poweroff makes a short
-  # press shut down immediately (seen repeatedly in journal as "Power key pressed
-  # short" → "System is powering down"). Match laptop/ChromeOS-ish behavior:
-  # short → suspend, long → poweroff. (Hardware EC still force-cuts after ~10s.)
+  # Power button is owned by chromebook-power-chords.service (grab + chords).
+  # Keep logind from also suspending/powering-off on KEY_POWER.
   services.logind.settings.Login = {
-    HandlePowerKey = "suspend";
-    HandlePowerKeyLongPress = "poweroff";
+    HandlePowerKey = "ignore";
+    HandlePowerKeyLongPress = "ignore";
+  };
+
+  systemd.services.chromebook-power-chords = {
+    description = "Chromebook power-button chords (logout / reboot / suspend)";
+    documentation = [ "file://${./chromebook-power-chords.py}" ];
+    wantedBy = [ "multi-user.target" ];
+    after = [
+      "keyd.service"
+      "systemd-logind.service"
+    ];
+    wants = [ "keyd.service" ];
+    serviceConfig = {
+      Type = "simple";
+      ExecStart = "${chromebook-power-chords}/bin/chromebook-power-chords";
+      Restart = "on-failure";
+      RestartSec = "1s";
+      # Root: grab LNXPWRBN, call loginctl/systemctl.
+      Environment = [ "POWER_CHORDS_USER=${config.users.users.mitac.name}" ];
+    };
   };
 
   # Intel Tiger Lake iGPU (i3-1115G4 / device 0x9a78): VA-API for Parsec's
