@@ -16,7 +16,7 @@
 | セッション | 内容 |
 |------------|------|
 | **Console** | DE なし（TTY）。`apps` でアプリ一覧／選択。GUI は `gui <app>` またはエイリアス（`firefox` など）で **cage** によりアプリ単位起動。終了で TTY に戻る |
-| **Plasma** | 既存の KDE Plasma 6 |
+| **Plasma** | KDE Plasma 6（Wayland のみ。X11 セッションは置かない） |
 | **GNOME** | GNOME Shell（Wayland）。greetd から選択 |
 | **Caelestia-AW** | Hyprland + Caelestia shell（動画壁紙対応フォーク） |
 | **end4-pC** | Hyprland + Quickshell の end4-pC（Illogical Impulse の `hyprland.lua` / `hyprland-startup`） |
