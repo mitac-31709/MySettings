@@ -9,6 +9,8 @@ so keyd cannot chord them. This watcher:
   power + Refresh       → reboot
 
 Back/Refresh are read from keyd's virtual keyboard (after top-row remaps).
+
+Chord order does not matter: Back/Refresh may be pressed before or after Power.
 """
 
 from __future__ import annotations
@@ -25,6 +27,17 @@ POWER_NAME = "Power Button"
 KEYD_NAME = "keyd virtual keyboard"
 LONG_PRESS_SEC = 2.5
 OPEN_RETRY_SEC = 1.0
+# After starting suspend, ignore further short-presses briefly (resume bounce /
+# "suspend already in progress" spam).
+SUSPEND_COOLDOWN_SEC = 3.0
+
+# keyd emits these after cros top-row remaps (f1/back → KEY_BACK, etc.).
+BACK_CODES = frozenset(
+    c for c in (getattr(ecodes, "KEY_BACK", None),) if c is not None
+)
+REFRESH_CODES = frozenset(
+    c for c in (getattr(ecodes, "KEY_REFRESH", None),) if c is not None
+)
 
 
 def log(msg: str) -> None:
@@ -76,22 +89,51 @@ def main() -> int:
         log(f"grab {POWER_NAME} failed: {err}")
         return 1
 
-    log(f"watching {power.path} ({power.name}) + {keyd.path} ({keyd.name}) for user {user}")
+    log(
+        f"watching {power.path} ({power.name}) + {keyd.path} ({keyd.name}) "
+        f"for user {user}; back={sorted(BACK_CODES)} refresh={sorted(REFRESH_CODES)}"
+    )
 
     power_down_at: float | None = None
     combo_used = False
+    back_held = False
+    refresh_held = False
+    suspend_cooldown_until = 0.0
     devices = {power.fd: power, keyd.fd: keyd}
+
+    def trigger_logout() -> None:
+        nonlocal combo_used
+        combo_used = True
+        run(["loginctl", "terminate-user", user])
+
+    def trigger_reboot() -> None:
+        nonlocal combo_used
+        combo_used = True
+        run(["systemctl", "reboot"])
+
+    def maybe_chord_from_held() -> None:
+        """If Power just went down while Back/Refresh already held."""
+        if combo_used or power_down_at is None:
+            return
+        if back_held:
+            log("chord: power while Back held → logout")
+            trigger_logout()
+        elif refresh_held:
+            log("chord: power while Refresh held → reboot")
+            trigger_reboot()
 
     while True:
         try:
-            r, _, _ = select.select(list(devices), [], [], 1.0)
+            r, _, _ = select.select(list(devices), [], [], 0.2)
         except (OSError, ValueError):
             log("select failed; reopening devices")
             return 1
 
+        now = time.monotonic()
+
         # Long-press poweroff while still held.
         if power_down_at is not None and not combo_used:
-            held = time.monotonic() - power_down_at
+            held = now - power_down_at
             if held >= LONG_PRESS_SEC:
                 combo_used = True
                 run(["systemctl", "poweroff"])
@@ -113,25 +155,38 @@ def main() -> int:
                         if key.keystate == 1:
                             power_down_at = time.monotonic()
                             combo_used = False
+                            maybe_chord_from_held()
                         elif key.keystate == 0:
-                            if power_down_at is not None and not combo_used:
+                            if (
+                                power_down_at is not None
+                                and not combo_used
+                                and time.monotonic() >= suspend_cooldown_until
+                            ):
                                 run(["systemctl", "suspend"])
+                                suspend_cooldown_until = (
+                                    time.monotonic() + SUSPEND_COOLDOWN_SEC
+                                )
                             power_down_at = None
                             combo_used = False
                         continue
 
-                    if (
-                        dev is keyd
-                        and power_down_at is not None
-                        and key.keystate == 1
-                        and not combo_used
-                    ):
-                        if code == ecodes.KEY_BACK:
-                            combo_used = True
-                            run(["loginctl", "terminate-user", user])
-                        elif code == ecodes.KEY_REFRESH:
-                            combo_used = True
-                            run(["systemctl", "reboot"])
+                    if dev is keyd:
+                        if code in BACK_CODES:
+                            if key.keystate == 1:
+                                back_held = True
+                                if power_down_at is not None and not combo_used:
+                                    log("chord: Back while power held → logout")
+                                    trigger_logout()
+                            else:
+                                back_held = False
+                        elif code in REFRESH_CODES:
+                            if key.keystate == 1:
+                                refresh_held = True
+                                if power_down_at is not None and not combo_used:
+                                    log("chord: Refresh while power held → reboot")
+                                    trigger_reboot()
+                            else:
+                                refresh_held = False
             except OSError as err:
                 log(f"read error on {dev.name}: {err}")
                 return 1
