@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "xp-startup" ];
+  system.nixos.tags = [ "multi-session-greetd" ];
 }
