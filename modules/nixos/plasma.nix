@@ -43,7 +43,9 @@
       unload-module module-alsa-card
       unload-module module-null-sink
       load-module module-alsa-sink device=hw:0,0 sink_name=speaker sink_properties=device.description=Speakers tsched=false
-      load-module module-alsa-source device=hw:0,1 source_name=headset_mic source_properties=device.description=Headset\ Microphone tsched=false
+      # Headset capture: avoid source_properties (Pulse logs "Invalid properties"
+      # with escaped descriptions). .nofail keeps speaker up if mic open fails.
+      load-module module-alsa-source device=hw:0,1 source_name=headset_mic tsched=false
       set-default-sink speaker
     '';
   };

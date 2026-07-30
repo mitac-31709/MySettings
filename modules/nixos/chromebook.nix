@@ -49,7 +49,13 @@ in
     wantedBy = [ "sound.target" ];
     serviceConfig = {
       Type = "oneshot";
+      # alsactl init exits 99 when UCM import fails but still applies a generic
+      # init ("Hardware is initialized using a generic method") — treat as OK.
       ExecStart = "${pkgs.alsa-utils}/bin/alsactl init";
+      SuccessExitStatus = [
+        0
+        99
+      ];
       ExecStartPost = pkgs.writeShellScript "chromebook-speaker-levels" ''
         set +e
         amixer=${pkgs.alsa-utils}/bin/amixer
@@ -89,7 +95,8 @@ in
       # Match cros_ec / AT / Hammer IDs from cros-keyboard-map (not all USB boards).
       cros = {
         ids = [
-          "k:0000:0000"
+          # AT Translated Set 2 (i8042 Chromebook keyboard). Do not include
+          # k:0000:0000 — that also matches sof-rt5682 Headset Jack.
           "k:0001:0001"
           "k:18d1:502b"
           "k:18d1:5030"
