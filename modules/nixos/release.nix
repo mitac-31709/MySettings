@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "gnome-session" ];
+  system.nixos.tags = [ "hyprland-startup" ];
 }
