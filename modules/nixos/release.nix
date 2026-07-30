@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "hyprland-startup" ];
+  system.nixos.tags = [ "no-plasma-x11" ];
 }
