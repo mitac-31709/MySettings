@@ -98,9 +98,12 @@ let
       conf="$hypr_cfg/end4.conf"
 
       if [ -f "$lua" ]; then
-        printf 'using Illogical Impulse lua: %s\n' "$lua"
-        unset HYPRLAND_CONFIG || true
-        exec start-hyprland
+        printf 'using Illogical Impulse lua directly: %s\n' "$lua"
+        # Safety net: if hyprland.start hooks fail to spawn Quickshell, start it
+        # once shortly after compositor init.
+        ( sleep 2; qs -n -c end4-pC ) &
+        export HYPRLAND_CONFIG="$lua"
+        exec Hyprland --config "$lua"
       fi
 
       if [ -f "$conf" ]; then
@@ -142,10 +145,13 @@ let
       lua="$hypr_cfg/hyprland.lua"
       conf="$hypr_cfg/end4.conf"
 
-      if [ -f "$lua" ] && command -v start-hyprland >/dev/null; then
-        printf 'using Illogical Impulse lua via start-hyprland\n'
-        unset HYPRLAND_CONFIG || true
-        exec start-hyprland
+      if [ -f "$lua" ]; then
+        printf 'using Illogical Impulse lua directly\n'
+        # Safety net: if hyprland.start hooks fail to spawn Quickshell, start it
+        # once shortly after compositor init.
+        ( sleep 2; qs -n -c end4-pC ) &
+        export HYPRLAND_CONFIG="$lua"
+        exec Hyprland --config "$lua"
       fi
 
       if [ -f "$conf" ]; then
