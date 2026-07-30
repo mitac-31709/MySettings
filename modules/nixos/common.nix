@@ -106,8 +106,10 @@
     libva-utils # vainfo — verify VA-API / Parsec hw encode
   ];
 
-  # Cloudflare WARP (1.1.1.1) client daemon + CLI (warp-cli / warp-diag).
+  # Cloudflare WARP (1.1.1.1): daemon + CLI, plus official GUI (warp-taskbar tray).
   services.cloudflare-warp.enable = true;
+  systemd.packages = [ pkgs.cloudflare-warp ];
+  systemd.user.services.warp-taskbar.wantedBy = [ "graphical-session.target" ];
 
   # Tailscale daemon; Trayscale (GUI) is in home.packages.
   services.tailscale.enable = true;
