@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "power-key-suspend" ];
+  system.nixos.tags = [ "power-chords" ];
 }
