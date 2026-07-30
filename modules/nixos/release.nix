@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "no-plasma-x11" ];
+  system.nixos.tags = [ "end4-qsconfig" ];
 }
