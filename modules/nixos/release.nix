@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "end4-qml-sw" ];
+  system.nixos.tags = [ "power-back-logout" ];
 }
