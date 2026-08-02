@@ -287,11 +287,17 @@ Parsec を開き直してハードウェアエンコーダーが選べるか確�
 ```
 flake.nix
 hosts/mitac/
-modules/nixos/common.nix      # locale、ユーザー、mozc、フォント
+modules/nixos/common.nix       # locale、ユーザー、mozc、フォント
+modules/nixos/desktop.nix      # plasma + greetd + console-gui + hyprland
 modules/nixos/plasma.nix
-modules/nixos/chromebook.nix  # delbin 専用
-modules/nixos/backup.nix      # encrypted /home → Google Drive (restic/rclone/rbw)
-modules/nixos/release.nix     # system.nixos.tags（世代ラベルのスラッグ）
-home/mitac.nix
+modules/nixos/greetd.nix       # tuigreet セッション定義
+modules/nixos/hyprland.nix     # portals / Hyprland 共通パッケージ
+modules/nixos/console-gui.nix  # Console 用 gui / apps
+modules/nixos/chromebook.nix   # delbin 専用
+modules/nixos/backup.nix       # encrypted /home → Google Drive (restic/rclone/rbw)
+modules/nixos/release.nix      # system.nixos.tags（世代ラベルのスラッグ）
+home/mitac.nix                 # エントリ（bash / git / パッケージ）
+home/plasma.nix                # Plasma 設定・起動音
+home/sessions/hyprland.nix     # Caelestia-AW / end4-pC
 home/nvim/
 ```
