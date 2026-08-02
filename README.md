@@ -16,11 +16,15 @@
 | セッション | 内容 |
 |------------|------|
 | **Console** | DE なし（TTY）。`apps` でアプリ一覧／選択。GUI は `gui <app>` またはエイリアス（`firefox` など）で **cage** によりアプリ単位起動。終了で TTY に戻る |
-| **Plasma** | 既存の KDE Plasma 6 |
-| **Caelestia-AW** | Hyprland + Caelestia shell（動画壁紙対応フォーク） |
+| **Plasma** | KDE Plasma 6（Wayland）。X11 セッションは greeter に出さない |
+| **Caelestia-AW** | Hyprland（`start-hyprland`）+ Caelestia shell（動画壁紙対応フォーク） |
 | **end4-pC** | Hyprland + Quickshell の end4-pC 設定 |
 
+共通（Hyprland 系）: Polkit / Fcitx5 / cliphist を `exec-once` で起動。ランチャーは **Super+R**（**Super+Space** は Mozc 切替のまま）。音量・輝度は PulseAudio / brightnessctl 経由。
+
 Caelestia の動画壁紙は `~/Pictures/Wallpapers/Animated/` に配置（`.mp4` / `.webm` / `.mkv` / `.gif`）。
+
+end4-pC は初回の matugen／壁紙自動適用をスキップして起動を安定化しています（外観はシェル既定色）。設定パネル（**Super+Escape**）から後で変更できます。
 
 ## 世代と Git タグ
 

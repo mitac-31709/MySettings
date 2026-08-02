@@ -26,16 +26,25 @@ let
         ffmpeg -y -i ${windowsXpStartupMp3} -ar 44100 -ac 2 $out
       '';
 
-  # Minimal Hyprland configs for dedicated greetd sessions.
-  hyprlandCaelestiaConf = ''
+  polkitAgent = "${pkgs.kdePackages.polkit-kde-agent-1}/libexec/polkit-kde-authentication-agent-1";
+
+  # Shared Hyprland preamble for Caelestia / end4 sessions (greetd wrappers).
+  # Keep Super+Space free for Fcitx5/Mozc; use Super+R for launchers.
+  hyprlandSharedPreamble = ''
     monitor=,preferred,auto,1
 
     env = XDG_CURRENT_DESKTOP,Hyprland
+    env = XDG_SESSION_DESKTOP,Hyprland
     env = XDG_SESSION_TYPE,wayland
     env = QT_QPA_PLATFORM,wayland
+    env = MOZ_ENABLE_WAYLAND,1
 
     exec-once = dbus-update-activation-environment --systemd --all
-    exec-once = caelestia shell -d
+    exec-once = systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE QT_QPA_PLATFORM
+    exec-once = ${polkitAgent}
+    exec-once = fcitx5 -d --replace
+    exec-once = wl-paste --type text --watch cliphist store
+    exec-once = wl-paste --type image --watch cliphist store
 
     input {
       kb_layout = jp
@@ -59,56 +68,54 @@ let
     misc {
       disable_hyprland_logo = true
       force_default_wallpaper = 0
+      vfr = true
     }
+
+    # PulseAudio volume (PipeWire audio is off on sof-rt5682; shell PW widgets
+    # may be empty — hardware keys still work via pactl).
+    bindel = , XF86AudioRaiseVolume, exec, ${pkgs.pulseaudio}/bin/pactl set-sink-volume @DEFAULT_SINK@ +5%
+    bindel = , XF86AudioLowerVolume, exec, ${pkgs.pulseaudio}/bin/pactl set-sink-volume @DEFAULT_SINK@ -5%
+    bindl = , XF86AudioMute, exec, ${pkgs.pulseaudio}/bin/pactl set-sink-mute @DEFAULT_SINK@ toggle
+    bindl = , XF86AudioMicMute, exec, ${pkgs.pulseaudio}/bin/pactl set-source-mute @DEFAULT_SOURCE@ toggle
+    bindel = , XF86MonBrightnessUp, exec, ${pkgs.brightnessctl}/bin/brightnessctl set +5%
+    bindel = , XF86MonBrightnessDown, exec, ${pkgs.brightnessctl}/bin/brightnessctl set 5%-
 
     bind = SUPER, Return, exec, ${pkgs.kdePackages.konsole}/bin/konsole
     bind = SUPER, Q, killactive,
     bind = SUPER SHIFT, E, exit,
     bind = SUPER, F, fullscreen,
-    bind = SUPER, Space, exec, caelestia shell drawers toggle launcher
+  '';
+
+  hyprlandCaelestiaConf = ''
+    ${hyprlandSharedPreamble}
+    exec-once = caelestia shell -d
+    bind = SUPER, R, exec, caelestia shell drawers toggle launcher
   '';
 
   hyprlandEnd4Conf = ''
-    monitor=,preferred,auto,1
-
-    env = XDG_CURRENT_DESKTOP,Hyprland
-    env = XDG_SESSION_TYPE,wayland
-    env = QT_QPA_PLATFORM,wayland
+    ${hyprlandSharedPreamble}
     env = qsConfig,end4-pC
-
-    exec-once = dbus-update-activation-environment --systemd --all
+    env = QUICKSHELL_CONFIG_NAME,end4-pC
     exec-once = qs -c end4-pC
-
-    input {
-      kb_layout = jp
-      follow_mouse = 1
-      touchpad {
-        natural_scroll = false
-        tap-to-click = true
-      }
-    }
-
-    general {
-      gaps_in = 4
-      gaps_out = 8
-      border_size = 2
-    }
-
-    decoration {
-      rounding = 8
-    }
-
-    misc {
-      disable_hyprland_logo = true
-      force_default_wallpaper = 0
-    }
-
-    bind = SUPER, Return, exec, ${pkgs.kdePackages.konsole}/bin/konsole
-    bind = SUPER, Q, killactive,
-    bind = SUPER SHIFT, E, exit,
-    bind = SUPER, F, fullscreen,
     bind = SUPER, Escape, global, quickshell:settingsToggle
+    bind = SUPER, R, global, quickshell:searchToggle
   '';
+
+  # Patch end4-pC so color/wallpaper scripts target this qs config name, not "ii".
+  end4PcPatched =
+    pkgs.runCommand "end4-pC-patched"
+      {
+        preferLocalBuild = true;
+      }
+      ''
+        mkdir -p "$out"
+        cp -a --no-preserve=mode ${inputs.end4-pc}/. "$out/"
+        find "$out" -type f \( -name '*.sh' -o -name '*.qml' -o -name '*.py' \) \
+          -exec sed -i \
+            -e 's/QUICKSHELL_CONFIG_NAME="ii"/QUICKSHELL_CONFIG_NAME="end4-pC"/g' \
+            -e 's/QUICKSHELL_CONFIG_NAME=ii/QUICKSHELL_CONFIG_NAME=end4-pC/g' \
+            {} +
+      '';
 in
 {
   imports = [
@@ -263,8 +270,8 @@ in
   xdg.configFile."hypr/caelestia.conf".text = hyprlandCaelestiaConf;
   xdg.configFile."hypr/end4.conf".text = hyprlandEnd4Conf;
 
-  # end4-pC Quickshell config (does not overwrite other qs configs).
-  xdg.configFile."quickshell/end4-pC".source = inputs.end4-pc;
+  # end4-pC Quickshell config (patched so scripts use end4-pC, not upstream "ii").
+  xdg.configFile."quickshell/end4-pC".source = end4PcPatched;
 
   # Plasma XDG autostart also tries to spawn pulseaudio while systemd already
   # runs pulseaudio.service → app-pulseaudio@autostart.service exit-code.
@@ -277,6 +284,20 @@ in
   # are hidden from tuigreet, but keep ~/.config/hypr clean for --config use).
   home.activation.removeAutogenHyprlandLua = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     rm -f "${config.home.homeDirectory}/.config/hypr/hyprland.lua"
+  '';
+
+  # Skip end4 FirstRunExperience wallpaper/matugen cascade on a fresh home
+  # (needs a full illogical-impulse dots tree). Shell still starts with
+  # Appearance.qml defaults; user can theme later from settings.
+  home.activation.end4SkipFirstRun = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    state="${config.home.homeDirectory}/.local/state/quickshell/user"
+    mkdir -p "$state" \
+      "${config.home.homeDirectory}/.config/illogical-impulse" \
+      "${config.home.homeDirectory}/.local/state/quickshell/user/generated"
+    if [ ! -f "$state/first_run.txt" ]; then
+      printf '%s\n' 'This file is just here to confirm you have been greeted :>' \
+        > "$state/first_run.txt"
+    fi
   '';
 
   # Plasma settings that live in shared KConfig files (merge, don't replace).
@@ -304,6 +325,7 @@ in
 
   # Play Windows XP startup sound once Plasma/PulseAudio are up.
   # Sleep gives sof-rt5682 / speaker sink a moment after session start.
+  # Scoped to KDE so Hyprland sessions do not play it.
   systemd.user.services.windows-xp-startup-sound = {
     Unit = {
       Description = "Windows XP startup sound";
@@ -312,6 +334,7 @@ in
         "graphical-session.target"
       ];
       Requires = [ "pulseaudio.service" ];
+      ConditionEnvironment = "XDG_CURRENT_DESKTOP=KDE";
     };
     Service = {
       Type = "oneshot";
