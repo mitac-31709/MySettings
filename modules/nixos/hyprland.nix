@@ -54,8 +54,8 @@
     playerctl
     # Theming helpers (end4 Material You pipeline; safe no-ops if unused)
     matugen
-    # Wallpaper backends some widgets expect
-    swww
+    # Wallpaper backends some widgets expect (nixpkgs renamed swww → awww)
+    awww
     mpvpaper
     # Auth / secrets for shell prompts
     kdePackages.polkit-kde-agent-1
