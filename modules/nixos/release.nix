@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "restic-notify" ];
+  system.nixos.tags = [ "session-stable" ];
 }
