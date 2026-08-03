@@ -19,6 +19,7 @@
 | **Plasma** | KDE Plasma 6（Wayland のみ。X11 セッションは置かない） |
 | **GNOME** | GNOME Shell（Wayland）。greetd から選択 |
 | **Xfce** | Xfce Session（Wayland / labwc）。greetd から選択 |
+| **Sway** | キーボード中心のタイル WM。tuigreet に近い暗色 TUI 風＋`apps`（fzf）ランチャー |
 | **Caelestia-AW** | Hyprland（`start-hyprland`）+ Caelestia shell（動画壁紙対応フォーク） |
 | **end4-pC** | Hyprland + Quickshell の end4-pC（Illogical Impulse の `hyprland.lua` / `hyprland-startup`） |
 
@@ -30,7 +31,7 @@ GUI セッションでは Plasma 基準で次を揃えています（テーマ�
 |------|------|------|
 | 検索 | **Super+R** | 各環境ネイティブの検索／ランチャー |
 | 端末 | **Ctrl+Alt+T** | Konsole（Hyprland は Super+Return も可） |
-| ロック | **Super+L** | 画面ロック（Plasma / GNOME / Xfce 既定系、Hyprland は hyprlock） |
+| ロック | **Super+L** | 画面ロック（Plasma / GNOME / Xfce 既定系、Sway は swaylock、Hyprland は hyprlock） |
 | タッチパッド | — | 自然スクロール off・タップクリック on・入力中もポインタ有効 |
 
 | セッション | Super+R で開くもの |
@@ -38,6 +39,7 @@ GUI セッションでは Plasma 基準で次を揃えています（テーマ�
 | **Plasma** | KRunner（既定の Alt+Space 等も残す） |
 | **GNOME** | Overview の検索欄（Super 単体も従来どおり） |
 | **Xfce** | App Finder（`xfce4-appfinder`） |
+| **Sway** | `apps`（fzf。Console と同じ一覧 UI） |
 | **Caelestia-AW** | Caelestia launcher |
 | **end4-pC** | Quickshell 検索（Super タップも従来どおり） |
 | **Console** | キーバインドなし。相当操作は `apps`（fzf） |
@@ -152,7 +154,7 @@ passwd mitac
 - **Mozc** — Fcitx5 エンジン（日本語入力）
 - **フォント** — JetBrainsMono Nerd Font（ターミナル／等幅の既定）
 - **暗号化バックアップ** — `restic` + `rclone` で `/home` を Google Drive へ。鍵は Bitwarden（`rbw`）。詳細は下記。
-- **マルチセッション** — greetd + tuigreet（Console / Plasma / GNOME / Xfce / Caelestia-AW / end4-pC）
+- **マルチセッション** — greetd + tuigreet（Console / Plasma / GNOME / Xfce / Sway / Caelestia-AW / end4-pC）
 - **gui** — Console 用。`cage` で単一 GUI アプリを起動（`gui firefox` など）。引数なしは `apps` を起動
 - **apps** — Console／TTY 用アプリ一覧（`fzf`）。`apps --list` で一覧のみ、選択で `gui` 経由起動
 - **Caelestia-AW** — Hyprland シェル（動画壁紙）。flake: `caelestia-shell-aw` / `caelestia-cli-aw`
@@ -314,10 +316,11 @@ Parsec を開き直してハードウェアエンコーダーが選べるか確�
 flake.nix
 hosts/mitac/
 modules/nixos/common.nix          # locale、ユーザー、mozc、フォント
-modules/nixos/desktop.nix         # plasma + gnome + xfce + greetd + console-gui + hyprland + 共有 XKB/印刷
+modules/nixos/desktop.nix         # plasma + gnome + xfce + sway + greetd + console-gui + hyprland + 共有 XKB/印刷
 modules/nixos/plasma.nix          # Plasma DE のみ
 modules/nixos/gnome.nix
 modules/nixos/xfce.nix            # Xfce Wayland（labwc）
+modules/nixos/sway.nix            # Sway（TUI 風キーボード WM）
 modules/nixos/greetd.nix          # tuigreet + セッション選別
 modules/nixos/greetd/sessions.nix # Console / Caelestia / end4 ラッパー
 modules/nixos/hyprland.nix        # portals / Hyprland 共通パッケージ / QML
@@ -332,6 +335,7 @@ home/programs.nix                 # git / rbw / neovim / 共通パッケージ
 home/plasma.nix                   # Plasma 設定・Konsole・起動音
 home/gnome.nix                    # GNOME ショートカット／タッチパッド
 home/xfce.nix                     # Xfce ショートカット（見た目は既定）
+home/sway.nix                     # Sway TUI 風設定・apps ランチャー
 home/sessions/hyprland.nix        # Caelestia-AW / end4-pC（II hypr tree）
 home/nvim/
 ```

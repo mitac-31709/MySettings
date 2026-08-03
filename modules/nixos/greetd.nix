@@ -25,6 +25,9 @@ let
     if [ -f ${sessionData}/share/wayland-sessions/xfce-wayland.desktop ]; then
       cp -f ${sessionData}/share/wayland-sessions/xfce-wayland.desktop "$out/wayland-sessions/"
     fi
+    if [ -f ${sessionData}/share/wayland-sessions/sway.desktop ]; then
+      cp -f ${sessionData}/share/wayland-sessions/sway.desktop "$out/wayland-sessions/"
+    fi
   '';
 in
 {

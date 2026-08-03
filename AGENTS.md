@@ -3,7 +3,7 @@
 ## Cursor Cloud specific instructions
 
 This repo is a **NixOS system-configuration flake** (host/user `mitac`, multi-session
-greetd desktop — Console / Plasma / GNOME / Xfce / Hyprland — with ASUS CX5500FE "delbin"
+greetd desktop — Console / Plasma / GNOME / Xfce / Sway / Hyprland — with ASUS CX5500FE "delbin"
 Chromebook support on `main`). It is **not** a long-running app/server: "running" it
 means evaluating and building the system configuration with Nix. Applying it for real
 (`sudo nixos-rebuild switch --flake .#mitac`) only works on the actual target NixOS
