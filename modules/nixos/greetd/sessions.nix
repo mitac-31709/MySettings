@@ -1,4 +1,4 @@
-# Console / Hyprland session wrappers and .desktop packages for greetd.
+# Hyprland session wrappers and .desktop packages for greetd.
 {
   config,
   pkgs,
@@ -72,19 +72,6 @@ let
         exec Hyprland --config "$conf"
       '';
     };
-
-  # Console: authenticated TTY login shell (not a Wayland compositor).
-  consoleWrapper = pkgs.writeShellApplication {
-    name = "mitac-console-session";
-    runtimeInputs = [ pkgs.bashInteractive ];
-    text = ''
-      export XDG_SESSION_TYPE=tty
-      export XDG_CURRENT_DESKTOP=Console
-      export XDG_SESSION_DESKTOP=Console
-      unset WAYLAND_DISPLAY DISPLAY
-      exec ${pkgs.bashInteractive}/bin/bash -l
-    '';
-  };
 
   hyprlandCaelestia = mkHyprlandConfWrapper {
     name = "hyprland-caelestia";
@@ -172,14 +159,6 @@ let
     '';
   };
 
-  consoleSession = mkWaylandSession {
-    id = "00-console";
-    name = "Console";
-    comment = "Text console without desktop environment (use: apps / gui <app>)";
-    exec = "${consoleWrapper}/bin/mitac-console-session";
-    desktopNames = "Console";
-  };
-
   # Use /run/current-system paths so tuigreet --remember-session does not keep
   # an old absolute /nix/store/... wrapper from a previous generation.
   caelestiaSession = mkWaylandSession {
@@ -197,7 +176,6 @@ let
   };
 
   customSessions = [
-    consoleSession
     caelestiaSession
     end4Session
   ];
@@ -215,7 +193,6 @@ in
     services.displayManager.sessionPackages = customSessions;
 
     environment.systemPackages = [
-      consoleWrapper
       hyprlandCaelestia
       hyprlandStartup
       hyprlandEnd4

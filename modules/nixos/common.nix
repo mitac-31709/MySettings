@@ -110,7 +110,7 @@
   # Cloudflare WARP (1.1.1.1): daemon + CLI, plus official GUI (warp-taskbar tray).
   services.cloudflare-warp.enable = true;
   systemd.packages = [ pkgs.cloudflare-warp ];
-  # Tray applet is Plasma-oriented; keep it off Hyprland/Console sessions.
+  # Tray applet is Plasma-oriented; keep it off Hyprland/Sway sessions.
   systemd.user.services.warp-taskbar = {
     wantedBy = [ "graphical-session.target" ];
     unitConfig.ConditionEnvironment = "XDG_CURRENT_DESKTOP=KDE";
