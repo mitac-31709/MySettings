@@ -21,9 +21,16 @@
 | **Caelestia-AW** | Hyprland（`start-hyprland`）+ Caelestia shell（動画壁紙対応フォーク） |
 | **end4-pC** | Hyprland + Quickshell の end4-pC（Illogical Impulse の `hyprland.lua` / `hyprland-startup`） |
 
-### 検索欄（全セッション共通）
+### 共通操作感（見た目は各環境のまま）
 
-GUI セッションでは **Super+R** で各環境ネイティブの検索欄を開きます（見た目・テーマは変更しません。**Super+Space** は Mozc 切替のまま）。
+GUI セッションでは Plasma 基準で次を揃えています（テーマ・パネル・シェルの見た目は変更しません。**Super+Space** は Mozc 切替のまま）。
+
+| 操作 | キー | 動作 |
+|------|------|------|
+| 検索 | **Super+R** | 各環境ネイティブの検索／ランチャー |
+| 端末 | **Ctrl+Alt+T** | Konsole（Hyprland は Super+Return も可） |
+| ロック | **Super+L** | 画面ロック（Plasma / GNOME 既定、Hyprland は hyprlock） |
+| タッチパッド | — | 自然スクロール off・タップクリック on・入力中もポインタ有効 |
 
 | セッション | Super+R で開くもの |
 |------------|-------------------|
@@ -32,6 +39,8 @@ GUI セッションでは **Super+R** で各環境ネイティブの検索欄を
 | **Caelestia-AW** | Caelestia launcher |
 | **end4-pC** | Quickshell 検索（Super タップも従来どおり） |
 | **Console** | キーバインドなし。相当操作は `apps`（fzf） |
+
+電源ボタン（全セッション共通・`chromebook-power-chords`）: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+Back=強制ログアウト** / **電源+Refresh=再起動**。
 
 共通（Hyprland 系 / Caelestia）: Polkit / Fcitx5 / cliphist を `exec-once` で起動。音量・輝度は PulseAudio / brightnessctl 経由。
 

@@ -11,6 +11,8 @@ so keyd cannot chord them. This watcher:
 Back/Refresh are read from keyd's virtual keyboard (after top-row remaps).
 
 Chord order does not matter: Back/Refresh may be pressed before or after Power.
+On Power release, a short grace window still accepts Back/Refresh before suspend
+(covers near-simultaneous taps where Power comes up slightly first).
 """
 
 from __future__ import annotations
@@ -30,13 +32,26 @@ OPEN_RETRY_SEC = 1.0
 # After starting suspend, ignore further short-presses briefly (resume bounce /
 # "suspend already in progress" spam).
 SUSPEND_COOLDOWN_SEC = 3.0
+# After Power key-up, wait this long for a late Back/Refresh before suspending.
+CHORD_GRACE_SEC = 0.4
 
-# keyd emits these after cros top-row remaps (f1/back → KEY_BACK, etc.).
+# keyd remaps top-row to KEY_BACK / KEY_REFRESH; also accept bare F1/F2 in case
+# the virtual keyboard still surfaces those codes.
 BACK_CODES = frozenset(
-    c for c in (getattr(ecodes, "KEY_BACK", None),) if c is not None
+    c
+    for c in (
+        getattr(ecodes, "KEY_BACK", None),
+        getattr(ecodes, "KEY_F1", None),
+    )
+    if c is not None
 )
 REFRESH_CODES = frozenset(
-    c for c in (getattr(ecodes, "KEY_REFRESH", None),) if c is not None
+    c
+    for c in (
+        getattr(ecodes, "KEY_REFRESH", None),
+        getattr(ecodes, "KEY_F2", None),
+    )
+    if c is not None
 )
 
 
@@ -91,7 +106,8 @@ def main() -> int:
 
     log(
         f"watching {power.path} ({power.name}) + {keyd.path} ({keyd.name}) "
-        f"for user {user}; back={sorted(BACK_CODES)} refresh={sorted(REFRESH_CODES)}"
+        f"for user {user}; back={sorted(BACK_CODES)} refresh={sorted(REFRESH_CODES)} "
+        f"grace={CHORD_GRACE_SEC}s"
     )
 
     power_down_at: float | None = None
@@ -99,16 +115,21 @@ def main() -> int:
     back_held = False
     refresh_held = False
     suspend_cooldown_until = 0.0
+    # When set, a short press is pending suspend until this monotonic time
+    # (or until a chord arrives / cooldown blocks it).
+    pending_suspend_until: float | None = None
     devices = {power.fd: power, keyd.fd: keyd}
 
     def trigger_logout() -> None:
-        nonlocal combo_used
+        nonlocal combo_used, pending_suspend_until
         combo_used = True
+        pending_suspend_until = None
         run(["loginctl", "terminate-user", user])
 
     def trigger_reboot() -> None:
-        nonlocal combo_used
+        nonlocal combo_used, pending_suspend_until
         combo_used = True
+        pending_suspend_until = None
         run(["systemctl", "reboot"])
 
     def maybe_chord_from_held() -> None:
@@ -122,20 +143,39 @@ def main() -> int:
             log("chord: power while Refresh held → reboot")
             trigger_reboot()
 
+    def arm_pending_suspend() -> None:
+        nonlocal pending_suspend_until
+        if time.monotonic() < suspend_cooldown_until:
+            pending_suspend_until = None
+            return
+        pending_suspend_until = time.monotonic() + CHORD_GRACE_SEC
+
     while True:
         try:
-            r, _, _ = select.select(list(devices), [], [], 0.2)
+            r, _, _ = select.select(list(devices), [], [], 0.05)
         except (OSError, ValueError):
             log("select failed; reopening devices")
             return 1
 
         now = time.monotonic()
 
+        # Flush deferred short-press suspend after the chord grace window.
+        if (
+            pending_suspend_until is not None
+            and now >= pending_suspend_until
+            and not combo_used
+        ):
+            pending_suspend_until = None
+            if now >= suspend_cooldown_until:
+                run(["systemctl", "suspend"])
+                suspend_cooldown_until = now + SUSPEND_COOLDOWN_SEC
+
         # Long-press poweroff while still held.
         if power_down_at is not None and not combo_used:
             held = now - power_down_at
             if held >= LONG_PRESS_SEC:
                 combo_used = True
+                pending_suspend_until = None
                 run(["systemctl", "poweroff"])
                 power_down_at = None
 
@@ -155,35 +195,44 @@ def main() -> int:
                         if key.keystate == 1:
                             power_down_at = time.monotonic()
                             combo_used = False
+                            pending_suspend_until = None
                             maybe_chord_from_held()
                         elif key.keystate == 0:
-                            if (
-                                power_down_at is not None
-                                and not combo_used
-                                and time.monotonic() >= suspend_cooldown_until
-                            ):
-                                run(["systemctl", "suspend"])
-                                suspend_cooldown_until = (
-                                    time.monotonic() + SUSPEND_COOLDOWN_SEC
-                                )
+                            if power_down_at is not None and not combo_used:
+                                arm_pending_suspend()
                             power_down_at = None
-                            combo_used = False
+                            # Keep combo_used if a chord already fired; otherwise
+                            # clear so the grace window can still accept Back.
+                            if combo_used:
+                                pending_suspend_until = None
+                            else:
+                                combo_used = False
                         continue
 
                     if dev is keyd:
+                        power_or_grace = (
+                            power_down_at is not None or pending_suspend_until is not None
+                        )
+                        if key.keystate == 1 and power_or_grace and not combo_used:
+                            if code not in BACK_CODES and code not in REFRESH_CODES:
+                                log(
+                                    f"key while power/grace: code={code} "
+                                    f"name={getattr(key, 'keycode', '?')}"
+                                )
+
                         if code in BACK_CODES:
                             if key.keystate == 1:
                                 back_held = True
-                                if power_down_at is not None and not combo_used:
-                                    log("chord: Back while power held → logout")
+                                if power_or_grace and not combo_used:
+                                    log("chord: Back while power/grace → logout")
                                     trigger_logout()
                             else:
                                 back_held = False
                         elif code in REFRESH_CODES:
                             if key.keystate == 1:
                                 refresh_held = True
-                                if power_down_at is not None and not combo_used:
-                                    log("chord: Refresh while power held → reboot")
+                                if power_or_grace and not combo_used:
+                                    log("chord: Refresh while power/grace → reboot")
                                     trigger_reboot()
                             else:
                                 refresh_held = False

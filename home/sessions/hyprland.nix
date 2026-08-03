@@ -12,6 +12,7 @@ let
   pactl = "${pkgs.pulseaudio}/bin/pactl";
   brightnessctl = "${pkgs.brightnessctl}/bin/brightnessctl";
   konsole = "${pkgs.kdePackages.konsole}/bin/konsole";
+  hyprlock = "${pkgs.hyprlock}/bin/hyprlock";
 
   # Shared classic-.conf preamble (Caelestia + end4 fallback).
   # Super+Space stays free for Fcitx5/Mozc; launchers use Super+R.
@@ -37,6 +38,7 @@ let
       touchpad {
         natural_scroll = false
         tap-to-click = true
+        disable_while_typing = false
       }
     }
 
@@ -65,6 +67,8 @@ let
     bindel = , XF86MonBrightnessDown, exec, ${brightnessctl} set 5%-
 
     bind = SUPER, Return, exec, ${konsole}
+    bind = CTRL ALT, T, exec, ${konsole}
+    bind = SUPER, L, exec, ${hyprlock}
     bind = SUPER, Q, killactive,
     bind = SUPER SHIFT, E, exit,
     bind = SUPER, F, fullscreen,
@@ -139,10 +143,12 @@ let
             -- hyprland.execs already starts qs; another launch duplicates the top bar.
         end)
         EOF
-        # Stock end4 opens search on Super tap; add Super+R for cross-session parity.
-        cat > "$out/custom/keybinds.lua" <<'EOF'
+        # Stock end4 opens search on Super tap; add Plasma-parity binds.
+        cat > "$out/custom/keybinds.lua" <<EOF
         hl.bind("CTRL+SUPER+ALT+Slash", hl.dsp.exec_cmd("xdg-open ~/.config/hypr/custom/keybinds.lua"), {description = "Edit user keybinds"} )
         hl.bind("SUPER + R", hl.dsp.global("quickshell:searchToggle"), { description = "Shell: Toggle search" })
+        hl.bind("CTRL + ALT + T", hl.dsp.exec_cmd("${konsole}"), { description = "Terminal: Konsole" })
+        hl.bind("SUPER + L", hl.dsp.exec_cmd("${hyprlock}"), { description = "Lock screen" })
         EOF
       '';
 in

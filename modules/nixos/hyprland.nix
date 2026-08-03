@@ -82,8 +82,9 @@ in
       slurp
       jq
       libnotify
-      # Idle / night light (II hyprland.start)
+      # Idle / lock / night light (II hyprland.start + Super+L parity)
       hypridle
+      hyprlock
       hyprsunset
       # Backlight / media keys
       brightnessctl
