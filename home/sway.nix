@@ -130,7 +130,11 @@ in
       ];
     };
 
-    # No extraConfig needed for custom floating launchers.
+    extraConfig = ''
+      # showmethekey floating overlay
+      for_window [app_id="showmethekey-gtk"] floating enable, sticky enable, border none
+      for_window [app_id="one.alynx.showmethekey"] floating enable, sticky enable, border none
+    '';
   };
 
   programs.waybar = {
