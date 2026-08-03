@@ -97,10 +97,9 @@ in
           mod = "Mod4";
         in
         lib.mkOptionDefault {
-          # Super+F → apps; restore default Super+R (resize) by not overriding it.
-          # Fullscreen moves to Super+Shift+F.
-          "${mod}+f" = "exec ${appsLauncher}";
-          "${mod}+Shift+f" = "fullscreen";
+          # Super+D → apps (also default $mod+d via menu). Super+F stays fullscreen.
+          # Super+R stays Sway default resize (do not override).
+          "${mod}+d" = "exec ${appsLauncher}";
           "Ctrl+Alt+t" = "exec ${ghosttyBin}";
           "${mod}+Return" = "exec ${ghosttyBin}";
           "${mod}+l" = "exec ${lockCmd}";

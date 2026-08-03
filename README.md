@@ -28,14 +28,14 @@ GUI セッションでは次を揃えています（テーマ・パネル・シ�
 
 | 操作 | キー | 動作 |
 |------|------|------|
-| 検索 | **Super+R**（Sway は **Super+F**） | 各環境ネイティブの検索／ランチャー |
+| 検索 | **Super+R**（Sway は **Super+D**） | 各環境ネイティブの検索／ランチャー |
 | 端末 | **Ctrl+Alt+T** | Ghostty（Hyprland / Sway は Super+Return も可） |
 | ロック | **Super+L** | 画面ロック（Plasma / GNOME / Xfce 既定系、Sway は swaylock、Hyprland は hyprlock） |
 | タッチパッド | — | 自然スクロール off・タップクリック on・入力中もポインタ有効 |
 
 | セッション | 検索／ランチャー |
 |------------|------------------|
-| **Sway** | **Super+F** → `apps`（fzf）。Super+D も `menu`（同じ）。Super+R は Sway 既定の resize。fullscreen は Super+Shift+F |
+| **Sway** | **Super+D** → `apps`（fzf / `menu`）。Super+F は fullscreen、Super+R は resize（Sway 既定） |
 | **Plasma** | Super+R → KRunner（既定の Alt+Space 等も残す） |
 | **GNOME** | Super+R → Overview の検索欄（Super 単体も従来どおり） |
 | **Xfce** | Super+R → App Finder（`xfce4-appfinder`） |
@@ -154,7 +154,7 @@ passwd mitac
 - **暗号化バックアップ** — `restic` + `rclone` で `/home` を Google Drive へ。鍵は Bitwarden（`rbw`）。詳細は下記。
 - **マルチセッション** — greetd + tuigreet（Sway 第一 / Plasma / GNOME / Xfce / Caelestia-AW / end4-pC）
 - **gui** — ディスプレイ無し時は `cage` で単一 GUI アプリを起動（`gui firefox` など）。引数なしは `apps` を起動
-- **apps** — `fzf` アプリ一覧。Sway の Super+F（および Super+D）ランチャー。選択で `gui` 経由起動
+- **apps** — `fzf` アプリ一覧。Sway の Super+D ランチャー。選択で `gui` 経由起動
 - **Caelestia-AW** — Hyprland シェル（動画壁紙）。flake: `caelestia-shell-aw` / `caelestia-cli-aw`
 - **end4-pC** — Quickshell 設定（`~/.config/quickshell/end4-pC`）+ Illogical Impulse の Hyprland 設定（`hyprland-startup` → `start-hyprland`）
 
