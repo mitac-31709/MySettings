@@ -1,4 +1,4 @@
-# Graphical multi-session stack: greeter + Console + Plasma + GNOME + Xfce + Sway + Hyprland.
+# Graphical multi-session stack: greeter + Plasma + GNOME + Xfce + Sway + Hyprland.
 { ... }:
 
 {

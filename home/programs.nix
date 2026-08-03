@@ -88,5 +88,7 @@ in
     tmux
     trayscale
     vivaldi
+    # On-screen keystroke overlay (useful for demos / Chromebook Fn keys).
+    showmethekey
   ];
 }

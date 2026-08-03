@@ -1,5 +1,5 @@
 {
-  description = "NixOS configuration for mitac (multi-session: Console/Plasma/Hyprland, Chromebook delbin)";
+  description = "NixOS configuration for mitac (multi-session: Sway/Plasma/Hyprland, Chromebook delbin)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";

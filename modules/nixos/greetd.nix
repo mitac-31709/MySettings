@@ -10,9 +10,13 @@ let
   sessionData = config.services.displayManager.sessionData.desktops;
   customSessions = config.mitac.greetd.customSessions;
 
-  # Curated tuigreet list: hide stock hyprland / plasmax11; include DE Wayland sessions.
+  # Curated tuigreet list: Sway first, then Hyprland customs, then DE Wayland.
+  # Hide stock hyprland / plasmax11; stock sway is renamed to 00-sway for sort order.
   curatedSessions = pkgs.runCommand "mitac-greetd-sessions" { } ''
     mkdir -p "$out/wayland-sessions"
+    if [ -f ${sessionData}/share/wayland-sessions/sway.desktop ]; then
+      cp -f ${sessionData}/share/wayland-sessions/sway.desktop "$out/wayland-sessions/00-sway.desktop"
+    fi
     ${lib.concatMapStrings (s: ''
       cp -f ${s}/share/wayland-sessions/*.desktop "$out/wayland-sessions/"
     '') customSessions}
@@ -24,9 +28,6 @@ let
     fi
     if [ -f ${sessionData}/share/wayland-sessions/xfce-wayland.desktop ]; then
       cp -f ${sessionData}/share/wayland-sessions/xfce-wayland.desktop "$out/wayland-sessions/"
-    fi
-    if [ -f ${sessionData}/share/wayland-sessions/sway.desktop ]; then
-      cp -f ${sessionData}/share/wayland-sessions/sway.desktop "$out/wayland-sessions/"
     fi
   '';
 in

@@ -19,7 +19,7 @@ in
       # Emergency: stop looping SOF amp playback (Broken pipe / stuck buffer).
       # Mute levels via the shared chromebook-speaker-levels helper (systemPackages).
       audio-panic = "chromebook-speaker-levels mute && systemctl --user restart pulseaudio.service 2>/dev/null; systemctl --user restart pipewire.service wireplumber.service 2>/dev/null; true";
-      # Console session: wrap common GUI apps with cage when no display is up.
+      # When no display is up, gui wraps with cage; otherwise passthrough.
       firefox = "gui firefox";
       vivaldi = "gui vivaldi";
       cursor = "gui cursor";
