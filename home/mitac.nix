@@ -7,6 +7,7 @@
     ./programs.nix
     ./plasma.nix
     ./gnome.nix
+    ./xfce.nix
     ./sessions/hyprland.nix
   ];
 

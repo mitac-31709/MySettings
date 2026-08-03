@@ -1,16 +1,17 @@
-# Graphical multi-session stack: greeter + Console + Plasma + GNOME + Hyprland.
+# Graphical multi-session stack: greeter + Console + Plasma + GNOME + Xfce + Hyprland.
 { ... }:
 
 {
   imports = [
     ./plasma.nix
     ./gnome.nix
+    ./xfce.nix
     ./greetd.nix
     ./console-gui.nix
     ./hyprland.nix
   ];
 
-  # Shared by Plasma / GNOME / Hyprland sessions (layout + printing).
+  # Shared by Plasma / GNOME / Xfce / Hyprland sessions (layout + printing).
   services.xserver.enable = true;
   services.xserver.xkb = {
     layout = "jp";

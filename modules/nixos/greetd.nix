@@ -10,7 +10,7 @@ let
   sessionData = config.services.displayManager.sessionData.desktops;
   customSessions = config.mitac.greetd.customSessions;
 
-  # Curated tuigreet list: hide stock hyprland / plasmax11; include Plasma + GNOME Wayland.
+  # Curated tuigreet list: hide stock hyprland / plasmax11; include DE Wayland sessions.
   curatedSessions = pkgs.runCommand "mitac-greetd-sessions" { } ''
     mkdir -p "$out/wayland-sessions"
     ${lib.concatMapStrings (s: ''
@@ -21,6 +21,9 @@ let
     fi
     if [ -f ${sessionData}/share/wayland-sessions/gnome.desktop ]; then
       cp -f ${sessionData}/share/wayland-sessions/gnome.desktop "$out/wayland-sessions/"
+    fi
+    if [ -f ${sessionData}/share/wayland-sessions/xfce-wayland.desktop ]; then
+      cp -f ${sessionData}/share/wayland-sessions/xfce-wayland.desktop "$out/wayland-sessions/"
     fi
   '';
 in
