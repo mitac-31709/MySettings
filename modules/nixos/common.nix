@@ -8,7 +8,7 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  networking.hostName = "mitac";
+  networking.hostName = "NixOS";
   networking.networkmanager.enable = true;
 
   # Avoid leaving networking down if activation stops NM then fails mid-switch
