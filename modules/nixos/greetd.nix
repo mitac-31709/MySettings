@@ -58,9 +58,7 @@ let
         export XDG_SESSION_TYPE=wayland
         export MITAC_SESSION=${lib.escapeShellArg sessionId}
         ${lib.concatStringsSep "\n" (
-          lib.mapAttrsToList (
-            k: v: "export ${k}=${lib.escapeShellArg v}"
-          ) extraExports
+          lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg v}") extraExports
         )}
         conf="''${XDG_CONFIG_HOME:-$HOME/.config}/hypr/${configName}"
         if [ ! -f "$conf" ]; then
