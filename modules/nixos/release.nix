@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "search-super-r" ];
+  system.nixos.tags = [ "desktop-feel-parity" ];
 }
