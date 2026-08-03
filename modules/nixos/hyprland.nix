@@ -18,6 +18,8 @@ in
 {
   programs.hyprland = {
     enable = true;
+    # Custom greetd wrappers launch via start-hyprland; keep UWSM off so stock
+    # hyprland-uwsm.desktop stays out of the curated tuigreet list.
     withUWSM = false;
     xwayland.enable = true;
   };
@@ -59,12 +61,32 @@ in
   ]
   ++ qsQtDeps
   ++ (with pkgs; [
+    # Clipboard + picker
     wl-clipboard
-    hyprpicker
     cliphist
+    hyprpicker
+    # Screenshots / recording helpers used by end4 scripts
+    grim
+    slurp
+    jq
+    libnotify
+    # Idle / night light (II hyprland.start)
     hypridle
     hyprsunset
+    # Backlight / media keys
     brightnessctl
+    playerctl
+    # Theming helpers (end4 Material You pipeline; safe no-ops if unused)
+    matugen
+    # Wallpaper backends (nixpkgs renamed swww → awww)
+    awww
+    mpvpaper
+    # Auth / secrets for shell prompts
+    kdePackages.polkit-kde-agent-1
+    libsecret
+    # Fonts / cursors for Material UI in end4 / Caelestia
+    material-symbols
+    rubik
     bibata-cursors
     python3
   ]);

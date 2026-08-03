@@ -4,12 +4,7 @@
   imports = [
     ./hardware-configuration.nix
     ../../modules/nixos/common.nix
-    ../../modules/nixos/plasma.nix
-    ../../modules/nixos/gnome.nix
-    ../../modules/nixos/greetd.nix
-    ../../modules/nixos/console-gui.nix
-    ../../modules/nixos/hyprland.nix
-
+    ../../modules/nixos/desktop.nix
     ../../modules/nixos/chromebook.nix
     ../../modules/nixos/backup.nix
     ../../modules/nixos/release.nix

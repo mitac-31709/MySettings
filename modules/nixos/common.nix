@@ -110,7 +110,11 @@
   # Cloudflare WARP (1.1.1.1): daemon + CLI, plus official GUI (warp-taskbar tray).
   services.cloudflare-warp.enable = true;
   systemd.packages = [ pkgs.cloudflare-warp ];
-  systemd.user.services.warp-taskbar.wantedBy = [ "graphical-session.target" ];
+  # Tray applet is Plasma-oriented; keep it off Hyprland/Console sessions.
+  systemd.user.services.warp-taskbar = {
+    wantedBy = [ "graphical-session.target" ];
+    unitConfig.ConditionEnvironment = "XDG_CURRENT_DESKTOP=KDE";
+  };
 
   # Tailscale daemon; Trayscale (GUI) is in home.packages.
   services.tailscale.enable = true;

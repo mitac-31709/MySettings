@@ -1,8 +1,6 @@
 {
   pkgs,
-  lib,
   config,
-  inputs,
   ...
 }:
 
@@ -10,150 +8,11 @@ let
   # Absolute flake path so `rebuild` works from $HOME (or any cwd), not only
   # when the shell is already inside the MySettings checkout.
   flakeUri = "${config.home.homeDirectory}/MySettings#mitac";
-
-  # Classic Windows XP startup cue (personal desktop flair). Converted to WAV
-  # so paplay can play it through PulseAudio after login.
-  windowsXpStartupMp3 = pkgs.fetchurl {
-    url = "https://www.myinstants.com/media/sounds/windows-xp-startup.mp3";
-    hash = "sha256-xswjAInX8eq89eIjQ8VyuGkhEboVRAT2r0Rms4Kdnzo=";
-  };
-  windowsXpStartupWav =
-    pkgs.runCommand "windows-xp-startup.wav"
-      {
-        nativeBuildInputs = [ pkgs.ffmpeg ];
-      }
-      ''
-        ffmpeg -y -i ${windowsXpStartupMp3} -ar 44100 -ac 2 $out
-      '';
-
-  # Minimal Hyprland config for Caelestia-AW greetd session only.
-  # end4-pC uses Illogical Impulse hyprland.lua (see xdg.configFile below).
-  hyprlandCaelestiaConf = ''
-    monitor=,preferred,auto,1
-
-    env = XDG_CURRENT_DESKTOP,Hyprland
-    env = XDG_SESSION_TYPE,wayland
-    env = QT_QPA_PLATFORM,wayland
-
-    exec-once = dbus-update-activation-environment --systemd --all
-    exec-once = caelestia shell -d
-
-    input {
-      kb_layout = jp
-      follow_mouse = 1
-      touchpad {
-        natural_scroll = false
-        tap-to-click = true
-      }
-    }
-
-    general {
-      gaps_in = 4
-      gaps_out = 8
-      border_size = 2
-    }
-
-    decoration {
-      rounding = 8
-    }
-
-    misc {
-      disable_hyprland_logo = true
-      force_default_wallpaper = 0
-    }
-
-    bind = SUPER, Return, exec, ${pkgs.kdePackages.konsole}/bin/konsole
-    bind = SUPER, Q, killactive,
-    bind = SUPER SHIFT, E, exit,
-    bind = SUPER, F, fullscreen,
-    bind = SUPER, Space, exec, caelestia shell drawers toggle launcher
-  '';
-
-  # Classic .conf fallback for end4-pC. greetd sets restartIfChanged=false, so
-  # after a switch it may keep running an older hyprland-end4 that still expects
-  # this file (II lua path only applies once greetd picks up the new sessions).
-  hyprlandEnd4Conf = ''
-    monitor=,preferred,auto,1
-
-    env = XDG_CURRENT_DESKTOP,Hyprland
-    env = XDG_SESSION_TYPE,wayland
-    env = QT_QPA_PLATFORM,wayland
-    env = qsConfig,end4-pC
-
-    exec-once = dbus-update-activation-environment --systemd --all
-    exec-once = qs -c end4-pC
-
-    input {
-      kb_layout = jp
-      follow_mouse = 1
-      touchpad {
-        natural_scroll = false
-        tap-to-click = true
-      }
-    }
-
-    general {
-      gaps_in = 4
-      gaps_out = 8
-      border_size = 2
-    }
-
-    decoration {
-      rounding = 8
-    }
-
-    misc {
-      disable_hyprland_logo = true
-      force_default_wallpaper = 0
-    }
-
-    bind = SUPER, Return, exec, ${pkgs.kdePackages.konsole}/bin/konsole
-    bind = SUPER, Q, killactive,
-    bind = SUPER SHIFT, E, exit,
-    bind = SUPER, F, fullscreen,
-    bind = SUPER, Escape, global, quickshell:settingsToggle
-  '';
-
-  iiHypr = "${inputs.dots-hyprland}/dots/.config/hypr";
-
-  # Hyprland resolves hyprland.lua through symlinks into the Nix store. Lua
-  # `require("custom.*")` then loads siblings of that resolved path — NOT
-  # ~/.config/hypr/custom. If hyprland.lua points at the raw dots-hyprland
-  # tree, stock empty custom/ wins and qsConfig stays "ii" → blank desktop
-  # (no ~/.config/quickshell/ii). Bundle lua + hyprland/ + custom/ together.
-  hyprEnd4Root =
-    pkgs.runCommand "hypr-end4-root"
-      {
-        preferLocalBuild = true;
-      }
-      ''
-                mkdir -p "$out"
-                cp -a ${iiHypr}/hyprland.lua "$out/"
-                cp -a ${iiHypr}/hyprland "$out/"
-                cp -a ${iiHypr}/hypridle.conf "$out/"
-                cp -a ${iiHypr}/hyprlock.conf "$out/"
-                cp -a ${iiHypr}/hyprlock "$out/"
-                cp -a ${iiHypr}/custom "$out/"
-                chmod -R u+w "$out"
-                cat > "$out/custom/env.lua" <<'EOF'
-        -- Loaded before execs; keep qsConfig on end4-pC even if variables load late.
-        hl.env("qsConfig", "end4-pC")
-        EOF
-                cat > "$out/custom/variables.lua" <<'EOF'
-        -- Mitac: end4-pC Quickshell instead of stock illogical-impulse "ii".
-        hl.env("qsConfig", "end4-pC")
-        EOF
-                # Hardcode qs so $qsConfig expansion cannot miss; log to cache.
-                cat > "$out/custom/execs.lua" <<'EOF'
-        hl.on("hyprland.start", function ()
-            hl.exec_cmd("bash -lc 'qs -c end4-pC >>\"$HOME/.cache/qs-end4.log\" 2>&1'")
-        end)
-        EOF
-      '';
 in
 {
   imports = [
-    inputs.caelestia-shell-aw.homeManagerModules.default
+    ./plasma.nix
+    ./sessions/hyprland.nix
   ];
 
   home.username = "mitac";
@@ -161,17 +20,6 @@ in
   home.stateVersion = "26.05";
 
   programs.home-manager.enable = true;
-
-  # Caelestia-AW: package + CLI on PATH. Start from Hyprland exec-once, not under
-  # every graphical-session (would also fire on Plasma).
-  programs.caelestia = {
-    enable = true;
-    systemd.enable = false;
-    cli.enable = true;
-    settings = {
-      paths.wallpaperDir = "~/Pictures/Wallpapers";
-    };
-  };
 
   programs.bash = {
     enable = true;
@@ -211,7 +59,6 @@ in
 
   programs.git = {
     enable = true;
-    # Update these to your own identity.
     settings.user = {
       name = "mitac";
       email = "mitac31709@gmail.com";
@@ -225,12 +72,10 @@ in
     settings = {
       email = "mitac31709@gmail.com";
       # Official Bitwarden EU cloud (defaults are .com / US).
-      # No trailing slashes — rbw is picky about these.
       base_url = "https://api.bitwarden.eu";
       identity_url = "https://identity.bitwarden.eu";
       ui_url = "https://vault.bitwarden.eu";
       notifications_url = "https://notifications.bitwarden.eu";
-      # Qt pinentry for Plasma.
       pinentry = pkgs.pinentry-qt;
       lock_timeout = 3600;
     };
@@ -261,114 +106,8 @@ in
     };
   };
 
-  # NumLock on at Plasma startup (0 = on, 1 = off, 2 = leave unchanged).
-  # Touchpad: traditional scrolling; keep pointer active while typing.
-  # ClickMethod=2 = clickfinger (1/2/3 fingers = left/right/middle), not button areas.
-  # Libinput section is for delbin's Elan Touchpad (0x04f3:0x00c2).
-  xdg.configFile."kcminputrc".text = ''
-    [Keyboard]
-    NumLock=0
-
-    [Libinput/1267/194/Elan Touchpad]
-    ClickMethod=2
-    DisableWhileTyping=false
-    NaturalScroll=false
-    TapToClick=true
-  '';
-
-  # Konsole default profile: JetBrainsMono Nerd Font 12 (was GNOME Console dconf).
-  xdg.configFile."konsolerc".text = ''
-    [Desktop Entry]
-    DefaultProfile=Mitac.profile
-
-    [General]
-    ConfigVersion=1
-  '';
-
-  xdg.dataFile."konsole/Mitac.profile".text = ''
-    [Appearance]
-    Font=JetBrainsMono Nerd Font,12,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
-
-    [General]
-    Name=Mitac
-    Parent=FALLBACK/
-  '';
-
-  # Neovim config → ~/.config/nvim
   xdg.configFile."nvim".source = ./nvim;
-
-  # Bundle lazy.nvim from nixpkgs (no git clone bootstrap).
   xdg.dataFile."nvim/lazy/lazy.nvim".source = "${pkgs.vimPlugins.lazy-nvim}";
-
-  # Caelestia-AW: dedicated classic .conf (greetd wrapper passes --config).
-  xdg.configFile."hypr/caelestia.conf".text = hyprlandCaelestiaConf;
-
-  # end4-pC classic fallback (see hyprlandEnd4Conf comment above).
-  xdg.configFile."hypr/end4.conf".text = hyprlandEnd4Conf;
-
-  # end4-pC: Illogical Impulse Hyprland tree (single store root — see hyprEnd4Root).
-  xdg.configFile."hypr/hyprland.lua".source = "${hyprEnd4Root}/hyprland.lua";
-  xdg.configFile."hypr/hyprland".source = "${hyprEnd4Root}/hyprland";
-  xdg.configFile."hypr/custom".source = "${hyprEnd4Root}/custom";
-  xdg.configFile."hypr/hypridle.conf".source = "${hyprEnd4Root}/hypridle.conf";
-  xdg.configFile."hypr/hyprlock.conf".source = "${hyprEnd4Root}/hyprlock.conf";
-  xdg.configFile."hypr/hyprlock".source = "${hyprEnd4Root}/hyprlock";
-
-  # end4-pC Quickshell config. Also expose as "ii" so a mistaken qsConfig=ii
-  # still launches a shell instead of a blank compositor.
-  xdg.configFile."quickshell/end4-pC".source = inputs.end4-pc;
-  xdg.configFile."quickshell/ii".source = inputs.end4-pc;
-
-  # Plasma XDG autostart also tries to spawn pulseaudio while systemd already
-  # runs pulseaudio.service → app-pulseaudio@autostart.service exit-code.
-  xdg.configFile."autostart/pulseaudio.desktop".text = ''
-    [Desktop Entry]
-    Hidden=true
-  '';
-
-  # Plasma settings that live in shared KConfig files (merge, don't replace).
-  # - fixed font: system monospace (was org/gnome/desktop/interface)
-  # - Ctrl+Alt+T → Konsole (was GNOME Console / kgx custom keybinding)
-  # - Chromebook lock key (XF86ScreenSaver): show leave dialog instead of
-  #   locking immediately (Meta+L still locks on purpose).
-  home.activation.plasmaDesktopPrefs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    kwriteconfig6=${pkgs.kdePackages.kconfig}/bin/kwriteconfig6
-    $kwriteconfig6 --file kdeglobals --group General --key fixed \
-      "JetBrainsMono Nerd Font,12,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
-    $kwriteconfig6 --file kglobalshortcutsrc \
-      --group services --group org.kde.konsole.desktop \
-      --key _launch "Ctrl+Alt+T"
-    $kwriteconfig6 --file kglobalshortcutsrc --group ksmserver \
-      --key "Lock Session" "Meta+L,Meta+L,スクリーンをロック"
-    $kwriteconfig6 --file kglobalshortcutsrc --group ksmserver \
-      --key "Log Out" "Ctrl+Alt+Del	Screensaver,Ctrl+Alt+Del,ログアウト画面を表示"
-  '';
-
-  # Ensure Caelestia animated-wallpaper directory exists.
-  home.activation.caelestiaWallpaperDirs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    mkdir -p "${config.home.homeDirectory}/Pictures/Wallpapers/Animated"
-  '';
-
-  # Play Windows XP startup sound once Plasma/PulseAudio are up.
-  # Sleep gives sof-rt5682 / speaker sink a moment after session start.
-  systemd.user.services.windows-xp-startup-sound = {
-    Unit = {
-      Description = "Windows XP startup sound";
-      After = [
-        "pulseaudio.service"
-        "graphical-session.target"
-      ];
-      Requires = [ "pulseaudio.service" ];
-    };
-    Service = {
-      Type = "oneshot";
-      ExecStartPre = "${pkgs.coreutils}/bin/sleep 3";
-      ExecStart = "${pkgs.pulseaudio}/bin/paplay ${windowsXpStartupWav}";
-    };
-    Install = {
-      WantedBy = [ "graphical-session.target" ];
-    };
-  };
 
   home.packages = with pkgs; [
     btop
@@ -384,14 +123,10 @@ in
     }))
     onlyoffice-desktopeditors
     parsec-bin
-    # Wineprefix manager for Windows apps/games (FHS-wrapped). Suppresses the
-    # upstream "unsupported on NixOS" startup dialog.
+    # Wineprefix manager for Windows apps/games (FHS-wrapped).
     (bottles.override { removeWarningPopup = true; })
     tmux
     trayscale
     vivaldi
-    # Caelestia-AW video wallpaper thumbnails / decode helpers
-    ffmpeg
-    python3Packages.pillow
   ];
 }

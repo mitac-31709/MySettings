@@ -18,10 +18,14 @@
 | **Console** | DE なし（TTY）。`apps` でアプリ一覧／選択。GUI は `gui <app>` またはエイリアス（`firefox` など）で **cage** によりアプリ単位起動。終了で TTY に戻る |
 | **Plasma** | KDE Plasma 6（Wayland のみ。X11 セッションは置かない） |
 | **GNOME** | GNOME Shell（Wayland）。greetd から選択 |
-| **Caelestia-AW** | Hyprland + Caelestia shell（動画壁紙対応フォーク） |
+| **Caelestia-AW** | Hyprland（`start-hyprland`）+ Caelestia shell（動画壁紙対応フォーク） |
 | **end4-pC** | Hyprland + Quickshell の end4-pC（Illogical Impulse の `hyprland.lua` / `hyprland-startup`） |
 
+共通（Hyprland 系 / Caelestia）: Polkit / Fcitx5 / cliphist を `exec-once` で起動。ランチャーは **Super+R**（**Super+Space** は Mozc 切替のまま）。音量・輝度は PulseAudio / brightnessctl 経由。
+
 Caelestia の動画壁紙は `~/Pictures/Wallpapers/Animated/` に配置（`.mp4` / `.webm` / `.mkv` / `.gif`）。
+
+end4-pC は初回の matugen／壁紙自動適用をスキップして起動を安定化しています（外観はシェル既定色）。設定パネル（**Super+Escape**）から後で変更できます。
 
 ## 世代と Git タグ
 
@@ -77,6 +81,9 @@ git push origin "gen/NN-<slug>"
 | 22 | （適用後にタグ予定） | `multi-session-greetd` ラベル | greetd+tuigreet・Console(cage)・Plasma・Caelestia-AW・end4-pC。`sudo nixos-rebuild switch` 後に `gen/22-multi-session-greetd` を打つ |
 | 23 | （適用後にタグ予定） | `bottles` ラベル | Bottles（Windows アプリ用 Wine）。`sudo nixos-rebuild switch` 後に `gen/23-bottles` を打つ |
 | 24 | （適用後にタグ予定） | `console-apps` ラベル | Console 用 `apps`（fzf アプリ一覧／起動）。`sudo nixos-rebuild switch` 後に `gen/24-console-apps` を打つ |
+| 25 | （適用後にタグ予定） | `restic-notify` ラベル | restic バックアップ進捗を Plasma 通知で表示。`sudo nixos-rebuild switch` 後に `gen/25-restic-notify` を打つ |
+| 26 | （適用後にタグ予定） | `session-stable` ラベル | 全セッション安定化（start-hyprland・Console TTY・end4 依存・Hyprland IM/polkit）。`sudo nixos-rebuild switch` 後に `gen/26-session-stable` を打つ |
+| — | （適用後にタグ予定） | `power-back-logout` ラベル | power+Back 強制ログアウト（chord 検出）。`sudo nixos-rebuild switch` 後にタグを打つ |
 
 タグ一覧: `git tag -l 'gen/*'` または GitHub の Tags ページ。
 
@@ -282,11 +289,18 @@ Parsec を開き直してハードウェアエンコーダーが選べるか確�
 ```
 flake.nix
 hosts/mitac/
-modules/nixos/common.nix      # locale、ユーザー、mozc、フォント
+modules/nixos/common.nix       # locale、ユーザー、mozc、フォント
+modules/nixos/desktop.nix      # plasma + gnome + greetd + console-gui + hyprland
 modules/nixos/plasma.nix
-modules/nixos/chromebook.nix  # delbin 専用
-modules/nixos/backup.nix      # encrypted /home → Google Drive (restic/rclone/rbw)
-modules/nixos/release.nix     # system.nixos.tags（世代ラベルのスラッグ）
-home/mitac.nix
+modules/nixos/gnome.nix
+modules/nixos/greetd.nix       # tuigreet セッション定義
+modules/nixos/hyprland.nix     # portals / Hyprland 共通パッケージ / QML
+modules/nixos/console-gui.nix  # Console 用 gui / apps
+modules/nixos/chromebook.nix   # delbin 専用
+modules/nixos/backup.nix       # encrypted /home → Google Drive (restic/rclone/rbw)
+modules/nixos/release.nix      # system.nixos.tags（世代ラベルのスラッグ）
+home/mitac.nix                 # エントリ（bash / git / パッケージ）
+home/plasma.nix                # Plasma 設定・起動音
+home/sessions/hyprland.nix     # Caelestia-AW / end4-pC（II hypr tree）
 home/nvim/
 ```
