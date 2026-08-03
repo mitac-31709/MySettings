@@ -15,7 +15,7 @@
 
 | セッション | 内容 |
 |------------|------|
-| **Sway** | キーボード中心のタイル WM（第一環境）。waybar / mako / swayidle。ランチャーは `apps`（fzf） |
+| **Sway** | キーボード中心のタイル WM（第一環境）。waybar / mako / swayidle。ランチャーは Sway 既定の dmenu（Super+D） |
 | **Plasma** | KDE Plasma 6（Wayland のみ。X11 セッションは置かない） |
 | **GNOME** | GNOME Shell（Wayland）。greetd から選択 |
 | **Xfce** | Xfce Session（Wayland / labwc）。greetd から選択 |
@@ -35,7 +35,7 @@ GUI セッションでは次を揃えています（テーマ・パネル・シ�
 
 | セッション | 検索／ランチャー |
 |------------|------------------|
-| **Sway** | **Super+D** → `apps`（fzf / `menu`）。Super+F は fullscreen、Super+R は resize（Sway 既定） |
+| **Sway** | **Super+D** → dmenu（Sway / Home Manager 既定）。Super+F は fullscreen、Super+R は resize |
 | **Plasma** | Super+R → KRunner（既定の Alt+Space 等も残す） |
 | **GNOME** | Super+R → Overview の検索欄（Super 単体も従来どおり） |
 | **Xfce** | Super+R → App Finder（`xfce4-appfinder`） |
@@ -154,7 +154,8 @@ passwd mitac
 - **暗号化バックアップ** — `restic` + `rclone` で `/home` を Google Drive へ。鍵は Bitwarden（`rbw`）。詳細は下記。
 - **マルチセッション** — greetd + tuigreet（Sway 第一 / Plasma / GNOME / Xfce / Caelestia-AW / end4-pC）
 - **gui** — ディスプレイ無し時は `cage` で単一 GUI アプリを起動（`gui firefox` など）。引数なしは `apps` を起動
-- **apps** — `fzf` アプリ一覧。Sway の Super+D ランチャー。選択で `gui` 経由起動
+- **apps** — `fzf` アプリ一覧（`gui` 経由起動）。TTY やシェルから利用可。Sway の Super+D は dmenu 既定
+
 - **Caelestia-AW** — Hyprland シェル（動画壁紙）。flake: `caelestia-shell-aw` / `caelestia-cli-aw`
 - **end4-pC** — Quickshell 設定（`~/.config/quickshell/end4-pC`）+ Illogical Impulse の Hyprland 設定（`hyprland-startup` → `start-hyprland`）
 
@@ -334,7 +335,7 @@ home/programs.nix                 # git / rbw / neovim / 共通パッケージ
 home/plasma.nix                   # Plasma 設定・Konsole・起動音
 home/gnome.nix                    # GNOME ショートカット／タッチパッド
 home/xfce.nix                     # Xfce ショートカット（見た目は既定）
-home/sway.nix                     # Sway 第一環境（waybar/mako/swayidle・apps）
+home/sway.nix                     # Sway 第一環境（waybar/mako/swayidle・既定 dmenu）
 home/sessions/hyprland.nix        # Caelestia-AW / end4-pC（II hypr tree）
 home/nvim/
 ```

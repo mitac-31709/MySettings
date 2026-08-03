@@ -16,6 +16,7 @@
       slurp
       brightnessctl
       cliphist
+      dmenu
     ];
   };
 

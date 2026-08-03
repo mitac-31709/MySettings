@@ -1,5 +1,6 @@
-# Sway Home Manager: primary desktop — waybar / mako / swayidle + apps(fzf).
+# Sway Home Manager: primary desktop — waybar / mako / swayidle.
 # Visual language stays terminal/greeter-adjacent (dark + cyan).
+# App launcher stays Home Manager / Sway default (dmenu via Super+D).
 {
   pkgs,
   lib,
@@ -17,8 +18,6 @@ let
   grim = "${pkgs.grim}/bin/grim";
   slurp = "${pkgs.slurp}/bin/slurp";
   wlCopy = "${pkgs.wl-clipboard}/bin/wl-copy";
-  # Ghostty + apps(fzf): keyboard list UI closest to tuigreet.
-  appsLauncher = "${ghosttyBin} --class=mitac-apps -e apps";
   lockCmd = "${swaylockBin} -f -c 0b0f14";
 in
 {
@@ -30,7 +29,7 @@ in
     config = {
       modifier = "Mod4";
       terminal = ghosttyBin;
-      menu = appsLauncher;
+      # menu: leave unset → HM default dmenu_path | dmenu | xargs swaymsg exec
 
       # Dark solid backdrop + cyan accents (greeter / classic TUI vibe).
       output."*" = {
@@ -97,9 +96,7 @@ in
           mod = "Mod4";
         in
         lib.mkOptionDefault {
-          # Super+D → apps (also default $mod+d via menu). Super+F stays fullscreen.
-          # Super+R stays Sway default resize (do not override).
-          "${mod}+d" = "exec ${appsLauncher}";
+          # Super+D uses default menu (dmenu). Super+F fullscreen, Super+R resize.
           "Ctrl+Alt+t" = "exec ${ghosttyBin}";
           "${mod}+Return" = "exec ${ghosttyBin}";
           "${mod}+l" = "exec ${lockCmd}";
@@ -133,10 +130,7 @@ in
       ];
     };
 
-    extraConfig = ''
-      for_window [app_id="mitac-apps"] floating enable, sticky enable, border pixel 2
-      for_window [class="mitac-apps"] floating enable, sticky enable, border pixel 2
-    '';
+    # No extraConfig needed for custom floating launchers.
   };
 
   programs.waybar = {
