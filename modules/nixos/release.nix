@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "sway-tui" ];
+  system.nixos.tags = [ "ghostty-terminal" ];
 }
