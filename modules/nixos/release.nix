@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "ghostty-terminal" ];
+  system.nixos.tags = [ "hostname-nixos" ];
 }
