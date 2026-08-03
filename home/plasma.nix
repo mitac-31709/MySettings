@@ -61,6 +61,7 @@ in
 
   # Merge into shared KConfig (don't replace whole files).
   # - fixed font / Ctrl+Alt+T → Konsole / Chromebook lock key → leave dialog
+  # - Meta+R → KRunner (search bar; matches Super+R on other sessions)
   home.activation.plasmaDesktopPrefs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     kwriteconfig6=${pkgs.kdePackages.kconfig}/bin/kwriteconfig6
     $kwriteconfig6 --file kdeglobals --group General --key fixed \
@@ -68,6 +69,10 @@ in
     $kwriteconfig6 --file kglobalshortcutsrc \
       --group services --group org.kde.konsole.desktop \
       --key _launch "Ctrl+Alt+T"
+    # Keep stock Alt+Space / Alt+F2 / Search; add Meta+R for cross-session parity.
+    $kwriteconfig6 --file kglobalshortcutsrc \
+      --group services --group org.kde.krunner.desktop \
+      --key _launch "Meta+R	Alt+Space	Alt+F2	Search"
     $kwriteconfig6 --file kglobalshortcutsrc --group ksmserver \
       --key "Lock Session" "Meta+L,Meta+L,スクリーンをロック"
     $kwriteconfig6 --file kglobalshortcutsrc --group ksmserver \

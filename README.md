@@ -21,7 +21,19 @@
 | **Caelestia-AW** | Hyprland（`start-hyprland`）+ Caelestia shell（動画壁紙対応フォーク） |
 | **end4-pC** | Hyprland + Quickshell の end4-pC（Illogical Impulse の `hyprland.lua` / `hyprland-startup`） |
 
-共通（Hyprland 系 / Caelestia）: Polkit / Fcitx5 / cliphist を `exec-once` で起動。ランチャーは **Super+R**（**Super+Space** は Mozc 切替のまま）。音量・輝度は PulseAudio / brightnessctl 経由。
+### 検索欄（全セッション共通）
+
+GUI セッションでは **Super+R** で各環境ネイティブの検索欄を開きます（見た目・テーマは変更しません。**Super+Space** は Mozc 切替のまま）。
+
+| セッション | Super+R で開くもの |
+|------------|-------------------|
+| **Plasma** | KRunner（既定の Alt+Space 等も残す） |
+| **GNOME** | Overview の検索欄（Super 単体も従来どおり） |
+| **Caelestia-AW** | Caelestia launcher |
+| **end4-pC** | Quickshell 検索（Super タップも従来どおり） |
+| **Console** | キーバインドなし。相当操作は `apps`（fzf） |
+
+共通（Hyprland 系 / Caelestia）: Polkit / Fcitx5 / cliphist を `exec-once` で起動。音量・輝度は PulseAudio / brightnessctl 経由。
 
 Caelestia の動画壁紙は `~/Pictures/Wallpapers/Animated/` に配置（`.mp4` / `.webm` / `.mkv` / `.gif`）。
 

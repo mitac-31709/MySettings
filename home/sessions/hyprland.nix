@@ -139,6 +139,11 @@ let
             -- hyprland.execs already starts qs; another launch duplicates the top bar.
         end)
         EOF
+        # Stock end4 opens search on Super tap; add Super+R for cross-session parity.
+        cat > "$out/custom/keybinds.lua" <<'EOF'
+        hl.bind("CTRL+SUPER+ALT+Slash", hl.dsp.exec_cmd("xdg-open ~/.config/hypr/custom/keybinds.lua"), {description = "Edit user keybinds"} )
+        hl.bind("SUPER + R", hl.dsp.global("quickshell:searchToggle"), { description = "Shell: Toggle search" })
+        EOF
       '';
 in
 {
