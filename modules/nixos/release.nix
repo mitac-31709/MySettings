@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "xfce-session" ];
+  system.nixos.tags = [ "sway-tui" ];
 }
