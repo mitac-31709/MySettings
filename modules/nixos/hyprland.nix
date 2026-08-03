@@ -36,8 +36,8 @@ in
       xwayland.enable = true;
     };
 
-    # Desktop-specific portals: Plasma=KDE, GNOME=gnome, Xfce=xapp,
-    # Sway=wlr, Hyprland=xdph+gtk.
+    # Desktop-specific portals: Plasma=KDE, GNOME=gnome, Xfce=xapp, Hyprland=xdph+gtk.
+    # Sway portals are set by programs.sway (do not redefine config.sway here).
     # Without this, stacks fight under every session (duplicate D-Bus names,
     # "Could not register app ID" spam).
     xdg.portal = {
@@ -46,7 +46,6 @@ in
         pkgs.xdg-desktop-portal-gtk
         pkgs.xdg-desktop-portal-hyprland
         pkgs.xdg-desktop-portal-xapp
-        pkgs.xdg-desktop-portal-wlr
       ];
       config = {
         common.default = [ "gtk" ];
@@ -71,12 +70,6 @@ in
         xfce = {
           default = [
             "xapp"
-            "gtk"
-          ];
-        };
-        sway = {
-          default = [
-            "wlr"
             "gtk"
           ];
         };
