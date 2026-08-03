@@ -136,7 +136,7 @@ let
             hl.exec_cmd("fcitx5 -d --replace")
             hl.exec_cmd("wl-paste --type text --watch cliphist store")
             hl.exec_cmd("wl-paste --type image --watch cliphist store")
-            hl.exec_cmd("bash -lc 'qs -c end4-pC >>\"\$HOME/.cache/qs-end4.log\" 2>&1'")
+            -- hyprland.execs already starts qs; another launch duplicates the top bar.
         end)
         EOF
       '';
