@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "desktop-feel-parity" ];
+  system.nixos.tags = [ "xfce-session" ];
 }
