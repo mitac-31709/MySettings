@@ -1,6 +1,6 @@
 # Sway Home Manager: primary desktop — waybar / mako / swayidle.
 # Visual language stays terminal/greeter-adjacent (dark + cyan).
-# App launcher stays Home Manager / Sway default (dmenu via Super+D).
+# Launcher: rofi (drun). Keyboard layout: jp.
 {
   pkgs,
   lib,
@@ -12,6 +12,7 @@ let
   swaylockBin = "${pkgs.swaylock}/bin/swaylock";
   swayidleBin = "${pkgs.swayidle}/bin/swayidle";
   waybarBin = "${pkgs.waybar}/bin/waybar";
+  rofiBin = "${pkgs.rofi}/bin/rofi";
   polkitAgent = "${pkgs.kdePackages.polkit-kde-agent-1}/libexec/polkit-kde-authentication-agent-1";
   pactl = "${pkgs.pulseaudio}/bin/pactl";
   brightnessctl = "${pkgs.brightnessctl}/bin/brightnessctl";
@@ -19,6 +20,7 @@ let
   slurp = "${pkgs.slurp}/bin/slurp";
   wlCopy = "${pkgs.wl-clipboard}/bin/wl-copy";
   lockCmd = "${swaylockBin} -f -c 0b0f14";
+  rofiLauncher = "${rofiBin} -show drun";
 in
 {
   wayland.windowManager.sway = {
@@ -29,7 +31,7 @@ in
     config = {
       modifier = "Mod4";
       terminal = ghosttyBin;
-      # menu: leave unset → HM default dmenu_path | dmenu | xargs swaymsg exec
+      menu = rofiLauncher;
 
       # Dark solid backdrop + cyan accents (greeter / classic TUI vibe).
       output."*" = {
@@ -85,10 +87,15 @@ in
       # Status bar is waybar (started in startup).
       bars = [ ];
 
-      input."type:touchpad" = {
-        natural_scroll = "disabled";
-        tap = "enabled";
-        dwt = "disabled";
+      input = {
+        "type:keyboard" = {
+          xkb_layout = "jp";
+        };
+        "type:touchpad" = {
+          natural_scroll = "disabled";
+          tap = "enabled";
+          dwt = "disabled";
+        };
       };
 
       keybindings =
@@ -96,7 +103,7 @@ in
           mod = "Mod4";
         in
         lib.mkOptionDefault {
-          # Super+D uses default menu (dmenu). Super+F fullscreen, Super+R resize.
+          # Super+D → rofi (via menu). Super+F fullscreen, Super+R resize.
           "Ctrl+Alt+t" = "exec ${ghosttyBin}";
           "${mod}+Return" = "exec ${ghosttyBin}";
           "${mod}+l" = "exec ${lockCmd}";

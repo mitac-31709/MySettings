@@ -16,7 +16,7 @@
       slurp
       brightnessctl
       cliphist
-      dmenu
+      rofi
     ];
   };
 

@@ -15,7 +15,7 @@
 
 | セッション | 内容 |
 |------------|------|
-| **Sway** | キーボード中心のタイル WM（第一環境）。waybar / mako / swayidle。ランチャーは Sway 既定の dmenu（Super+D） |
+| **Sway** | キーボード中心のタイル WM（第一環境）。waybar / mako / swayidle。ランチャーは **rofi**（Super+D）。キーボード配列は **jp** |
 | **Plasma** | KDE Plasma 6（Wayland のみ。X11 セッションは置かない） |
 | **GNOME** | GNOME Shell（Wayland）。greetd から選択 |
 | **Xfce** | Xfce Session（Wayland / labwc）。greetd から選択 |
@@ -28,14 +28,14 @@ GUI セッションでは次を揃えています（テーマ・パネル・シ�
 
 | 操作 | キー | 動作 |
 |------|------|------|
-| 検索 | **Super+R**（Sway は **Super+D**） | 各環境ネイティブの検索／ランチャー |
+| 検索 | **Super+R**（Sway は **Super+D**） | 各環境ネイティブの検索／ランチャー（Sway は rofi） |
 | 端末 | **Ctrl+Alt+T** | Ghostty（Hyprland / Sway は Super+Return も可） |
 | ロック | **Super+L** | 画面ロック（Plasma / GNOME / Xfce 既定系、Sway は swaylock、Hyprland は hyprlock） |
 | タッチパッド | — | 自然スクロール off・タップクリック on・入力中もポインタ有効 |
 
 | セッション | 検索／ランチャー |
 |------------|------------------|
-| **Sway** | **Super+D** → dmenu（Sway / Home Manager 既定）。Super+F は fullscreen、Super+R は resize |
+| **Sway** | **Super+D** → rofi（`-show drun`）。Super+F は fullscreen、Super+R は resize。キーボードは `xkb_layout=jp` |
 | **Plasma** | Super+R → KRunner（既定の Alt+Space 等も残す） |
 | **GNOME** | Super+R → Overview の検索欄（Super 単体も従来どおり） |
 | **Xfce** | Super+R → App Finder（`xfce4-appfinder`） |
@@ -335,7 +335,7 @@ home/programs.nix                 # git / rbw / neovim / 共通パッケージ
 home/plasma.nix                   # Plasma 設定・Konsole・起動音
 home/gnome.nix                    # GNOME ショートカット／タッチパッド
 home/xfce.nix                     # Xfce ショートカット（見た目は既定）
-home/sway.nix                     # Sway 第一環境（waybar/mako/swayidle・既定 dmenu）
+home/sway.nix                     # Sway 第一環境（waybar/mako/swayidle・rofi・jp）
 home/sessions/hyprland.nix        # Caelestia-AW / end4-pC（II hypr tree）
 home/nvim/
 ```
