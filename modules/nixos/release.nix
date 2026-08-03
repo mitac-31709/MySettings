@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "end4-single-bar" ];
+  system.nixos.tags = [ "search-super-r" ];
 }
