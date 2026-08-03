@@ -60,14 +60,18 @@ in
   '';
 
   # Merge into shared KConfig (don't replace whole files).
-  # - fixed font / Ctrl+Alt+T → Konsole / Chromebook lock key → leave dialog
+  # - fixed font / Ctrl+Alt+T → Ghostty / Chromebook lock key → leave dialog
   # - Meta+R → KRunner (search bar; matches Super+R on other sessions)
   home.activation.plasmaDesktopPrefs = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     kwriteconfig6=${pkgs.kdePackages.kconfig}/bin/kwriteconfig6
     $kwriteconfig6 --file kdeglobals --group General --key fixed \
       "JetBrainsMono Nerd Font,12,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+    # Free Ctrl+Alt+T from Konsole; bind Ghostty (also declared on its .desktop).
     $kwriteconfig6 --file kglobalshortcutsrc \
       --group services --group org.kde.konsole.desktop \
+      --key _launch "none"
+    $kwriteconfig6 --file kglobalshortcutsrc \
+      --group services --group com.mitchellh.ghostty.desktop \
       --key _launch "Ctrl+Alt+T"
     # Keep stock Alt+Space / Alt+F2 / Search; add Meta+R for cross-session parity.
     $kwriteconfig6 --file kglobalshortcutsrc \

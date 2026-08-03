@@ -9,7 +9,6 @@
     extraPackages = with pkgs; [
       swaylock
       swayidle
-      foot
       wl-clipboard
     ];
   };

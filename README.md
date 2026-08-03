@@ -30,7 +30,7 @@ GUI セッションでは Plasma 基準で次を揃えています（テーマ�
 | 操作 | キー | 動作 |
 |------|------|------|
 | 検索 | **Super+R** | 各環境ネイティブの検索／ランチャー |
-| 端末 | **Ctrl+Alt+T** | Konsole（Hyprland は Super+Return も可） |
+| 端末 | **Ctrl+Alt+T** | Ghostty（Hyprland / Sway は Super+Return も可） |
 | ロック | **Super+L** | 画面ロック（Plasma / GNOME / Xfce 既定系、Sway は swaylock、Hyprland は hyprlock） |
 | タッチパッド | — | 自然スクロール off・タップクリック on・入力中もポインタ有効 |
 
@@ -168,12 +168,13 @@ Fcitx5 + Mozc を有効化しています。パネルの入力インジケータ
 ## フォント
 
 - システムの等幅フォント既定: `JetBrainsMono Nerd Font`（`fontconfig` + Plasma `kdeglobals` の `fixed`）
-- Konsole 既定プロファイルも同じフォント（12pt）を使用（`home/plasma.nix`）
+- Ghostty も同じフォント（12pt）。Konsole を開いた場合のプロファイルも同フォント（`home/plasma.nix`）
 - Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行し、ログアウトして再ログイン
 
 ## ターミナル
 
-**Ctrl+Alt+T** で Konsole を開きます（旧 GNOME Console ショートカット相当）。
+既定は **Ghostty**（`programs.ghostty`）。**Ctrl+Alt+T** で開きます（Plasma / GNOME / Xfce / Sway / Hyprland）。
+`TERMINAL=ghostty` も Home Manager で設定しています。
 
 ## タッチパッド
 

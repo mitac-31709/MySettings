@@ -11,7 +11,7 @@ let
   polkitAgent = "${pkgs.kdePackages.polkit-kde-agent-1}/libexec/polkit-kde-authentication-agent-1";
   pactl = "${pkgs.pulseaudio}/bin/pactl";
   brightnessctl = "${pkgs.brightnessctl}/bin/brightnessctl";
-  konsole = "${pkgs.kdePackages.konsole}/bin/konsole";
+  ghostty = "${pkgs.ghostty}/bin/ghostty";
   hyprlock = "${pkgs.hyprlock}/bin/hyprlock";
 
   # Shared classic-.conf preamble (Caelestia + end4 fallback).
@@ -66,8 +66,8 @@ let
     bindel = , XF86MonBrightnessUp, exec, ${brightnessctl} set +5%
     bindel = , XF86MonBrightnessDown, exec, ${brightnessctl} set 5%-
 
-    bind = SUPER, Return, exec, ${konsole}
-    bind = CTRL ALT, T, exec, ${konsole}
+    bind = SUPER, Return, exec, ${ghostty}
+    bind = CTRL ALT, T, exec, ${ghostty}
     bind = SUPER, L, exec, ${hyprlock}
     bind = SUPER, Q, killactive,
     bind = SUPER SHIFT, E, exit,
@@ -147,7 +147,7 @@ let
         cat > "$out/custom/keybinds.lua" <<EOF
         hl.bind("CTRL+SUPER+ALT+Slash", hl.dsp.exec_cmd("xdg-open ~/.config/hypr/custom/keybinds.lua"), {description = "Edit user keybinds"} )
         hl.bind("SUPER + R", hl.dsp.global("quickshell:searchToggle"), { description = "Shell: Toggle search" })
-        hl.bind("CTRL + ALT + T", hl.dsp.exec_cmd("${konsole}"), { description = "Terminal: Konsole" })
+        hl.bind("CTRL + ALT + T", hl.dsp.exec_cmd("${ghostty}"), { description = "Terminal: Ghostty" })
         hl.bind("SUPER + L", hl.dsp.exec_cmd("${hyprlock}"), { description = "Lock screen" })
         EOF
       '';

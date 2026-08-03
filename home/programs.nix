@@ -37,6 +37,18 @@ in
     # Plugins are managed by lazy.nvim (see ./nvim), not Home Manager.
   };
 
+  # Default terminal across Plasma / GNOME / Xfce / Sway / Hyprland.
+  programs.ghostty = {
+    enable = true;
+    settings = {
+      font-family = "JetBrainsMono Nerd Font";
+      font-size = 12;
+      gtk-single-instance = true;
+    };
+  };
+
+  home.sessionVariables.TERMINAL = "ghostty";
+
   # Keep XDG dirs in English even with ja_JP.UTF-8 locale.
   xdg.userDirs = {
     enable = true;

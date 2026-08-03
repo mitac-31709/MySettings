@@ -2,11 +2,11 @@
 { pkgs, ... }:
 
 let
-  konsole = "${pkgs.kdePackages.konsole}/bin/konsole";
+  ghostty = "${pkgs.ghostty}/bin/ghostty";
 in
 {
   # Super+R → Overview search (parity with Plasma KRunner / Hyprland launchers).
-  # Ctrl+Alt+T → Konsole; touchpad matches Plasma (natural off / tap on / DWT off).
+  # Ctrl+Alt+T → Ghostty; touchpad matches Plasma (natural off / tap on / DWT off).
   # Super alone (mutter overlay-key) still opens Overview; do not restyle Shell.
   dconf.settings = {
     "org/gnome/shell/keybindings" = {
@@ -21,8 +21,8 @@ in
     };
 
     "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0" = {
-      name = "Konsole";
-      command = konsole;
+      name = "Ghostty";
+      command = ghostty;
       binding = "<Primary><Alt>t";
     };
 
