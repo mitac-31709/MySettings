@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "power-back-logout" ];
+  system.nixos.tags = [ "end4-single-bar" ];
 }
