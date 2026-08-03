@@ -9,4 +9,12 @@
     ./console-gui.nix
     ./hyprland.nix
   ];
+
+  # Shared by Plasma / GNOME / Hyprland sessions (layout + printing).
+  services.xserver.enable = true;
+  services.xserver.xkb = {
+    layout = "jp";
+    variant = "";
+  };
+  services.printing.enable = true;
 }
