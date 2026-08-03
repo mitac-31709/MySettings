@@ -113,7 +113,7 @@ sudo nixos-rebuild switch --flake .#mitac
 passwd mitac
 ```
 
-`flake.lock` は、Nix があるマシンで初回の評価／rebuild 時に作成されます。シェルエイリアス `rebuild` / `generations` は `home/mitac.nix` で定義され、flake パスは `~/MySettings` 固定です（ホーム直下など、リポジトリ外からも実行可）。
+`flake.lock` はリポジトリに含まれます。シェルエイリアス `rebuild` / `generations` は `home/shell.nix` で定義され、flake パスは `~/MySettings` 固定です（ホーム直下など、リポジトリ外からも実行可）。
 
 ## 同梱ソフトウェア
 
@@ -143,7 +143,7 @@ Fcitx5 + Mozc を有効化しています。パネルの入力インジケータ
 ## フォント
 
 - システムの等幅フォント既定: `JetBrainsMono Nerd Font`（`fontconfig` + Plasma `kdeglobals` の `fixed`）
-- Konsole 既定プロファイルも同じフォント（12pt）を使用（`home/mitac.nix`）
+- Konsole 既定プロファイルも同じフォント（12pt）を使用（`home/plasma.nix`）
 - Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行し、ログアウトして再ログイン
 
 ## ターミナル
@@ -247,18 +247,19 @@ restic-home restore latest --target /tmp/restore
 aplay -l
 # sof-rt5682 / SOF 関連のカード名のような表示を期待
 
-wpctl status
-# Speaker がデフォルトシンクであること
+pactl list short sinks
+pactl info | grep 'Default Sink'
+# speaker がデフォルトシンクであること
 ```
 
 SOF（Tiger Lake）では PipeWire の ALSA バックエンドが `Broken pipe` になり、スピーカーが最後の音をループし続ける既知不具合があります（WeirdTreeThing/chromebook-linux-audio#2）。
 
 対策:
 
-- **音声は PulseAudio**（PipeWire はデスクトップ用のみ）
+- **音声は PulseAudio**（PipeWire はデスクトップ用のみ）。設定は `modules/nixos/chromebook/audio.nix`
 - sof-rt5682 は UCM プロファイル探索に失敗するため、**`hw:0,0`（Speaker）を直接** `module-alsa-sink` でバインド
-- 起動／レジューム時に `alsactl init` + max98373 の Digital/Spk レベル設定
-- 緊急停止: `audio-panic`
+- 起動／レジューム時に `alsactl init` + `chromebook-speaker-levels apply`（max98373 Digital/Spk）
+- 緊急停止: `audio-panic`（`chromebook-speaker-levels mute`）
 
 ```bash
 pactl list short sinks   # speaker が見えること
@@ -282,25 +283,29 @@ Parsec を開き直してハードウェアエンコーダーが選べるか確�
 
 ### モジュール
 
-`modules/nixos/chromebook.nix` は `hosts/mitac/default.nix` から import されます。
+`modules/nixos/chromebook.nix` は `hosts/mitac/default.nix` から import され、`modules/nixos/chromebook/` 配下の audio / power / graphics / input を束ねます。
 
 ## 構成
 
 ```
 flake.nix
 hosts/mitac/
-modules/nixos/common.nix       # locale、ユーザー、mozc、フォント
-modules/nixos/desktop.nix      # plasma + gnome + greetd + console-gui + hyprland
-modules/nixos/plasma.nix
+modules/nixos/common.nix          # locale、ユーザー、mozc、フォント
+modules/nixos/desktop.nix         # plasma + gnome + greetd + console-gui + hyprland + 共有 XKB/印刷
+modules/nixos/plasma.nix          # Plasma DE のみ
 modules/nixos/gnome.nix
-modules/nixos/greetd.nix       # tuigreet セッション定義
-modules/nixos/hyprland.nix     # portals / Hyprland 共通パッケージ / QML
-modules/nixos/console-gui.nix  # Console 用 gui / apps
-modules/nixos/chromebook.nix   # delbin 専用
-modules/nixos/backup.nix       # encrypted /home → Google Drive (restic/rclone/rbw)
-modules/nixos/release.nix      # system.nixos.tags（世代ラベルのスラッグ）
-home/mitac.nix                 # エントリ（bash / git / パッケージ）
-home/plasma.nix                # Plasma 設定・起動音
-home/sessions/hyprland.nix     # Caelestia-AW / end4-pC（II hypr tree）
+modules/nixos/greetd.nix          # tuigreet + セッション選別
+modules/nixos/greetd/sessions.nix # Console / Caelestia / end4 ラッパー
+modules/nixos/hyprland.nix        # portals / Hyprland 共通パッケージ / QML
+modules/nixos/console-gui.nix     # Console 用 gui / apps
+modules/nixos/chromebook.nix      # delbin 集約（./chromebook/*）
+modules/nixos/chromebook/         # audio / power / graphics / input
+modules/nixos/backup.nix          # encrypted /home → Google Drive (restic/rclone/rbw)
+modules/nixos/release.nix         # system.nixos.tags（世代ラベルのスラッグ）
+home/mitac.nix                    # HM エントリ（identity + imports）
+home/shell.nix                    # bash エイリアス / runbtop
+home/programs.nix                 # git / rbw / neovim / 共通パッケージ
+home/plasma.nix                   # Plasma 設定・Konsole・起動音
+home/sessions/hyprland.nix        # Caelestia-AW / end4-pC（II hypr tree）
 home/nvim/
 ```

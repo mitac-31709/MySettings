@@ -2,6 +2,10 @@
 result
 result-*
 
-# Machine-specific hardware config (keep the stub in git; override locally)
+# Machine-specific hardware config: this repo keeps the delbin-generated file.
+# On another machine, regenerate before switch (see README.md).
 # Uncomment if you prefer never committing a generated file:
 # hosts/mitac/hardware-configuration.nix
+
+# Agent knowledge graph (local / optional)
+graphify-out/
