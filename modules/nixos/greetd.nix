@@ -35,9 +35,8 @@ let
         cp ${desktop} "$out/share/wayland-sessions/${id}.desktop"
       '';
 
-  # Shared launcher for greetd Hyprland sessions (Caelestia / end4).
-  # Prefer start-hyprland (sets compositor env / portals) over raw Hyprland.
-  mkHyprlandWrapper =
+  # Shared launcher for classic-.conf Hyprland sessions (Caelestia).
+  mkHyprlandConfWrapper =
     {
       name,
       sessionId,
@@ -59,16 +58,17 @@ let
         export XDG_SESSION_TYPE=wayland
         export MITAC_SESSION=${lib.escapeShellArg sessionId}
         ${lib.concatStringsSep "\n" (
-          lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg v}") extraExports
+          lib.mapAttrsToList (
+            k: v: "export ${k}=${lib.escapeShellArg v}"
+          ) extraExports
         )}
         conf="''${XDG_CONFIG_HOME:-$HOME/.config}/hypr/${configName}"
         if [ ! -f "$conf" ]; then
           printf 'missing Hyprland config: %s\n' "$conf" >&2
           exit 1
         fi
-        # Avoid stock hyprland.lua taking over when --config is a classic .conf.
+        # Avoid stock/II hyprland.lua taking over when --config is a classic .conf.
         export HYPRLAND_CONFIG="$conf"
-        # Args after -- are forwarded to Hyprland by start-hyprland.
         if command -v start-hyprland >/dev/null 2>&1; then
           exec start-hyprland -- --config "$conf"
         fi
@@ -77,7 +77,6 @@ let
     };
 
   # Console: authenticated TTY login shell (not a Wayland compositor).
-  # Listed under wayland-sessions for tuigreet, but clears Wayland/X11 env.
   consoleWrapper = pkgs.writeShellApplication {
     name = "mitac-console-session";
     runtimeInputs = [ pkgs.bashInteractive ];
@@ -90,24 +89,88 @@ let
     '';
   };
 
-  hyprlandCaelestia = mkHyprlandWrapper {
+  hyprlandCaelestia = mkHyprlandConfWrapper {
     name = "hyprland-caelestia";
     sessionId = "caelestia";
     configName = "caelestia.conf";
   };
 
-  hyprlandEnd4 = mkHyprlandWrapper {
-    name = "hyprland-end4";
-    sessionId = "end4";
-    configName = "end4.conf";
-    extraRuntimeInputs = [ pkgs.quickshell ];
-    extraExports = {
-      qsConfig = "end4-pC";
-      QT_QPA_PLATFORM = "wayland";
-      # end4 scripts that still look for the upstream ii name.
-      QUICKSHELL_CONFIG_NAME = "end4-pC";
+  # Prefer aggregated system QML tree (packages listed in hyprland.nix).
+  qmlImportPath = "/run/current-system/sw/lib/qt-6/qml";
+
+  # Wait for Hyprland's Wayland socket, then start qs if II's hyprland.start
+  # did not. Must NOT run qs before WAYLAND_DISPLAY exists — that crashes Qt.
+  waitAndStartQs = ''
+    runtime="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+    qs_log="''${XDG_CACHE_HOME:-$HOME/.cache}/qs-end4.log"
+    i=0
+    while [ "$i" -lt 45 ]; do
+      for sock in wayland-1 wayland-0; do
+        if [ -S "$runtime/$sock" ] && ls "$runtime"/hypr/*/ >/dev/null 2>&1; then
+          export WAYLAND_DISPLAY="$sock"
+          sleep 3
+          printf '[%s] safety-net: WAYLAND_DISPLAY=%s — ensuring qs\n' "$(date -Is)" "$WAYLAND_DISPLAY"
+          qs -n -c end4-pC >>"$qs_log" 2>&1 &
+          exit 0
+        fi
+      done
+      i=$((i + 1))
+      sleep 1
+    done
+    printf '[%s] safety-net: no Wayland/Hyprland socket after 45s\n' "$(date -Is)"
+  '';
+
+  # end4-pC: Illogical Impulse hyprland.lua via start-hyprland; fall back to end4.conf.
+  mkEnd4Wrapper =
+    name:
+    pkgs.writeShellApplication {
+      inherit name;
+      runtimeInputs = [
+        pkgs.hyprland
+        pkgs.quickshell
+        pkgs.systemd
+        pkgs.coreutils
+      ];
+      text = ''
+        export XDG_CURRENT_DESKTOP=Hyprland
+        export XDG_SESSION_DESKTOP=Hyprland
+        export XDG_SESSION_TYPE=wayland
+        export MITAC_SESSION=end4
+        export qsConfig=end4-pC
+        export QT_QPA_PLATFORM=wayland
+        export QML2_IMPORT_PATH="${qmlImportPath}''${QML2_IMPORT_PATH:+:$QML2_IMPORT_PATH}"
+
+        log_dir="''${XDG_CACHE_HOME:-$HOME/.cache}"
+        mkdir -p "$log_dir"
+        log_file="$log_dir/hyprland-startup.log"
+        exec >>"$log_file" 2>&1
+        printf '[%s] %s begin\n' "$(date -Is)" ${lib.escapeShellArg name}
+
+        hypr_cfg="''${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
+        lua="$hypr_cfg/hyprland.lua"
+        conf="$hypr_cfg/end4.conf"
+
+        if [ -f "$lua" ]; then
+          printf 'using Illogical Impulse lua via start-hyprland: %s\n' "$lua"
+          (${waitAndStartQs}) &
+          unset HYPRLAND_CONFIG || true
+          exec start-hyprland
+        fi
+
+        if [ -f "$conf" ]; then
+          printf 'lua missing; falling back to classic conf: %s\n' "$conf"
+          export HYPRLAND_CONFIG="$conf"
+          exec Hyprland --config "$conf"
+        fi
+
+        printf 'missing Hyprland config: need %s or %s\n' "$lua" "$conf"
+        exit 1
+      '';
     };
-  };
+
+  hyprlandStartup = mkEnd4Wrapper "hyprland-startup";
+  # Stable name used by older greetd session .desktop files.
+  hyprlandEnd4 = mkEnd4Wrapper "hyprland-end4";
 
   consoleSession = mkWaylandSession {
     id = "00-console";
@@ -117,36 +180,40 @@ let
     desktopNames = "Console";
   };
 
+  # Use /run/current-system paths so tuigreet --remember-session does not keep
+  # an old absolute /nix/store/... wrapper from a previous generation.
   caelestiaSession = mkWaylandSession {
     id = "caelestia-aw";
     name = "Caelestia-AW";
     comment = "Hyprland with Caelestia shell (animated wallpapers)";
-    exec = "${hyprlandCaelestia}/bin/hyprland-caelestia";
+    exec = "/run/current-system/sw/bin/hyprland-caelestia";
   };
 
   end4Session = mkWaylandSession {
     id = "end4-pc";
     name = "end4-pC";
-    comment = "Hyprland with end4-pC Quickshell";
-    exec = "${hyprlandEnd4}/bin/hyprland-end4";
+    comment = "Hyprland with end4-pC Quickshell (II hyprland-startup)";
+    exec = "/run/current-system/sw/bin/hyprland-startup";
   };
 
-  # Sessions we actually support in tuigreet (hide stock hyprland / plasmax11).
   customSessions = [
     consoleSession
     caelestiaSession
     end4Session
   ];
 
+  # Curated tuigreet list: hide stock hyprland / plasmax11; include Plasma + GNOME Wayland.
   curatedSessions = pkgs.runCommand "mitac-greetd-sessions" { } ''
-    mkdir -p "$out/wayland-sessions" "$out/xsessions"
+    mkdir -p "$out/wayland-sessions"
     ${lib.concatMapStrings (s: ''
       cp -f ${s}/share/wayland-sessions/*.desktop "$out/wayland-sessions/"
     '') customSessions}
     if [ -f ${sessionData}/share/wayland-sessions/plasma.desktop ]; then
       cp -f ${sessionData}/share/wayland-sessions/plasma.desktop "$out/wayland-sessions/"
     fi
-    # Intentionally leave xsessions empty (no plasmax11).
+    if [ -f ${sessionData}/share/wayland-sessions/gnome.desktop ]; then
+      cp -f ${sessionData}/share/wayland-sessions/gnome.desktop "$out/wayland-sessions/"
+    fi
   '';
 in
 {
@@ -164,14 +231,11 @@ in
           "--user-menu"
           "--sessions"
           "${curatedSessions}/wayland-sessions"
-          "--xsessions"
-          "${curatedSessions}/xsessions"
         ];
       };
     };
   };
 
-  # Suppress boot spam on the greeter TTY.
   systemd.services.greetd.serviceConfig = {
     Type = "idle";
     StandardInput = "tty";
@@ -182,15 +246,14 @@ in
     TTYVTDisallocate = true;
   };
 
-  # greetd already substasks login PAM (KWallet via Plasma); keep explicit.
   security.pam.services.greetd.kwallet.enable = true;
 
   services.displayManager.sessionPackages = customSessions;
 
-  # Wrappers on PATH for manual starts from an existing shell.
   environment.systemPackages = [
     consoleWrapper
     hyprlandCaelestia
+    hyprlandStartup
     hyprlandEnd4
   ];
 }

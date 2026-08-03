@@ -89,6 +89,23 @@
         "type": "github"
       }
     },
+    "dots-hyprland": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785144061,
+        "narHash": "sha256-PT2amtOlgsvf5ijjrLW42z3JcANu49+4oWk2XA2XFfQ=",
+        "owner": "end-4",
+        "repo": "dots-hyprland",
+        "rev": "aed4d1ec63f584905c28d2a678db5845579fdafc",
+        "type": "github"
+      },
+      "original": {
+        "owner": "end-4",
+        "repo": "dots-hyprland",
+        "rev": "aed4d1ec63f584905c28d2a678db5845579fdafc",
+        "type": "github"
+      }
+    },
     "end4-pc": {
       "flake": false,
       "locked": {
@@ -223,6 +240,7 @@
         "alsa-ucm-conf-cros": "alsa-ucm-conf-cros",
         "caelestia-cli-aw": "caelestia-cli-aw",
         "caelestia-shell-aw": "caelestia-shell-aw",
+        "dots-hyprland": "dots-hyprland",
         "end4-pc": "end4-pc",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs"

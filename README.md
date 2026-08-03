@@ -16,11 +16,12 @@
 | セッション | 内容 |
 |------------|------|
 | **Console** | DE なし（TTY）。`apps` でアプリ一覧／選択。GUI は `gui <app>` またはエイリアス（`firefox` など）で **cage** によりアプリ単位起動。終了で TTY に戻る |
-| **Plasma** | KDE Plasma 6（Wayland）。X11 セッションは greeter に出さない |
+| **Plasma** | KDE Plasma 6（Wayland のみ。X11 セッションは置かない） |
+| **GNOME** | GNOME Shell（Wayland）。greetd から選択 |
 | **Caelestia-AW** | Hyprland（`start-hyprland`）+ Caelestia shell（動画壁紙対応フォーク） |
-| **end4-pC** | Hyprland + Quickshell の end4-pC 設定 |
+| **end4-pC** | Hyprland + Quickshell の end4-pC（Illogical Impulse の `hyprland.lua` / `hyprland-startup`） |
 
-共通（Hyprland 系）: Polkit / Fcitx5 / cliphist を `exec-once` で起動。ランチャーは **Super+R**（**Super+Space** は Mozc 切替のまま）。音量・輝度は PulseAudio / brightnessctl 経由。
+共通（Hyprland 系 / Caelestia）: Polkit / Fcitx5 / cliphist を `exec-once` で起動。ランチャーは **Super+R**（**Super+Space** は Mozc 切替のまま）。音量・輝度は PulseAudio / brightnessctl 経由。
 
 Caelestia の動画壁紙は `~/Pictures/Wallpapers/Animated/` に配置（`.mp4` / `.webm` / `.mkv` / `.gif`）。
 
@@ -82,6 +83,7 @@ git push origin "gen/NN-<slug>"
 | 24 | （適用後にタグ予定） | `console-apps` ラベル | Console 用 `apps`（fzf アプリ一覧／起動）。`sudo nixos-rebuild switch` 後に `gen/24-console-apps` を打つ |
 | 25 | （適用後にタグ予定） | `restic-notify` ラベル | restic バックアップ進捗を Plasma 通知で表示。`sudo nixos-rebuild switch` 後に `gen/25-restic-notify` を打つ |
 | 26 | （適用後にタグ予定） | `session-stable` ラベル | 全セッション安定化（start-hyprland・Console TTY・end4 依存・Hyprland IM/polkit）。`sudo nixos-rebuild switch` 後に `gen/26-session-stable` を打つ |
+| — | （適用後にタグ予定） | `power-back-logout` ラベル | power+Back 強制ログアウト（chord 検出）。`sudo nixos-rebuild switch` 後にタグを打つ |
 
 タグ一覧: `git tag -l 'gen/*'` または GitHub の Tags ページ。
 
@@ -127,11 +129,11 @@ passwd mitac
 - **Mozc** — Fcitx5 エンジン（日本語入力）
 - **フォント** — JetBrainsMono Nerd Font（ターミナル／等幅の既定）
 - **暗号化バックアップ** — `restic` + `rclone` で `/home` を Google Drive へ。鍵は Bitwarden（`rbw`）。詳細は下記。
-- **マルチセッション** — greetd + tuigreet（Console / Plasma / Caelestia-AW / end4-pC）
+- **マルチセッション** — greetd + tuigreet（Console / Plasma / GNOME / Caelestia-AW / end4-pC）
 - **gui** — Console 用。`cage` で単一 GUI アプリを起動（`gui firefox` など）。引数なしは `apps` を起動
 - **apps** — Console／TTY 用アプリ一覧（`fzf`）。`apps --list` で一覧のみ、選択で `gui` 経由起動
 - **Caelestia-AW** — Hyprland シェル（動画壁紙）。flake: `caelestia-shell-aw` / `caelestia-cli-aw`
-- **end4-pC** — Quickshell 設定（`~/.config/quickshell/end4-pC`）
+- **end4-pC** — Quickshell 設定（`~/.config/quickshell/end4-pC`）+ Illogical Impulse の Hyprland 設定（`hyprland-startup` → `start-hyprland`）
 
 ## 日本語入力（Mozc）
 
@@ -236,7 +238,7 @@ restic-home restore latest --target /tmp/restore
 | プラットフォーム | `volteer`（Intel Tiger Lake） |
 | GPU | Iris Xe（i3-1115G4）。`intel-media-driver` + `LIBVA_DRIVER_NAME=iHD`（Parsec 等の VA-API） |
 | オーディオ | SOF + `sof-rt5682` / `max98373`（`alsa-ucm-conf-cros` + `sof-firmware`） |
-| キーボード | [cros-keyboard-map](https://github.com/WeirdTreeThing/cros-keyboard-map) 相当の `keyd`（delbin physmap）。最上段は ChromeOS キー。**Search+最上段**で F1–F10。tuigreet セッション一覧は **Search+3つ目のキー（zoom/全画面）** |
+| キーボード | [cros-keyboard-map](https://github.com/WeirdTreeThing/cros-keyboard-map) 相当の `keyd`（delbin physmap）。最上段は ChromeOS キー。**Search+最上段**で F1–F10。tuigreet セッション一覧は **Search+3つ目のキー（zoom/全画面）**。電源コード: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+Back=強制ログアウト** / **電源+Refresh=再起動**（`chromebook-power-chords`） |
 | Flip | タブレットモード向け libinput quirk `ModelTabletModeNoSuspend=1` |
 
 ### オーディオ確認
@@ -288,16 +290,17 @@ Parsec を開き直してハードウェアエンコーダーが選べるか確�
 flake.nix
 hosts/mitac/
 modules/nixos/common.nix       # locale、ユーザー、mozc、フォント
-modules/nixos/desktop.nix      # plasma + greetd + console-gui + hyprland
+modules/nixos/desktop.nix      # plasma + gnome + greetd + console-gui + hyprland
 modules/nixos/plasma.nix
+modules/nixos/gnome.nix
 modules/nixos/greetd.nix       # tuigreet セッション定義
-modules/nixos/hyprland.nix     # portals / Hyprland 共通パッケージ
+modules/nixos/hyprland.nix     # portals / Hyprland 共通パッケージ / QML
 modules/nixos/console-gui.nix  # Console 用 gui / apps
 modules/nixos/chromebook.nix   # delbin 専用
 modules/nixos/backup.nix       # encrypted /home → Google Drive (restic/rclone/rbw)
 modules/nixos/release.nix      # system.nixos.tags（世代ラベルのスラッグ）
 home/mitac.nix                 # エントリ（bash / git / パッケージ）
 home/plasma.nix                # Plasma 設定・起動音
-home/sessions/hyprland.nix     # Caelestia-AW / end4-pC
+home/sessions/hyprland.nix     # Caelestia-AW / end4-pC（II hypr tree）
 home/nvim/
 ```

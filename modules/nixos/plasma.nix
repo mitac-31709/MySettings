@@ -9,7 +9,7 @@
 
   services.desktopManager.plasma6.enable = true;
   # Session chooser is greetd+tuigreet (see greetd.nix); keep Plasma as a
-  # selectable desktop only.
+  # selectable Wayland desktop only (no Plasma X11 / startx).
   services.displayManager.plasma-login-manager.enable = false;
 
   # delbin / sof-rt5682: PipeWire's ALSA backend hits a known Tiger Lake SOF

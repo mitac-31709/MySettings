@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "session-stable" ];
+  system.nixos.tags = [ "power-back-logout" ];
 }

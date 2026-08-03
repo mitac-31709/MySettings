@@ -27,6 +27,11 @@
       url = "github:pctrade/end4-pC";
       flake = false;
     };
+    # Illogical Impulse Hyprland configs (required by end4-pC for startup/keybinds)
+    dots-hyprland = {
+      url = "github:end-4/dots-hyprland/aed4d1ec63f584905c28d2a678db5845579fdafc";
+      flake = false;
+    };
   };
 
   outputs =
