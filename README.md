@@ -197,8 +197,9 @@ Plasma 標準の **クリップボード**（システムトレイ、または *
 
 A daily `systemd` timer (`restic-backups-home.timer`) runs the backup and prunes old
 snapshots (`--keep-daily 7 --keep-weekly 5 --keep-monthly 12`). While a graphical
-session is logged in, Plasma desktop notifications show start / progress / finish
-(or failure) via `libnotify` (`restic-backups-home-progress.service`).
+session is logged in, **Sway waybar** shows live progress (`バックアップ N%`) via
+`$XDG_RUNTIME_DIR/restic-home-status`, and mako notifications cover start / finish
+(or failure).
 
 ### One-time setup (secrets stay out of git / the Nix store)
 

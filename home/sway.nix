@@ -157,6 +157,7 @@ in
         ];
         modules-center = [ "sway/window" ];
         modules-right = [
+          "custom/restic"
           "cpu"
           "memory"
           "battery"
@@ -171,6 +172,22 @@ in
         };
         "sway/window" = {
           max-length = 48;
+        };
+        # Status file written by modules/nixos/backup.nix while restic runs.
+        "custom/restic" = {
+          exec = pkgs.writeShellScript "waybar-restic" ''
+            f="''${XDG_RUNTIME_DIR}/restic-home-status"
+            if [ -s "$f" ]; then
+              cat "$f"
+            else
+              printf '%s\n' '{"text":"","class":"idle"}'
+            fi
+          '';
+          return-type = "json";
+          interval = 2;
+          signal = 8;
+          hide-empty-text = true;
+          tooltip = true;
         };
         cpu = {
           format = "cpu {usage}%";
@@ -249,6 +266,22 @@ in
       #cpu, #memory, #battery, #network, #pulseaudio, #clock, #tray {
         padding: 0 8px;
         color: #9fe7e7;
+      }
+      #custom-restic {
+        padding: 0 8px;
+        color: #e6edf3;
+        background: #15383a;
+      }
+      #custom-restic.running {
+        color: #9fe7e7;
+        border-bottom: 2px solid #33c5c5;
+      }
+      #custom-restic.done {
+        color: #98c379;
+      }
+      #custom-restic.failed {
+        color: #e06c75;
+        background: #3a1a1e;
       }
       #battery.warning { color: #e5c07b; }
       #battery.critical { color: #e06c75; }

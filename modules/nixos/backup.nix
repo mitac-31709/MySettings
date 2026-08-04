@@ -86,8 +86,9 @@ let
     RESTIC_PASSWORD_COMMAND=${resticPasswordCommand}
   '';
 
-  # Desktop notifications via the logged-in user's session bus (Plasma).
-  # Same replace-id so start / progress / finish collapse into one bubble.
+  # Desktop notifications via the logged-in user's session bus.
+  # Same replace-id so start / finish collapse into one bubble.
+  # Mid-run progress is shown on the Sway waybar panel (status file below).
   notifySend = lib.getExe pkgs.libnotify;
   notifyHint = "string:x-canonical-private-synchronous:restic-home";
 
@@ -115,6 +116,52 @@ let
       --urgency="$urgency" \
       -h ${notifyHint} \
       "$title" "$body"
+  '';
+
+  # Write / clear the waybar status JSON under mitac's XDG_RUNTIME_DIR.
+  resticPanel = pkgs.writeShellScript "restic-home-panel" ''
+    set -eu
+    export PATH="${
+      lib.makeBinPath [
+        pkgs.coreutils
+        pkgs.getent
+        pkgs.jq
+        pkgs.procps
+        pkgs.util-linux
+      ]
+    }:$PATH"
+    uid="$(getent passwd ${user} | cut -d: -f3)"
+    status="/run/user/''${uid}/restic-home-status"
+    action="$1"
+
+    signal_waybar() {
+      runuser -u ${user} -- env XDG_RUNTIME_DIR="/run/user/''${uid}" \
+        pkill -SIGRTMIN+8 -x waybar >/dev/null 2>&1 || true
+    }
+
+    case "$action" in
+      clear)
+        rm -f "$status"
+        signal_waybar
+        ;;
+      set)
+        text="$2"
+        tooltip="''${3:-$text}"
+        class="''${4:-running}"
+        jq -nc \
+          --arg text "$text" \
+          --arg tooltip "$tooltip" \
+          --arg class "$class" \
+          '{text:$text, tooltip:$tooltip, class:$class}' >"$status"
+        chown ${user}:users "$status" 2>/dev/null || chown ${user} "$status" || true
+        chmod 644 "$status" || true
+        signal_waybar
+        ;;
+      *)
+        echo "usage: restic-home-panel set <text> [tooltip] [class] | clear" >&2
+        exit 2
+        ;;
+    esac
   '';
 
   # Companion unit: poll journal progress lines while the backup oneshot runs.
@@ -145,6 +192,12 @@ let
       sleep 0.5
     done
 
+    if ! unit_busy; then
+      # Backup never reached activating/active (e.g. pre-start failed fast).
+      exit 0
+    fi
+
+    ${resticPanel} set "バックアップ …" "/home/${user} → Google Drive" running || true
     ${resticNotify} low "バックアップ開始" "/home/${user} → Google Drive" || true
 
     last=""
@@ -157,11 +210,22 @@ let
           || true
       )"
       if [ -n "$line" ] && [ "$line" != "$last" ]; then
-        ${resticNotify} low "バックアップ進行中" "$line" || true
+        pct="$(printf '%s\n' "$line" | sed -n 's/.*[^0-9]\([0-9]\{1,3\}\)\.[0-9]\+%.*$/\1/p')"
+        if [ -z "$pct" ]; then
+          pct="$(printf '%s\n' "$line" | sed -n 's/.*[^0-9]\([0-9]\{1,3\}\)%.*$/\1/p')"
+        fi
+        if [ -n "$pct" ]; then
+          text="バックアップ ''${pct}%"
+        else
+          text="バックアップ中"
+        fi
+        ${resticPanel} set "$text" "$line" running || true
         last="$line"
       fi
-      sleep 15
+      sleep 2
     done
+
+    # Final label + clear are handled by backupCleanupCommand (avoids racing partOf stop).
   '';
 in
 {
@@ -197,8 +261,8 @@ in
     initialize = true;
 
     # Emit progress to the journal even under systemd (non-TTY); companion
-    # notifier reads those lines for desktop updates (~every 20s).
-    progressFps = 0.05;
+    # notifier / waybar panel reads those lines (~every few seconds).
+    progressFps = 0.2;
 
     # Retention: prune old snapshots after each run.
     pruneOpts = [
@@ -225,12 +289,19 @@ in
           || true
       )"
       if [ "''${SERVICE_RESULT:-}" = success ]; then
+        ${resticPanel} set "バックアップ完了" \
+          "''${summary:-/home/${user} → Google Drive}" done || true
         ${resticNotify} normal "バックアップ完了" \
           "''${summary:-/home/${user} → Google Drive}" || true
       else
+        ${resticPanel} set "バックアップ失敗" \
+          "結果: ''${SERVICE_RESULT:-unknown}" failed || true
         ${resticNotify} critical "バックアップ失敗" \
           "結果: ''${SERVICE_RESULT:-unknown}（journalctl -u ${backupUnit}）" || true
       fi
+      # Leave the final panel label briefly; progress unit EXIT trap also clears.
+      sleep 8
+      ${resticPanel} clear || true
     '';
 
     # createWrapper defaults to true → installs a `restic-home` command with the
