@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "hostname-nixos" ];
+  system.nixos.tags = [ "wol-pc" ];
 }
