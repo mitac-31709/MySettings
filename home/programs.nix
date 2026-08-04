@@ -85,6 +85,10 @@ in
     parsec-bin
     # Wineprefix manager for Windows apps/games (FHS-wrapped).
     (bottles.override { removeWarningPopup = true; })
+    # wol-pc (Wake-on-LAN client): password SSH + GUI password prompt.
+    # Scripts live in ~/Projects/wol-pc (not in the Nix store; config.env is local).
+    sshpass
+    zenity
     tmux
     trayscale
     vivaldi
