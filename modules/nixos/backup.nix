@@ -37,7 +37,10 @@ let
   # Wrapper so systemd's minimal PATH still finds rbw-agent. Always talk to
   # mitac's session agent (do not trust %U / id -u here: ExecStartPre can see
   # uid 0 and systemd %U has been observed to expand to 0 on this unit).
+  # When the vault is locked, pinentry-qt needs the graphical session (D-Bus +
+  # Wayland/X11); a bare systemd unit has neither unless we import them here.
   resticPasswordCommand = pkgs.writeShellScript "restic-home-password" ''
+    set -eu
     export PATH="${
       lib.makeBinPath [
         pkgs.rbw
@@ -48,6 +51,32 @@ let
     uid="$(getent passwd ${user} | cut -d: -f3)"
     export XDG_RUNTIME_DIR="/run/user/''${uid}"
     export HOME="/home/${user}"
+    export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/''${uid}/bus"
+
+    if [ ! -S "/run/user/''${uid}/bus" ]; then
+      echo "restic-home-password: ''${user} session bus missing (log in graphically, then: rbw unlock)" >&2
+      exit 1
+    fi
+
+    # Import display so pinentry-qt can prompt if the vault is locked.
+    if [ -z "''${WAYLAND_DISPLAY:-}" ]; then
+      for sock in /run/user/"''${uid}"/wayland-*; do
+        case "$sock" in
+          *.lock) continue ;;
+        esac
+        if [ -S "$sock" ]; then
+          export WAYLAND_DISPLAY="$(basename "$sock")"
+          break
+        fi
+      done
+    fi
+    if [ -z "''${DISPLAY:-}" ] && [ -e /tmp/.X11-unix/X0 ]; then
+      export DISPLAY=:0
+    fi
+    if [ -z "''${XAUTHORITY:-}" ] && [ -f "/home/${user}/.Xauthority" ]; then
+      export XAUTHORITY="/home/${user}/.Xauthority"
+    fi
+
     exec ${lib.getExe pkgs.rbw} get ${bitwardenItem}
   '';
 
@@ -76,6 +105,11 @@ let
     urgency="$1"
     title="$2"
     body="$3"
+    # Session bus may be absent (no graphical login); do not fail the backup.
+    if [ ! -S "/run/user/''${uid}/bus" ]; then
+      echo "restic-home-notify: no session bus for ''${user}; skip: $title" >&2
+      exit 0
+    fi
     exec ${notifySend} \
       --app-name=Restic \
       --urgency="$urgency" \
@@ -85,6 +119,7 @@ let
 
   # Companion unit: poll journal progress lines while the backup oneshot runs.
   # Declared separately because ExecStartPre children are killed when preStart ends.
+  # Note: `systemctl is-activating` is not a real verb; use ActiveState instead.
   progressNotifyScript = pkgs.writeShellScript "restic-home-progress-notify" ''
     set -eu
     export PATH="${
@@ -96,19 +131,24 @@ let
       ]
     }:$PATH"
 
+    unit_busy() {
+      case "$(systemctl show -p ActiveState --value ${backupUnit} 2>/dev/null || true)" in
+        active|activating) return 0 ;;
+        *) return 1 ;;
+      esac
+    }
+
     for _ in $(seq 1 60); do
-      if systemctl is-active --quiet ${backupUnit} \
-        || systemctl is-activating --quiet ${backupUnit}; then
+      if unit_busy; then
         break
       fi
       sleep 0.5
     done
 
-    ${resticNotify} low "バックアップ開始" "/home/${user} → Google Drive"
+    ${resticNotify} low "バックアップ開始" "/home/${user} → Google Drive" || true
 
     last=""
-    while systemctl is-active --quiet ${backupUnit} \
-      || systemctl is-activating --quiet ${backupUnit}; do
+    while unit_busy; do
       line="$(
         journalctl -u ${backupUnit} -n 30 -o cat --no-pager 2>/dev/null \
           | grep -E '%|[0-9]+ / [0-9]+' \
@@ -186,10 +226,10 @@ in
       )"
       if [ "''${SERVICE_RESULT:-}" = success ]; then
         ${resticNotify} normal "バックアップ完了" \
-          "''${summary:-/home/${user} → Google Drive}"
+          "''${summary:-/home/${user} → Google Drive}" || true
       else
         ${resticNotify} critical "バックアップ失敗" \
-          "結果: ''${SERVICE_RESULT:-unknown}（journalctl -u ${backupUnit}）"
+          "結果: ''${SERVICE_RESULT:-unknown}（journalctl -u ${backupUnit}）" || true
       fi
     '';
 

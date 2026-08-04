@@ -241,8 +241,10 @@ restic-home restore latest --target /tmp/restore
 ### Notes
 
 - The backup runs as user `mitac`; `rbw` must be **unlocked/reachable** for a run to
-  succeed. For unattended timer runs keep an unlocked `rbw-agent` in your session, or
-  trigger backups manually after `rbw unlock`.
+  succeed. Prefer keeping an unlocked `rbw-agent` in your graphical session. If the
+  vault is locked when the timer fires, the password command imports your session
+  D-Bus / Wayland (or X11) so `pinentry-qt` can prompt; with no session, unlock first
+  (`rbw unlock`) and start the unit manually.
 - To back up **all** of `/home` (multiple users), change the service to run as `root`
   and configure root's `rclone`/`rbw` instead.
 - The rclone OAuth token and Bitwarden login live under `~/.config` — never in this repo.
