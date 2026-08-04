@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "restic-rbw-session" ];
+  system.nixos.tags = [ "restic-waybar-progress" ];
 }
