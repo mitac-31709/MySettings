@@ -255,6 +255,7 @@ restic-home restore latest --target /tmp/restore
 | `home/nvim/lua/plugins/` | プラグイン仕様 |
 
 プラグインは `lua/plugins/` 以下に追加します。lazy.nvim 自体は Home Manager が `pkgs.vimPlugins.lazy-nvim` からインストールします（git clone によるブートストラップは不要）。
+`lazy-lock.json` は読み取り専用の `~/.config/nvim` ではなく `~/.local/state/nvim/lazy-lock.json` に置きます。
 
 ## Chromebook — ASUS CX5500FE / delbin
 

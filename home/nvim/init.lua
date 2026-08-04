@@ -19,6 +19,8 @@ local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup("plugins", {
+  -- ~/.config/nvim is a Home Manager symlink into the Nix store (read-only).
+  lockfile = vim.fn.stdpath("state") .. "/lazy-lock.json",
   checker = {
     enabled = false, -- Nix manages lazy.nvim itself
   },
