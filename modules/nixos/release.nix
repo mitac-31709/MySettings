@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "restic-waybar-progress" ];
+  system.nixos.tags = [ "clipboard-history" ];
 }
