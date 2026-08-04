@@ -5,6 +5,7 @@
   imports = [
     ./shell.nix
     ./programs.nix
+    ./clipboard.nix
     ./plasma.nix
     ./gnome.nix
     ./xfce.nix

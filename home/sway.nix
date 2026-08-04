@@ -107,6 +107,8 @@ in
           "Ctrl+Alt+t" = "exec ${ghosttyBin}";
           "${mod}+Return" = "exec ${ghosttyBin}";
           "${mod}+l" = "exec ${lockCmd}";
+          # Clipboard history (cliphist store runs in startup).
+          "${mod}+v" = "exec clipboard-history";
           # Volume / mic (PulseAudio on sof-rt5682 Chromebook).
           "XF86AudioRaiseVolume" = "exec ${pactl} set-sink-volume @DEFAULT_SINK@ +5%";
           "XF86AudioLowerVolume" = "exec ${pactl} set-sink-volume @DEFAULT_SINK@ -5%";

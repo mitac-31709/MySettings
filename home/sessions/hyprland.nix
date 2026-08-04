@@ -69,6 +69,7 @@ let
     bind = SUPER, Return, exec, ${ghostty}
     bind = CTRL ALT, T, exec, ${ghostty}
     bind = SUPER, L, exec, ${hyprlock}
+    bind = SUPER, V, exec, clipboard-history
     bind = SUPER, Q, killactive,
     bind = SUPER SHIFT, E, exit,
     bind = SUPER, F, fullscreen,
@@ -149,6 +150,7 @@ let
         hl.bind("SUPER + R", hl.dsp.global("quickshell:searchToggle"), { description = "Shell: Toggle search" })
         hl.bind("CTRL + ALT + T", hl.dsp.exec_cmd("${ghostty}"), { description = "Terminal: Ghostty" })
         hl.bind("SUPER + L", hl.dsp.exec_cmd("${hyprlock}"), { description = "Lock screen" })
+        hl.bind("SUPER + V", hl.dsp.exec_cmd("clipboard-history"), { description = "Clipboard history" })
         EOF
       '';
 in

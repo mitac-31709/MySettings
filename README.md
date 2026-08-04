@@ -31,6 +31,7 @@ GUI セッションでは次を揃えています（テーマ・パネル・シ�
 | 検索 | **Super+R**（Sway は **Super+D**） | 各環境ネイティブの検索／ランチャー（Sway は rofi） |
 | 端末 | **Ctrl+Alt+T** | Ghostty（Hyprland / Sway は Super+Return も可） |
 | ロック | **Super+L** | 画面ロック（Plasma / GNOME / Xfce 既定系、Sway は swaylock、Hyprland は hyprlock） |
+| クリップボード履歴 | **Super+V** | Sway / Hyprland は cliphist+rofi、Plasma は Klipper、GNOME は GPaste |
 | タッチパッド | — | 自然スクロール off・タップクリック on・入力中もポインタ有効 |
 
 | セッション | 検索／ランチャー |
@@ -182,7 +183,11 @@ Fcitx5 + Mozc を有効化しています。パネルの入力インジケータ
 
 ## クリップボード履歴
 
-Plasma 標準の **クリップボード**（システムトレイ、または **Meta+V**）を使います。
+| セッション | 仕組み | 呼び出し |
+|------------|--------|----------|
+| **Sway / Hyprland** | `cliphist`（起動時に `wl-paste --watch`）+ `clipboard-history`（rofi） | **Super+V** |
+| **Plasma** | Klipper（履歴保持を有効化） | **Super+V**（トレイからも可） |
+| **GNOME** | GPaste（`programs.gpaste` + Shell 拡張） | **Super+V** |
 
 ## Encrypted /home backup
 

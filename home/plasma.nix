@@ -81,6 +81,12 @@ in
       --key "Lock Session" "Meta+L,Meta+L,スクリーンをロック"
     $kwriteconfig6 --file kglobalshortcutsrc --group ksmserver \
       --key "Log Out" "Ctrl+Alt+Del	Screensaver,Ctrl+Alt+Del,ログアウト画面を表示"
+    # Klipper: keep history and ensure Meta+V opens the popup.
+    $kwriteconfig6 --file klipperrc --group General --key KeepClipboardContents true
+    $kwriteconfig6 --file klipperrc --group General --key MaxClipItems 50
+    $kwriteconfig6 --file klipperrc --group General --key IgnoreEmptyClipboard true
+    $kwriteconfig6 --file kglobalshortcutsrc --group klipper \
+      --key "show clipboard items at mouse position" "Meta+V,none,クリップボードの履歴を表示する"
   '';
 
   # Scoped to KDE so Hyprland sessions do not play it.

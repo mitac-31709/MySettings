@@ -9,6 +9,10 @@ in
   # Ctrl+Alt+T → Ghostty; touchpad matches Plasma (natural off / tap on / DWT off).
   # Super alone (mutter overlay-key) still opens Overview; do not restyle Shell.
   dconf.settings = {
+    "org/gnome/shell" = {
+      enabled-extensions = [ "GPaste@gnome-shell-extensions.gnome.org" ];
+    };
+
     "org/gnome/shell/keybindings" = {
       toggle-overview = [ "<Super>r" ];
     };
@@ -16,6 +20,7 @@ in
     "org/gnome/settings-daemon/plugins/media-keys" = {
       custom-keybindings = [
         "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/"
+        "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/"
       ];
       # Super+L is GNOME's default screensaver/lock binding; leave stock.
     };
@@ -24,6 +29,13 @@ in
       name = "Ghostty";
       command = ghostty;
       binding = "<Primary><Alt>t";
+    };
+
+    # GPaste UI (programs.gpaste.enable); Super+V matches Plasma / Sway.
+    "org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1" = {
+      name = "Clipboard history";
+      command = "gpaste-client ui";
+      binding = "<Super>v";
     };
 
     "org/gnome/desktop/peripherals/touchpad" = {
