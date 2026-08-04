@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "wol-pc" ];
+  system.nixos.tags = [ "restic-rbw-session" ];
 }
