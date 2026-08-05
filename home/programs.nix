@@ -71,6 +71,8 @@ in
 
   home.packages = with pkgs; [
     btop
+    # Official 7-Zip CLI (`7zz`). Attribute is `_7zz` because names can't start with a digit.
+    _7zz
     firefox
     code-cursor
     # Pin 1.8.4 (nixpkgs currently ships 1.8.5). Same upstream zip layout.
