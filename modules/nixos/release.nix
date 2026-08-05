@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "clipboard-history" ];
+  system.nixos.tags = [ "7zip" ];
 }
