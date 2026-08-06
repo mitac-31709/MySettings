@@ -12,6 +12,9 @@ in
 {
   programs.bash = {
     enable = true;
+    # -1 = unlimited (bash: non-negative caps; negative / unset = no limit).
+    historySize = -1;
+    historyFileSize = -1;
     shellAliases = {
       ll = "ls -la";
       rebuild = "sudo nixos-rebuild switch --flake ${flakeUri}";
