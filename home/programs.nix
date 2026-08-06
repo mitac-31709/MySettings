@@ -75,6 +75,8 @@ in
     bat
     # Download utility (command: aria2c).
     aria2
+    # YouTube / media downloader.
+    yt-dlp
     # Official 7-Zip CLI (`7zz`). Attribute is `_7zz` because names can't start with a digit.
     _7zz
     firefox
