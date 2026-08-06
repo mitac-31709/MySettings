@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "yt-dlp" ];
+  system.nixos.tags = [ "mediainfo" ];
 }
