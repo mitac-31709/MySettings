@@ -77,6 +77,8 @@ in
     aria2
     # YouTube / media downloader.
     yt-dlp
+    # Media file technical metadata.
+    mediainfo
     # Official 7-Zip CLI (`7zz`). Attribute is `_7zz` because names can't start with a digit.
     _7zz
     firefox
