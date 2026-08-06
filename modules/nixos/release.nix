@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "bat" ];
+  system.nixos.tags = [ "aria2" ];
 }
