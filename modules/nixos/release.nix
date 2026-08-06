@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "7zip" ];
+  system.nixos.tags = [ "bat" ];
 }
