@@ -17,6 +17,7 @@ in
     historyFileSize = -1;
     shellAliases = {
       ll = "ls -la";
+      batcat = "bat";
       rebuild = "sudo nixos-rebuild switch --flake ${flakeUri}";
       generations = "nixos-rebuild list-generations";
       # Emergency: stop looping SOF amp playback (Broken pipe / stuck buffer).

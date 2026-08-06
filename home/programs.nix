@@ -71,6 +71,8 @@ in
 
   home.packages = with pkgs; [
     btop
+    # Cat clone with syntax highlighting (`bat`; Debian package name is batcat).
+    bat
     # Official 7-Zip CLI (`7zz`). Attribute is `_7zz` because names can't start with a digit.
     _7zz
     firefox
