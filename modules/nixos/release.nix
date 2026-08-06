@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "aria2" ];
+  system.nixos.tags = [ "yt-dlp" ];
 }
