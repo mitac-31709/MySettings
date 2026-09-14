@@ -6,19 +6,12 @@
 }:
 
 let
-  # Classic Windows XP startup cue. Converted to WAV for paplay / PulseAudio.
-  windowsXpStartupMp3 = pkgs.fetchurl {
-    url = "https://www.myinstants.com/media/sounds/windows-xp-startup.mp3";
-    hash = "sha256-xswjAInX8eq89eIjQ8VyuGkhEboVRAT2r0Rms4Kdnzo=";
+  # Classic Windows XP startup cue for paplay / PulseAudio.
+  # myinstants started returning 403; use the Internet Archive mirror instead.
+  windowsXpStartupWav = pkgs.fetchurl {
+    url = "https://archive.org/download/windowsxpstartup_201910/Windows%20XP%20Startup.wav";
+    hash = "sha256-j4Weu5AkcDbO0R24VISKvhQ03D/9+leV98XwbbmkI9U=";
   };
-  windowsXpStartupWav =
-    pkgs.runCommand "windows-xp-startup.wav"
-      {
-        nativeBuildInputs = [ pkgs.ffmpeg ];
-      }
-      ''
-        ffmpeg -y -i ${windowsXpStartupMp3} -ar 44100 -ac 2 $out
-      '';
 in
 {
   # NumLock on at Plasma startup (0 = on).
