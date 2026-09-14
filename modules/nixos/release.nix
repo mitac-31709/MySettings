@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "mediainfo" ];
+  system.nixos.tags = [ "xp-startup-url" ];
 }
