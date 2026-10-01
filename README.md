@@ -210,27 +210,19 @@ session is logged in, **Sway waybar** shows live progress (`バックアップ N
 ### One-time setup (secrets stay out of git / the Nix store)
 
 1. **Edit your identifiers** before rebuilding:
-   - `home/mitac.nix`: `programs.rbw.settings.email` → your Bitwarden email.
+   - `home/programs.nix`: `programs.rbw.settings.email` → your Bitwarden email.
    - `modules/nixos/backup.nix` (optional): `repository`, `bitwardenItem`, `paths`.
 2. **Rebuild**: `sudo nixos-rebuild switch --flake .#mitac`.
-3. **Configure the Google Drive rclone remote named `gdrive`** (OAuth, interactive):
+3. **Run the interactive setup** (rclone `gdrive` OAuth → Bitwarden key → first backup):
+   ```bash
+   restic-home-setup
+   ```
+   Or do the same steps manually:
    ```bash
    rclone config
    # n(ew) → name: gdrive → storage: drive → follow the browser OAuth
-   # (headless? use: rclone authorize "drive" on a machine with a browser)
-   ```
-   This writes `~/.config/rclone/rclone.conf` (contains the OAuth token; keep it private).
-4. **Store the encryption key in Bitwarden** as an item named `restic-home` whose
-   password is a strong passphrase:
-   ```bash
-   rbw login          # uses the email from home/mitac.nix
-   rbw unlock         # pinentry prompts for your master password
-   # Create the item (or add it in the Bitwarden app); its password IS the restic key:
-   rbw generate 40 restic-home
-   rbw get restic-home   # should print the key
-   ```
-5. **First backup** (also creates the repo, `initialize = true`):
-   ```bash
+   rbw login && rbw unlock
+   rbw generate 40 restic-home   # password field = restic encryption key
    sudo systemctl start restic-backups-home.service
    journalctl -u restic-backups-home -f
    ```
@@ -238,9 +230,10 @@ session is logged in, **Sway waybar** shows live progress (`バックアップ N
 ### Restore / inspect
 
 The module installs a `restic-home` wrapper preloaded with the repository, rclone config
-and Bitwarden password command:
+and Bitwarden password command (and `restic-home-setup` for first-time setup):
 
 ```bash
+restic-home-setup
 restic-home snapshots
 restic-home restore latest --target /tmp/restore
 ```

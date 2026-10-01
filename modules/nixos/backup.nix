@@ -227,12 +227,151 @@ let
 
     # Final label + clear are handled by backupCleanupCommand (avoids racing partOf stop).
   '';
+
+  # Interactive first-time setup: rclone gdrive remote, Bitwarden key, first backup.
+  # Secrets stay out of the Nix store (OAuth token + restic key live in user config / BW).
+  resticHomeSetup = pkgs.writeShellApplication {
+    name = "restic-home-setup";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.gnugrep
+      pkgs.rbw
+      pkgs.rclone
+      pkgs.restic
+      pkgs.systemd
+    ];
+    text = ''
+      set -euo pipefail
+
+      # setuid sudo + system wrappers (restic-home) live outside the app PATH.
+      export PATH="/run/wrappers/bin:/run/current-system/sw/bin:$PATH"
+
+      remote_name="gdrive"
+      rclone_conf="${rcloneConfigFile}"
+      bw_item="${bitwardenItem}"
+      repo="${repository}"
+      unit="${backupUnit}"
+
+      say() { printf '%s\n' "$*"; }
+      step() { printf '\n==> %s\n' "$*"; }
+      die() { printf 'error: %s\n' "$*" >&2; exit 1; }
+
+      confirm() {
+        local prompt="$1"
+        local reply
+        printf '%s [y/N] ' "$prompt"
+        read -r reply || true
+        case "$reply" in
+          y|Y|yes|YES) return 0 ;;
+          *) return 1 ;;
+        esac
+      }
+
+      say "restic home backup — first-time setup"
+      say "repo: $repo"
+      say "rclone config: $rclone_conf"
+      say "Bitwarden item: $bw_item"
+
+      # --- 1. rclone Google Drive remote ---------------------------------
+      step "1/3 Google Drive remote ($remote_name)"
+      export RCLONE_CONFIG="$rclone_conf"
+      mkdir -p "$(dirname "$rclone_conf")"
+
+      has_remote=0
+      if [ -f "$rclone_conf" ] && rclone listremotes 2>/dev/null | grep -qx "''${remote_name}:"; then
+        has_remote=1
+      fi
+
+      if [ "$has_remote" -eq 1 ]; then
+        say "Remote ''${remote_name}: already configured."
+      else
+        say "Remote ''${remote_name}: missing. Launching interactive rclone config."
+        say "Create a remote named exactly ''${remote_name} (storage: Google Drive / drive),"
+        say "complete browser OAuth, then quit the rclone menu."
+        if ! confirm "Start rclone config now?"; then
+          die "Aborted. Re-run restic-home-setup after configuring rclone."
+        fi
+        rclone config
+        if ! rclone listremotes 2>/dev/null | grep -qx "''${remote_name}:"; then
+          die "Remote ''${remote_name}: still missing after rclone config."
+        fi
+        say "Remote ''${remote_name}: OK."
+      fi
+
+      # --- 2. Bitwarden (rbw) + restic encryption key --------------------
+      step "2/3 Bitwarden key ($bw_item)"
+
+      if ! rbw unlocked >/dev/null 2>&1; then
+        say "Vault is locked (or not logged in)."
+        if ! confirm "Run rbw login / unlock now?"; then
+          die "Aborted. Run: rbw login && rbw unlock"
+        fi
+        # login is idempotent-ish; unlock prompts via pinentry when needed.
+        rbw login || true
+        rbw unlock
+      else
+        say "Vault is unlocked."
+      fi
+
+      rbw sync >/dev/null || true
+
+      if rbw get "$bw_item" >/dev/null 2>&1; then
+        say "Bitwarden item '$bw_item' already exists."
+      else
+        say "Creating Bitwarden item '$bw_item' (40-char generated passphrase = restic key)."
+        if ! confirm "Generate and store a new restic key as '$bw_item'?"; then
+          die "Aborted. Create the item manually: rbw generate 40 $bw_item"
+        fi
+        rbw generate 40 "$bw_item"
+        rbw sync >/dev/null || true
+        if ! rbw get "$bw_item" >/dev/null 2>&1; then
+          die "Failed to read '$bw_item' after generate."
+        fi
+        say "Key stored in Bitwarden as '$bw_item'."
+      fi
+
+      # Smoke-check: restic can decrypt the password command path via wrapper.
+      if command -v restic-home >/dev/null 2>&1; then
+        if restic-home snapshots >/dev/null 2>&1; then
+          say "restic-home can open the repository (existing snapshots OK)."
+        else
+          say "Repository not readable yet (expected before first backup / initialize)."
+        fi
+      fi
+
+      # --- 3. First backup -----------------------------------------------
+      step "3/3 First backup ($unit)"
+      say "This creates the restic repo on Google Drive if needed (initialize = true)."
+      if confirm "Start $unit now (may prompt for sudo)?"; then
+        if systemctl --quiet is-active "$unit" 2>/dev/null; then
+          say "$unit is already running."
+        elif systemctl start "$unit" 2>/dev/null; then
+          say "Started $unit."
+        else
+          sudo systemctl start "$unit"
+          say "Started $unit (via sudo)."
+        fi
+        say "Follow logs with:"
+        say "  journalctl -u $unit -f"
+      else
+        say "Skipped. Start later with:"
+        say "  sudo systemctl start $unit"
+        say "  journalctl -u $unit -f"
+      fi
+
+      say ""
+      say "Done. Afterwards:"
+      say "  restic-home snapshots"
+      say "  restic-home restore latest --target /tmp/restore"
+    '';
+  };
 in
 {
   environment.systemPackages = with pkgs; [
     restic
     rclone
     rbw
+    resticHomeSetup
   ];
 
   services.restic.backups.home = {
@@ -307,6 +446,7 @@ in
     # createWrapper defaults to true → installs a `restic-home` command with the
     # same environment (repository, rclone config, Bitwarden password command) so
     # you can list snapshots or restore without re-specifying anything, e.g.:
+    #   restic-home-setup
     #   restic-home snapshots
     #   restic-home restore latest --target /tmp/restore
   };
