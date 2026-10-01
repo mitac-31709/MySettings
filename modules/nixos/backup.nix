@@ -390,7 +390,8 @@ in
     # rclone/rbw at root's config.
     paths = [ "/home/${user}" ];
 
-    # Skip caches, trash and large regenerable build artifacts.
+    # Skip caches, trash, regenerable HM/Nix links, and the MySettings flake
+    # checkout (tracked in git; restore copies are not wanted in the repo).
     exclude = [
       "/home/${user}/.cache"
       "/home/${user}/.local/share/Trash"
@@ -399,6 +400,12 @@ in
       "/home/${user}/**/.direnv"
       "/home/${user}/**/target"
       "/home/${user}/.local/state/nvim/swap"
+      "/home/${user}/MySettings"
+      "/home/${user}/.bash_history"
+      "/home/${user}/.bash_profile"
+      "/home/${user}/.bashrc"
+      "/home/${user}/.nix-defexpr"
+      "/home/${user}/.nix-profile"
     ];
 
     # Provides RESTIC_PASSWORD_COMMAND → key stays in Bitwarden.
