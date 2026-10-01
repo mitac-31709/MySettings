@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "xp-startup-url" ];
+  system.nixos.tags = [ "restic-home-setup" ];
 }
