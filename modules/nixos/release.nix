@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "restic-home-setup" ];
+  system.nixos.tags = [ "restic-exclude-hm" ];
 }
