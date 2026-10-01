@@ -284,10 +284,18 @@ let
 
       if [ "$has_remote" -eq 1 ]; then
         say "Remote ''${remote_name}: already configured."
+        if confirm "Reconfigure OAuth (own Google client_id / refresh token)?"; then
+          say "Prefer your own Desktop OAuth client_id (shared rclone ID is rate-limited / retiring 2026)."
+          say "Docs: https://rclone.org/drive/#making-your-own-client-id"
+          rclone config
+        fi
       else
         say "Remote ''${remote_name}: missing. Launching interactive rclone config."
-        say "Create a remote named exactly ''${remote_name} (storage: Google Drive / drive),"
-        say "complete browser OAuth, then quit the rclone menu."
+        say "Create a remote named exactly ''${remote_name} (storage: Google Drive / drive)."
+        say "IMPORTANT: paste your own Google Cloud OAuth client_id and client_secret"
+        say "(Desktop app). Do not leave them blank — shared rclone client_id is slow and"
+        say "being retired in 2026. See: https://rclone.org/drive/#making-your-own-client-id"
+        say "Then complete browser OAuth and quit the rclone menu."
         if ! confirm "Start rclone config now?"; then
           die "Aborted. Re-run restic-home-setup after configuring rclone."
         fi

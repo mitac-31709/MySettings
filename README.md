@@ -213,14 +213,38 @@ session is logged in, **Sway waybar** shows live progress (`バックアップ N
    - `home/programs.nix`: `programs.rbw.settings.email` → your Bitwarden email.
    - `modules/nixos/backup.nix` (optional): `repository`, `bitwardenItem`, `paths`.
 2. **Rebuild**: `sudo nixos-rebuild switch --flake .#mitac`.
-3. **Run the interactive setup** (rclone `gdrive` OAuth → Bitwarden key → first backup):
+3. **Create your own Google Drive OAuth client** (required: rclone's shared client_id is being retired in 2026, and the shared quota is what makes restore crawl). See [Making your own client_id](https://rclone.org/drive/#making-your-own-client-id):
+   1. [Google Cloud Console](https://console.cloud.google.com/) → new project (e.g. `rclone-mitac`).
+   2. **APIs & Services → Library** → enable **Google Drive API**.
+   3. **OAuth consent screen** → User type **External** → app name + your email.
+   4. **Data Access** → add scopes:
+      - `https://www.googleapis.com/auth/docs`
+      - `https://www.googleapis.com/auth/drive`
+      - `https://www.googleapis.com/auth/drive.metadata.readonly`
+   5. **Audience** → **+ Add users** → add your Google account as a test user.
+   6. **Clients → Create OAuth client** → Application type **Desktop app** → Create.
+      Note the **Client ID** and **Client secret** (keep them private; never commit).
+   7. **Audience → Publish app** (move out of Testing). Leaving it in Testing makes refresh tokens expire about weekly.
+4. **Run the interactive setup** (rclone `gdrive` OAuth → Bitwarden key → first backup):
    ```bash
    restic-home-setup
    ```
-   Or do the same steps manually:
+   When rclone asks for `client_id` / `client_secret`, paste the values from step 3
+   (do **not** leave them blank). Or configure / reconnect manually:
    ```bash
+   # New remote
    rclone config
-   # n(ew) → name: gdrive → storage: drive → follow the browser OAuth
+   # n → name: gdrive → storage: drive
+   # client_id>   <your Client ID>
+   # client_secret> <your Client secret>
+   # scope> 1 (full drive) → browser OAuth
+
+   # Existing remote that still uses the shared client_id:
+   rclone config reconnect gdrive:
+   # or: rclone config → e (edit) → gdrive → set client_id/secret → replace token (Y)
+   ```
+   Then Bitwarden + first backup:
+   ```bash
    rbw login && rbw unlock
    rbw generate 40 restic-home   # password field = restic encryption key
    sudo systemctl start restic-backups-home.service
@@ -236,6 +260,17 @@ and Bitwarden password command (and `restic-home-setup` for first-time setup):
 restic-home-setup
 restic-home snapshots
 restic-home restore latest --target /tmp/restore
+```
+
+If Drive restore is still rate-limited, copy the repo locally first, then restore from disk:
+
+```bash
+rclone copy gdrive:restic/mitac-home /var/tmp/restic-mitac-home \
+  --fast-list --transfers 4 --checkers 8 --tpslimit 8 --drive-chunk-size 64M
+restic restore latest \
+  --repo /var/tmp/restic-mitac-home \
+  --password-command 'rbw get restic-home' \
+  --target /tmp/restore
 ```
 
 ### Notes
