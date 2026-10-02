@@ -69,7 +69,10 @@ in
   };
 
   xdg.configFile."nvim".source = ./nvim;
-  xdg.dataFile."nvim/lazy/lazy.nvim".source = "${pkgs.vimPlugins.lazy-nvim}";
+  # Keep outside lazy's plugin root (~/.local/share/nvim/lazy/): a HM symlink
+  # there is seen as uninstalled (Util.ls reports "link"), so lazy tries to
+  # re-clone and fails with "should be a directory!".
+  xdg.dataFile."nvim/nix/lazy.nvim".source = "${pkgs.vimPlugins.lazy-nvim}";
 
   home.packages = with pkgs; [
     btop

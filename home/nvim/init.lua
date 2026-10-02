@@ -14,8 +14,8 @@ vim.opt.updatetime = 250
 vim.opt.splitright = true
 vim.opt.splitbelow = true
 
--- lazy.nvim bundled via Home Manager (xdg.dataFile)
-local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+-- lazy.nvim bundled via Home Manager (outside lazy's managed plugin root)
+local lazypath = vim.fn.stdpath("data") .. "/nix/lazy.nvim"
 vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup("plugins", {
