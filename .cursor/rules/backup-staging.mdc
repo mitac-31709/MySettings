@@ -1,0 +1,29 @@
+---
+description: 端末状態のバックアップは宣言設定を優先し、必要なら restic ステージングを拡張
+alwaysApply: true
+---
+
+# バックアップ対象の拡張
+
+サービスや端末登録を足すとき、再インストール後に「ログインし直し」や「再ペアリング」が必要になる状態がないか確認する。
+
+## 手順（この順）
+
+1. **NixOS / Home Manager で宣言できないか**を先に見る  
+   - 設定・鍵マップ・フラグ・パッケージは flake に書く（例: `services.keyd`、HM の設定）  
+   - 宣言で足りるなら **バックアップに足さない**
+2. 宣言できない **端末固有の秘密・登録**だけ、restic の allowlist に足す  
+   - 例: Tailscale ノード鍵、Wi‑Fi プロファイル、Bluetooth ペアリング、WARP 登録
+3. 足す場所: `modules/nixos/backup.nix` の `systemStagingSources`  
+4. 同じ変更で `README.md` の Restore 手順（`cp` / `chown` / `systemctl restart`）も更新する
+
+## やらないこと
+
+- `/var` や `/var/lib` の一括バックアップ
+- 再生成可能なもの（キャッシュ、ログ、fwupd メタデータ、Nix プロファイル）
+- すでに `/home/mitac` にあり home バックアップで足りるもの（rbw、rclone、LocalSend 等）
+
+## 参照
+
+- 現状のステージング: Wi‑Fi / Bluetooth / WARP / Tailscale（`backup.nix`）
+- 復元手順: `README.md` → Encrypted /home backup → Restore
