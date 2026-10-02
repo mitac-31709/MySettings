@@ -133,6 +133,9 @@
   # LocalSend (LAN file transfer); opens TCP/UDP 53317 by default.
   programs.localsend.enable = true;
 
+  # Lan Mouse (software KVM from Windows); default UDP 4242.
+  networking.firewall.allowedUDPPorts = [ 4242 ];
+
   hardware.enableRedistributableFirmware = true;
 
   services.openssh.enable = false;

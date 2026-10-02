@@ -6,6 +6,7 @@
     ./shell.nix
     ./programs.nix
     ./clipboard.nix
+    ./lan-mouse.nix
     ./plasma.nix
     ./gnome.nix
     ./xfce.nix
