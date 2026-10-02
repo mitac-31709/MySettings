@@ -95,8 +95,9 @@ in
     onlyoffice-desktopeditors
     # Raster editor (native).
     gimp
-    # Affinity suite v3 via Wine (overlay from affinity-nix flake).
-    affinity-v3
+    # Affinity v3 omitted: affinity-nix patches wineWow64 and often
+    # source-builds for hours when cache.forall.systems misses.
+    # Re-enable with: affinity-v3
     parsec-bin
     # Wineprefix manager for Windows apps/games (FHS-wrapped).
     (bottles.override { removeWarningPopup = true; })
