@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "hypr-warp-fix" ];
+  system.nixos.tags = [ "cursor-3.22" ];
 }
