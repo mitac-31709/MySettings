@@ -43,5 +43,10 @@ in
       tap-to-click = true;
       disable-while-typing = false;
     };
+
+    "org/gnome/desktop/peripherals/keyboard" = {
+      numlock-state = true;
+      remember-numlock-state = true;
+    };
   };
 }

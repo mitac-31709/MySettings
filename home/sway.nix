@@ -90,6 +90,8 @@ in
       input = {
         "type:keyboard" = {
           xkb_layout = "jp";
+          # Sway clears NumLock on start unless this is set.
+          xkb_numlock = "enabled";
         };
         "type:touchpad" = {
           natural_scroll = "disabled";

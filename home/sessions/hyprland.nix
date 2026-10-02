@@ -34,6 +34,7 @@ let
 
     input {
       kb_layout = jp
+      numlock_by_default = true
       follow_mouse = 1
       touchpad {
         natural_scroll = false
@@ -134,6 +135,12 @@ let
         cat > "$out/custom/variables.lua" <<'EOF'
         -- Mitac: end4-pC Quickshell instead of stock illogical-impulse "ii".
         hl.env("qsConfig", "end4-pC")
+        -- NumLock on at Hyprland start (external keyboards).
+        hl.config({
+            input = {
+                numlock_by_default = true,
+            },
+        })
         EOF
         cat > "$out/custom/execs.lua" <<EOF
         hl.on("hyprland.start", function ()

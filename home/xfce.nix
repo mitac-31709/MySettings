@@ -15,5 +15,10 @@ in
       "commands/custom/<Primary><Alt>t" = ghostty;
       "commands/custom/<Super>l" = xflock4;
     };
+
+    keyboards = {
+      Numlock = true;
+      RestoreNumlock = true;
+    };
   };
 }

@@ -64,4 +64,21 @@ in
   };
 
   security.pam.services.greetd.kwallet.enable = true;
+
+  # NumLock on before tuigreet (and as the default for new VTs).
+  # Compositors that reset LED state still need their own session option.
+  systemd.services.numLockOnTty = {
+    description = "Enable NumLock on TTYs";
+    wantedBy = [ "multi-user.target" ];
+    before = [ "greetd.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = pkgs.writeShellScript "numLockOnTty" ''
+        for tty in /dev/tty{1..6}; do
+          ${pkgs.kbd}/bin/setleds -D +num < "$tty" || true
+        done
+      '';
+    };
+  };
 }
