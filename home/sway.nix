@@ -32,7 +32,7 @@ let
     ┌─ 起動・終了 ─────────────────────────────────────────────┐
     │ Super+Return       Ghostty を起動                        │
     │ Ctrl+Alt+T         Ghostty を起動                        │
-    │ Super+D            rofi（アプリ起動・drun）              │
+    │ Super+D / Alt+Space rofi（アプリ起動・drun）             │
     │ Super+Shift+q      フォーカス中のウィンドウを閉じる      │
     │ Super+L            画面ロック（swaylock）                │
     │ Super+Shift+c      Sway 設定を再読み込み                 │
@@ -228,7 +228,9 @@ in
           mod = "Mod4";
         in
         lib.mkOptionDefault {
-          # Super+D → rofi (via menu). Super+F fullscreen, Super+R resize.
+          # Super+D → rofi (via menu). Alt+Space also opens the launcher.
+          # Super+F fullscreen, Super+R resize. Super+Space stays IME.
+          "Mod1+space" = "exec ${rofiLauncher}";
           "Ctrl+Alt+t" = "exec ${ghosttyBin}";
           "${mod}+Return" = "exec ${ghosttyBin}";
           "${mod}+l" = "exec ${lockCmd}";
