@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "slim-desktop-thermald" ];
+  system.nixos.tags = [ "hypr-warp-fix" ];
 }
