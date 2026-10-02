@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "rofi-alt-space" ];
+  system.nixos.tags = [ "cliphist-paste" ];
 }
