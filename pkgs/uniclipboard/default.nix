@@ -63,6 +63,8 @@ stdenv.mkDerivation rec {
 
     mkdir -p $out/bin $out/share
     install -Dm755 usr/bin/uniclipboard $out/bin/uniclipboard
+    # Keep the real argv0/exe name `uniclipd`. The GUI probes /proc/<pid>/exe and
+    # rejects wrapped names like `.uniclipd-wrapped` as a stale/mismatched daemon.
     install -Dm755 usr/bin/uniclipd $out/bin/uniclipd
     cp -a usr/share/. $out/share/
 
@@ -71,8 +73,8 @@ stdenv.mkDerivation rec {
       --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath [
         gtk-layer-shell
         libayatana-appindicator
-      ]}"
-    wrapProgram $out/bin/uniclipd "''${gappsWrapperArgs[@]}"
+      ]}" \
+      --set-default WEBKIT_DISABLE_DMABUF_RENDERER 1
 
     runHook postInstall
   '';

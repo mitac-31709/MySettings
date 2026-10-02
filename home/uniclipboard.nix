@@ -1,12 +1,14 @@
 # UniClipboard: sync clipboard with Windows (and other devices).
 # Pair once in the GUI (`uniclipboard`); uniclipd keeps syncing in the background.
+#
+# uniclipd must remain an unwrapped binary named exactly `uniclipd` — the GUI
+# rejects Nix makeWrapper names (`.uniclipd-wrapped`) as a mismatched daemon.
 { pkgs, ... }:
 
 let
   uniclipboard = pkgs.callPackage ../pkgs/uniclipboard { };
 in
 {
-  # Also listed in programs.nix; package here so the service path is explicit.
   home.packages = [ uniclipboard ];
 
   systemd.user.services.uniclipd = {
