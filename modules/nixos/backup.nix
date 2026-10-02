@@ -284,6 +284,26 @@ let
     # Final label + clear are handled by backupCleanupCommand (avoids racing partOf stop).
   '';
 
+  # Interactive CLI with the same env as the systemd unit (repo, rclone, Bitwarden).
+  # NixOS names its auto-wrapper `restic-<name>`; we disable that and ship `backup`.
+  resticBackupCmd = pkgs.writeShellScriptBin "backup" ''
+    set -a
+    # shellcheck disable=SC1091
+    source ${resticEnvFile}
+    export RESTIC_CACHE_DIR="/var/cache/restic-backups-home"
+    export RESTIC_REPOSITORY="${repository}"
+    export RCLONE_CONFIG="${rcloneConfigFile}"
+    export RESTIC_PROGRESS_FPS="0.2"
+    PATH="${
+      lib.makeBinPath [
+        pkgs.rbw
+        pkgs.rclone
+        pkgs.openssh
+      ]
+    }:$PATH"
+    exec ${lib.getExe pkgs.restic} "$@"
+  '';
+
   # Interactive first-time setup: rclone gdrive remote, Bitwarden key, first backup.
   # Secrets stay out of the Nix store (OAuth token + restic key live in user config / BW).
   resticHomeSetup = pkgs.writeShellApplication {
@@ -299,7 +319,7 @@ let
     text = ''
       set -euo pipefail
 
-      # setuid sudo + system wrappers (restic-home) live outside the app PATH.
+      # setuid sudo + system wrappers (backup) live outside the app PATH.
       export PATH="/run/wrappers/bin:/run/current-system/sw/bin:$PATH"
 
       remote_name="gdrive"
@@ -395,9 +415,9 @@ let
       fi
 
       # Smoke-check: restic can decrypt the password command path via wrapper.
-      if command -v restic-home >/dev/null 2>&1; then
-        if restic-home snapshots >/dev/null 2>&1; then
-          say "restic-home can open the repository (existing snapshots OK)."
+      if command -v backup >/dev/null 2>&1; then
+        if backup snapshots >/dev/null 2>&1; then
+          say "backup can open the repository (existing snapshots OK)."
         else
           say "Repository not readable yet (expected before first backup / initialize)."
         fi
@@ -425,8 +445,8 @@ let
 
       say ""
       say "Done. Afterwards:"
-      say "  restic-home snapshots"
-      say "  restic-home restore latest --target /tmp/restore"
+      say "  backup snapshots"
+      say "  backup restore latest --target /tmp/restore"
     '';
   };
 in
@@ -435,11 +455,15 @@ in
     restic
     rclone
     rbw
+    resticBackupCmd
     resticHomeSetup
   ];
 
   services.restic.backups.home = {
     inherit user repository rcloneConfigFile;
+
+    # Prefer a short `backup` CLI over nixpkgs' default `restic-home` wrapper.
+    createWrapper = false;
 
     # Home plus staged root-only system state (Wi-Fi, Bluetooth, Cloudflare WARP).
     # On this single-user host /home/${user} is effectively all of /home.
@@ -568,12 +592,10 @@ in
       ${resticPanel} clear || true
     '';
 
-    # createWrapper defaults to true → installs a `restic-home` command with the
-    # same environment (repository, rclone config, Bitwarden password command) so
-    # you can list snapshots or restore without re-specifying anything, e.g.:
+    # CLI: `backup` (see resticBackupCmd) — same env as this unit, e.g.:
     #   restic-home-setup
-    #   restic-home snapshots
-    #   restic-home restore latest --target /tmp/restore
+    #   backup snapshots
+    #   backup restore latest --target /tmp/restore
   };
 
   # Systemd's default PATH for this unit does not include profile bins; restic

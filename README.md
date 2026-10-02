@@ -251,13 +251,13 @@ session is logged in, **Sway waybar** shows live progress (`バックアップ N
 
 ### Restore / inspect
 
-The module installs a `restic-home` wrapper preloaded with the repository, rclone config
+The module installs a `backup` wrapper preloaded with the repository, rclone config
 and Bitwarden password command (and `restic-home-setup` for first-time setup):
 
 ```bash
 restic-home-setup
-restic-home snapshots
-restic-home restore latest --target /tmp/restore
+backup snapshots
+backup restore latest --target /tmp/restore
 ```
 
 System state lands under `/tmp/restore/run/restic-backups-home/system/`:
