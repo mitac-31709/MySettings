@@ -1,7 +1,8 @@
 {
   lib,
   stdenv,
-  fetchurl,
+  src,
+  version,
   dpkg,
   autoPatchelfHook,
   makeWrapper,
@@ -18,14 +19,9 @@
   webkitgtk_4_1,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation {
   pname = "uniclipboard";
-  version = "1.0.1";
-
-  src = fetchurl {
-    url = "https://github.com/UniClipboard/UniClipboard/releases/download/v${version}/UniClipboard_${version}_amd64.deb";
-    hash = "sha256-f2jw4Gk/JXDdw/jkmNb4rOxwteTxj51nThcEa5XbFjA=";
-  };
+  inherit version src;
 
   nativeBuildInputs = [
     dpkg

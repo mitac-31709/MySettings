@@ -1,7 +1,7 @@
 {
   lib,
   stdenv,
-  fetchurl,
+  src,
   dpkg,
   autoPatchelfHook,
   makeWrapper,
@@ -35,13 +35,10 @@
 
 stdenv.mkDerivation {
   pname = "sendanywhere";
-  version = "24.6.1";
+  # Rolling upstream .deb; content hash lives in flake.lock (sendanywhere-deb).
+  version = "latest";
 
-  src = fetchurl {
-    # Upstream publishes only a rolling "latest" URL; hash pins the contents.
-    url = "https://update.send-anywhere.com/linux_downloads/sendanywhere_latest_amd64.deb";
-    hash = "sha256-v1dV9tAaT5Lf5/9oKFWt9ckzophjZlDIMlNV6TcAl3w=";
-  };
+  inherit src;
 
   nativeBuildInputs = [
     dpkg

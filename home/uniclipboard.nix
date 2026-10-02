@@ -5,11 +5,8 @@
 # rejects Nix makeWrapper names (`.uniclipd-wrapped`) as a mismatched daemon.
 { pkgs, ... }:
 
-let
-  uniclipboard = pkgs.callPackage ../pkgs/uniclipboard { };
-in
 {
-  home.packages = [ uniclipboard ];
+  home.packages = [ pkgs.uniclipboard ];
 
   systemd.user.services.uniclipd = {
     Unit = {
@@ -18,7 +15,7 @@ in
       BindsTo = [ "graphical-session.target" ];
     };
     Service = {
-      ExecStart = "${uniclipboard}/bin/uniclipd";
+      ExecStart = "${pkgs.uniclipboard}/bin/uniclipd";
       Restart = "on-failure";
       RestartSec = 3;
     };

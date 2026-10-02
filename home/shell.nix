@@ -20,6 +20,8 @@ in
       batcat = "bat";
       rebuild = "sudo nixos-rebuild switch --flake ${flakeUri}";
       generations = "nixos-rebuild list-generations";
+      # UniClipboard latest + nix flake update (Cursor / Send Anywhere / inputs).
+      flake-update = "${config.home.homeDirectory}/MySettings/scripts/flake-update.sh";
       # Emergency: stop looping SOF amp playback (Broken pipe / stuck buffer).
       # Mute levels via the shared chromebook-speaker-levels helper (systemPackages).
       audio-panic = "chromebook-speaker-levels mute && systemctl --user restart pulseaudio.service 2>/dev/null; systemctl --user restart pipewire.service wireplumber.service 2>/dev/null; true";

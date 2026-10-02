@@ -36,6 +36,16 @@
     affinity-nix.url = "github:mrshmllow/affinity-nix";
     # Fresher nixpkgs solely for code-cursor (avoid bumping the whole system).
     nixpkgs-cursor.url = "github:NixOS/nixpkgs/nixos-unstable";
+    # Vendor .debs (flake update re-fetches; see scripts/flake-update.sh).
+    sendanywhere-deb = {
+      url = "https://update.send-anywhere.com/linux_downloads/sendanywhere_latest_amd64.deb";
+      flake = false;
+    };
+    # Keep URL version in sync with uniclipboardVersion below (flake-update.sh).
+    uniclipboard-deb = {
+      url = "https://github.com/UniClipboard/UniClipboard/releases/download/v1.0.1/UniClipboard_1.0.1_amd64.deb";
+      flake = false;
+    };
   };
 
   outputs =
@@ -48,6 +58,8 @@
     }@inputs:
     let
       system = "x86_64-linux";
+      # Must match inputs.uniclipboard-deb URL (updated by scripts/flake-update.sh).
+      uniclipboardVersion = "1.0.1";
     in
     {
       nixosConfigurations.mitac = nixpkgs.lib.nixosSystem {
@@ -72,6 +84,13 @@
                     system = prev.stdenv.hostPlatform.system;
                     config.allowUnfree = true;
                   }).code-cursor;
+                sendanywhere = final.callPackage ./pkgs/sendanywhere {
+                  src = inputs.sendanywhere-deb;
+                };
+                uniclipboard = final.callPackage ./pkgs/uniclipboard {
+                  src = inputs.uniclipboard-deb;
+                  version = uniclipboardVersion;
+                };
               })
             ];
             home-manager = {
