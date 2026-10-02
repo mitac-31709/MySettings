@@ -20,10 +20,11 @@ alwaysApply: true
 4. ユーザーに `sudo nixos-rebuild switch --flake .#mitac` を依頼（エージェントに sudo パスワードが無い場合は実行しない）
 5. `nixos-rebuild list-generations` で世代番号 `NN` を確認する
 6. `git tag -a "gen/NN-<slug>" -m "世代 NN: 短い特徴"` → `git push origin "gen/NN-<slug>"`
-7. `README.md` の「世代と Git タグ」対応表に行を追加する
+
+**しないこと:** `README.md` の世代↔タグ対応表への追記は不要（更新しない）。
 
 ## 参照
 
 - スラッグ定義: `modules/nixos/release.nix`
 - `configurationRevision` は `flake.nix` で `self.rev` から自動設定（手で触らない）
-- 対応表・手順の詳細: `README.md` の「世代と Git タグ」
+- 手順の詳細: `README.md` の「世代と Git タグ」

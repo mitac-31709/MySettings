@@ -7,9 +7,8 @@
 # 2. Update `system.nixos.tags` below to a short slug (letters/digits/-/_/./: only).
 # 3. Commit that bump, then: sudo nixos-rebuild switch --flake .#mitac
 # 4. Tag the commit: git tag -a "gen/NN-<slug>" -m "..." && git push origin "gen/NN-<slug>"
-# 5. Append a row to the generations table in README.md.
 #
-# Historical mapping (machine gen → git tag) lives in README.md.
+# Do not append rows to the README generations table (frozen / unused).
 
 { ... }:
 

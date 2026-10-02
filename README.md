@@ -76,7 +76,9 @@ git tag -a "gen/NN-<slug>" -m "世代 NN: 短い特徴の説明"
 git push origin "gen/NN-<slug>"
 ```
 
-### このマシン上の対応表（2026-07-28 時点）
+### このマシン上の対応表（履歴・更新しない）
+
+世代番号↔タグの対応表は **今後更新しない**。参照が必要なら `git tag -l 'gen/*'` や `nixos-rebuild list-generations` を使う。以下は過去スナップショット。
 
 ラベル導入前の世代は `Configuration Revision` が Unknown です。近いコミットをタグで示します。
 
@@ -96,19 +98,6 @@ git push origin "gen/NN-<slug>"
 | 13 | `gen/13-rbw-eu` | `879c43c` | rbw を Bitwarden EU エンドポイントへ |
 | 14 | `gen/14-plasma-numlock` | `f72575e` | 初のラベル付き世代。NumLock 既定オン（ログイン＋Plasma）。`configurationRevision` 付き |
 | 15 | `gen/15-plasma-gnome-prefs` | `32034aa` | 旧 GNOME dconf 相当を Plasma へ（タッチパッド／Konsole フォント／Ctrl+Alt+T） |
-| 16 | （適用後にタグ予定） | `jquake` ラベル | Parsec VA-API + JQuake。`sudo nixos-rebuild switch` 後に `gen/16-jquake` を打つ |
-| 17 | （適用後にタグ予定） | `sof-audio-stable` ラベル | SOF 音声安定化（WP suspend 無効・alsactl init）+ zram/oomd。`sudo nixos-rebuild switch` 後に `gen/17-sof-audio-stable` を打つ |
-| 18 | （適用後にタグ予定） | `auto-cpufreq` ラベル | auto-cpufreq（PPD 無効）。`sudo nixos-rebuild switch` 後に `gen/18-auto-cpufreq` を打つ |
-| 19 | （適用後にタグ予定） | `pulse-sof-fix` ラベル | 音声を PulseAudio へ（SOF Broken-pipe ループ回避）。`sudo nixos-rebuild switch` 後に `gen/19-pulse-sof-fix` を打つ |
-| 20 | （適用後にタグ予定） | `pulse-hw-sink` ラベル | Pulse で sof スピーカーを hw:0,0 直結。`sudo nixos-rebuild switch` 後に `gen/20-pulse-hw-sink` を打つ |
-| 21 | （適用後にタグ予定） | `xp-startup` ラベル | ログイン後に Windows XP 起動音。`sudo nixos-rebuild switch` 後に `gen/21-xp-startup` を打つ |
-| 22 | （適用後にタグ予定） | `multi-session-greetd` ラベル | greetd+tuigreet・Console(cage)・Plasma・Caelestia-AW・end4-pC。`sudo nixos-rebuild switch` 後に `gen/22-multi-session-greetd` を打つ |
-| 23 | （適用後にタグ予定） | `bottles` ラベル | Bottles（Windows アプリ用 Wine）。`sudo nixos-rebuild switch` 後に `gen/23-bottles` を打つ |
-| 24 | （適用後にタグ予定） | `console-apps` ラベル | Console 用 `apps`（fzf アプリ一覧／起動）。`sudo nixos-rebuild switch` 後に `gen/24-console-apps` を打つ |
-| 25 | （適用後にタグ予定） | `restic-notify` ラベル | restic バックアップ進捗を Plasma 通知で表示。`sudo nixos-rebuild switch` 後に `gen/25-restic-notify` を打つ |
-| 26 | （適用後にタグ予定） | `session-stable` ラベル | 全セッション安定化（start-hyprland・Console TTY・end4 依存・Hyprland IM/polkit）。`sudo nixos-rebuild switch` 後に `gen/26-session-stable` を打つ |
-| — | （適用後にタグ予定） | `power-back-logout` ラベル | power+Back 強制ログアウト（chord 検出）。`sudo nixos-rebuild switch` 後にタグを打つ |
-| — | （適用後にタグ予定） | `gimp-affinity` ラベル | GIMP + Affinity v3（affinity-nix）。`sudo nixos-rebuild switch` 後にタグを打つ |
 
 タグ一覧: `git tag -l 'gen/*'` または GitHub の Tags ページ。
 
