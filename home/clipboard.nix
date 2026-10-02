@@ -1,4 +1,5 @@
 # Clipboard history picker (cliphist + rofi). Sway / Hyprland bind Super+V.
+# Selecting an entry copies it and pastes into the previously focused window.
 { pkgs, lib, ... }:
 
 let
@@ -9,6 +10,7 @@ let
         pkgs.cliphist
         pkgs.rofi
         pkgs.wl-clipboard
+        pkgs.wtype
         pkgs.coreutils
       ]
     }:$PATH"
@@ -17,6 +19,9 @@ let
       exit 0
     fi
     printf '%s\n' "$sel" | cliphist decode | wl-copy
+    # Wait for focus to return from rofi, then paste.
+    sleep 0.05
+    wtype -M ctrl v -m ctrl
   '';
 in
 {

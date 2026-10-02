@@ -181,7 +181,7 @@ Fcitx5 + Mozc を有効化しています。パネルの入力インジケータ
 
 | セッション | 仕組み | 呼び出し |
 |------------|--------|----------|
-| **Sway / Hyprland** | `cliphist`（起動時に `wl-paste --watch`）+ `clipboard-history`（rofi） | **Super+V** |
+| **Sway / Hyprland** | `cliphist`（起動時に `wl-paste --watch`）+ `clipboard-history`（rofi → 選択で貼り付け） | **Super+V** |
 | **Plasma** | Klipper（履歴保持を有効化） | **Super+V**（トレイからも可） |
 | **GNOME** | GPaste（`programs.gpaste` + Shell 拡張） | **Super+V** |
 
