@@ -129,7 +129,11 @@
   };
 
   # Tailscale daemon; Trayscale (GUI) is in home.packages.
-  services.tailscale.enable = true;
+  # --operator lets the login user run `tailscale file get` (Taildrop) without sudo.
+  services.tailscale = {
+    enable = true;
+    extraSetFlags = [ "--operator=mitac" ];
+  };
 
   # Steam needs the NixOS module (32-bit libs, FHS, steam-hardware).
   # Also pulls in hardware.graphics.enable32Bit, which Bottles/Wine need.
