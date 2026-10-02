@@ -8,8 +8,6 @@
     ./clipboard.nix
     ./lan-mouse.nix
     ./plasma.nix
-    ./gnome.nix
-    ./xfce.nix
     ./sway.nix
     ./sessions/hyprland.nix
   ];

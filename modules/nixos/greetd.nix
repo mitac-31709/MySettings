@@ -23,12 +23,6 @@ let
     if [ -f ${sessionData}/share/wayland-sessions/plasma.desktop ]; then
       cp -f ${sessionData}/share/wayland-sessions/plasma.desktop "$out/wayland-sessions/"
     fi
-    if [ -f ${sessionData}/share/wayland-sessions/gnome.desktop ]; then
-      cp -f ${sessionData}/share/wayland-sessions/gnome.desktop "$out/wayland-sessions/"
-    fi
-    if [ -f ${sessionData}/share/wayland-sessions/xfce-wayland.desktop ]; then
-      cp -f ${sessionData}/share/wayland-sessions/xfce-wayland.desktop "$out/wayland-sessions/"
-    fi
   '';
 in
 {

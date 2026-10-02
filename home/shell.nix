@@ -24,7 +24,6 @@ in
       # Mute levels via the shared chromebook-speaker-levels helper (systemPackages).
       audio-panic = "chromebook-speaker-levels mute && systemctl --user restart pulseaudio.service 2>/dev/null; systemctl --user restart pipewire.service wireplumber.service 2>/dev/null; true";
       # When no display is up, gui wraps with cage; otherwise passthrough.
-      firefox = "gui firefox";
       vivaldi = "gui vivaldi";
       cursor = "gui cursor";
       code-cursor = "gui cursor";

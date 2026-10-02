@@ -34,6 +34,9 @@ in
     "vm.vfs_cache_pressure" = 50;
   };
 
+  # Sustained performance under Chromebook thermal limits.
+  services.thermald.enable = true;
+
   # auto-cpufreq manages governors/turbo; conflicts with power-profiles-daemon.
   services.power-profiles-daemon.enable = false;
   services.auto-cpufreq = {
