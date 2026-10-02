@@ -1,4 +1,4 @@
-# Encrypted backup of the user's home to Google Drive.
+# Encrypted backup of the user's home (+ Wi-Fi) to Google Drive.
 #
 # Pieces:
 #   - restic  : encrypted, deduplicated, snapshot-based backup engine.
@@ -6,6 +6,13 @@
 #   - rbw     : CLI Bitwarden client. The restic repository password (i.e. the
 #               encryption key) is stored in Bitwarden and fetched at runtime via
 #               `rbw get`, so no key material lives on disk or in the Nix store.
+#
+# Paths:
+#   - /home/mitac
+#   - NetworkManager system connections (Wi-Fi SSIDs/PSKs). Those files are
+#     root:root mode 600 under /etc/NetworkManager/system-connections; the
+#     backup user cannot read them, so a root ExecStartPre stages a copy into
+#     the unit RuntimeDirectory for the duration of the run.
 #
 # What is declarative (this file) vs. manual (secrets, kept out of the store):
 #   declarative : which paths, excludes, schedule, retention, the Google Drive
@@ -33,6 +40,36 @@ let
 
   # Bitwarden item whose password field holds the restic encryption key.
   bitwardenItem = "restic-home";
+
+  # NetworkManager Wi-Fi profiles (SSIDs + PSKs). Staged for the backup user.
+  nmConnectionsDir = "/etc/NetworkManager/system-connections";
+  # Matches RuntimeDirectory from the nixpkgs restic module for this unit.
+  nmStagingDir = "/run/restic-backups-home/nm-connections";
+
+  # Run as root (systemd ExecStartPre=+...) so mode-600 NM files are readable.
+  stageNmConnections = pkgs.writeShellScript "restic-home-stage-nm" ''
+    set -eu
+    export PATH="${
+      lib.makeBinPath [
+        pkgs.coreutils
+        pkgs.findutils
+      ]
+    }:$PATH"
+    rm -rf "${nmStagingDir}"
+    mkdir -p "${nmStagingDir}"
+    if [ -d "${nmConnectionsDir}" ]; then
+      # Store copy stays writable for chown; do not preserve root-only ownership.
+      find "${nmConnectionsDir}" -mindepth 1 -maxdepth 1 -exec \
+        cp -a --no-preserve=ownership {} "${nmStagingDir}/" \;
+      chown -R ${user}:users "${nmStagingDir}"
+      chmod -R u=rwX,go= "${nmStagingDir}"
+    fi
+  '';
+
+  clearNmStaging = pkgs.writeShellScript "restic-home-clear-nm" ''
+    set -eu
+    rm -rf "${nmStagingDir}"
+  '';
 
   # Wrapper so systemd's minimal PATH still finds rbw-agent. Always talk to
   # mitac's session agent (do not trust %U / id -u here: ExecStartPre can see
@@ -197,8 +234,8 @@ let
       exit 0
     fi
 
-    ${resticPanel} set "バックアップ …" "/home/${user} → Google Drive" running || true
-    ${resticNotify} low "バックアップ開始" "/home/${user} → Google Drive" || true
+    ${resticPanel} set "バックアップ …" "/home/${user} + Wi-Fi → Google Drive" running || true
+    ${resticNotify} low "バックアップ開始" "/home/${user} + Wi-Fi → Google Drive" || true
 
     last=""
     while unit_busy; do
@@ -385,10 +422,12 @@ in
   services.restic.backups.home = {
     inherit user repository rcloneConfigFile;
 
-    # The user's data under /home. On this single-user host this is effectively
-    # all of /home. To back up every user's home, run as root instead and point
-    # rclone/rbw at root's config.
-    paths = [ "/home/${user}" ];
+    # Home plus a staged copy of NetworkManager system connections (Wi-Fi).
+    # On this single-user host /home/${user} is effectively all of /home.
+    paths = [
+      "/home/${user}"
+      nmStagingDir
+    ];
 
     # Skip caches, trash, regenerable HM/Nix links, and the MySettings flake
     # checkout (tracked in git; restore copies are not wanted in the repo).
@@ -444,9 +483,9 @@ in
       )"
       if [ "''${SERVICE_RESULT:-}" = success ]; then
         ${resticPanel} set "バックアップ完了" \
-          "''${summary:-/home/${user} → Google Drive}" done || true
+          "''${summary:-/home/${user} + Wi-Fi → Google Drive}" done || true
         ${resticNotify} normal "バックアップ完了" \
-          "''${summary:-/home/${user} → Google Drive}" || true
+          "''${summary:-/home/${user} + Wi-Fi → Google Drive}" || true
       else
         ${resticPanel} set "バックアップ失敗" \
           "結果: ''${SERVICE_RESULT:-unknown}" failed || true
@@ -481,6 +520,11 @@ in
     ];
     wants = [ "restic-backups-home-progress.service" ];
     after = [ "restic-backups-home-progress.service" ];
+    # "+" = run as root even though the unit User= is mitac (NM files are 0600).
+    serviceConfig = {
+      ExecStartPre = [ "+${stageNmConnections}" ];
+      ExecStopPost = [ "+${clearNmStaging}" ];
+    };
   };
 
   # Runs as root so journalctl can read the system unit; notify-send still

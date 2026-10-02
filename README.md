@@ -187,9 +187,11 @@ Fcitx5 + Mozc を有効化しています。パネルの入力インジケータ
 
 ## Encrypted /home backup
 
-`modules/nixos/backup.nix` backs up the user's home to **Google Drive**, encrypted:
+`modules/nixos/backup.nix` backs up the user's home **and Wi-Fi profiles** to
+**Google Drive**, encrypted:
 
-- **restic** — encrypted, deduplicated, snapshot backups (`/home/mitac`).
+- **restic** — encrypted, deduplicated, snapshot backups (`/home/mitac`, plus a
+  staged copy of `/etc/NetworkManager/system-connections`).
 - **rclone** — Google Drive backend (restic repo `rclone:gdrive:restic/mitac-home`).
 - **Bitwarden (`rbw`)** — holds the restic encryption key. restic fetches it at
   runtime via `RESTIC_PASSWORD_COMMAND=rbw get restic-home`, so **no key material is
@@ -257,6 +259,17 @@ restic-home snapshots
 restic-home restore latest --target /tmp/restore
 ```
 
+Wi-Fi profiles land under
+`/tmp/restore/run/restic-backups-home/nm-connections/` (SSIDs/PSKs). To reinstate:
+
+```bash
+sudo cp /tmp/restore/run/restic-backups-home/nm-connections/* \
+  /etc/NetworkManager/system-connections/
+sudo chown root:root /etc/NetworkManager/system-connections/*
+sudo chmod 600 /etc/NetworkManager/system-connections/*
+sudo nmcli connection reload
+```
+
 If Drive restore is still rate-limited, copy the repo locally first, then restore from disk:
 
 ```bash
@@ -275,6 +288,9 @@ restic restore latest \
   vault is locked when the timer fires, the password command imports your session
   D-Bus / Wayland (or X11) so `pinentry-qt` can prompt; with no session, unlock first
   (`rbw unlock`) and start the unit manually.
+- NetworkManager system connections are root-only (`0600`); a root `ExecStartPre`
+  stages them into `/run/restic-backups-home/nm-connections` for the backup user,
+  then clears the staging dir on stop.
 - To back up **all** of `/home` (multiple users), change the service to run as `root`
   and configure root's `rclone`/`rbw` instead.
 - The rclone OAuth token and Bitwarden login live under `~/.config` — never in this repo.
