@@ -1,4 +1,4 @@
-# Encrypted backup of the user's home (+ Wi-Fi) to Google Drive.
+# Encrypted backup of the user's home + selected system state to Google Drive.
 #
 # Pieces:
 #   - restic  : encrypted, deduplicated, snapshot-based backup engine.
@@ -8,11 +8,10 @@
 #               `rbw get`, so no key material lives on disk or in the Nix store.
 #
 # Paths:
-#   - /home/mitac
-#   - NetworkManager system connections (Wi-Fi SSIDs/PSKs). Those files are
-#     root:root mode 600 under /etc/NetworkManager/system-connections; the
-#     backup user cannot read them, so a root ExecStartPre stages a copy into
-#     the unit RuntimeDirectory for the duration of the run.
+#   - /home/mitac (with excludes for regenerable bulky trees)
+#   - Root-only system state staged into the unit RuntimeDirectory:
+#       NetworkManager Wi-Fi profiles, Bluetooth pairings, Cloudflare WARP.
+#     (/etc/shadow and ~/MySettings are intentionally not backed up.)
 #
 # What is declarative (this file) vs. manual (secrets, kept out of the store):
 #   declarative : which paths, excludes, schedule, retention, the Google Drive
@@ -41,13 +40,30 @@ let
   # Bitwarden item whose password field holds the restic encryption key.
   bitwardenItem = "restic-home";
 
-  # NetworkManager Wi-Fi profiles (SSIDs + PSKs). Staged for the backup user.
-  nmConnectionsDir = "/etc/NetworkManager/system-connections";
   # Matches RuntimeDirectory from the nixpkgs restic module for this unit.
-  nmStagingDir = "/run/restic-backups-home/nm-connections";
+  stagingRoot = "/run/restic-backups-home/system";
+  nmStagingDir = "${stagingRoot}/nm-connections";
+  bluetoothStagingDir = "${stagingRoot}/bluetooth";
+  warpStagingDir = "${stagingRoot}/cloudflare-warp";
 
-  # Run as root (systemd ExecStartPre=+...) so mode-600 NM files are readable.
-  stageNmConnections = pkgs.writeShellScript "restic-home-stage-nm" ''
+  # Root-only sources → staged copies readable by the backup user.
+  systemStagingSources = [
+    {
+      src = "/etc/NetworkManager/system-connections";
+      dest = nmStagingDir;
+    }
+    {
+      src = "/var/lib/bluetooth";
+      dest = bluetoothStagingDir;
+    }
+    {
+      src = "/var/lib/cloudflare-warp";
+      dest = warpStagingDir;
+    }
+  ];
+
+  # Run as root (systemd ExecStartPre=+...) so mode-600/700 trees are readable.
+  stageSystemState = pkgs.writeShellScript "restic-home-stage-system" ''
     set -eu
     export PATH="${
       lib.makeBinPath [
@@ -55,20 +71,23 @@ let
         pkgs.findutils
       ]
     }:$PATH"
-    rm -rf "${nmStagingDir}"
-    mkdir -p "${nmStagingDir}"
-    if [ -d "${nmConnectionsDir}" ]; then
-      # Store copy stays writable for chown; do not preserve root-only ownership.
-      find "${nmConnectionsDir}" -mindepth 1 -maxdepth 1 -exec \
-        cp -a --no-preserve=ownership {} "${nmStagingDir}/" \;
-      chown -R ${user}:users "${nmStagingDir}"
-      chmod -R u=rwX,go= "${nmStagingDir}"
-    fi
+    rm -rf "${stagingRoot}"
+    mkdir -p "${stagingRoot}"
+    ${lib.concatMapStringsSep "\n" (s: ''
+      mkdir -p "${s.dest}"
+      if [ -d "${s.src}" ]; then
+        # Store copy stays writable for chown; do not preserve root-only ownership.
+        find "${s.src}" -mindepth 1 -maxdepth 1 -exec \
+          cp -a --no-preserve=ownership {} "${s.dest}/" \;
+        chown -R ${user}:users "${s.dest}"
+        chmod -R u=rwX,go= "${s.dest}"
+      fi
+    '') systemStagingSources}
   '';
 
-  clearNmStaging = pkgs.writeShellScript "restic-home-clear-nm" ''
+  clearSystemStaging = pkgs.writeShellScript "restic-home-clear-system" ''
     set -eu
-    rm -rf "${nmStagingDir}"
+    rm -rf "${stagingRoot}"
   '';
 
   # Wrapper so systemd's minimal PATH still finds rbw-agent. Always talk to
@@ -234,8 +253,8 @@ let
       exit 0
     fi
 
-    ${resticPanel} set "バックアップ …" "/home/${user} + Wi-Fi → Google Drive" running || true
-    ${resticNotify} low "バックアップ開始" "/home/${user} + Wi-Fi → Google Drive" || true
+    ${resticPanel} set "バックアップ …" "/home/${user} + システム → Google Drive" running || true
+    ${resticNotify} low "バックアップ開始" "/home/${user} + システム → Google Drive" || true
 
     last=""
     while unit_busy; do
@@ -422,30 +441,75 @@ in
   services.restic.backups.home = {
     inherit user repository rcloneConfigFile;
 
-    # Home plus a staged copy of NetworkManager system connections (Wi-Fi).
+    # Home plus staged root-only system state (Wi-Fi, Bluetooth, Cloudflare WARP).
     # On this single-user host /home/${user} is effectively all of /home.
     paths = [
       "/home/${user}"
-      nmStagingDir
+      stagingRoot
     ];
 
-    # Skip caches, trash, regenerable HM/Nix links, Steam game installs
-    # (re-downloadable; saves stay in userdata/compatdata), and the MySettings
-    # flake checkout (tracked in git; restore copies are not wanted in the repo).
+    # Skip regenerable bulk (Steam client/runtime, Cursor agent binaries, browser
+    # caches/extensions, Firefox storage), HM/Nix links, and MySettings (git).
+    # Login password (/etc/shadow) is intentionally not staged.
     exclude = [
       "/home/${user}/.cache"
       "/home/${user}/.local/share/Trash"
+      "/home/${user}/.config/mozilla/firefox/*/storage"
       "/home/${user}/.mozilla/firefox/*/storage"
       "/home/${user}/**/node_modules"
       "/home/${user}/**/.direnv"
       "/home/${user}/**/target"
       "/home/${user}/.local/state/nvim/swap"
+
+      # Steam: game installs + client/runtime (re-downloadable). Keep config
+      # (minus htmlcache), userdata, and Proton compatdata.
       "/home/${user}/.local/share/Steam/steamapps/common"
       "/home/${user}/.local/share/Steam/steamapps/downloading"
       "/home/${user}/.local/share/Steam/steamapps/temp"
       "/home/${user}/.local/share/Steam/steamapps/shadercache"
       "/home/${user}/.local/share/Steam/steamapps/workshop"
       "/home/${user}/.local/share/Steam/depotcache"
+      "/home/${user}/.local/share/Steam/steamrt64"
+      "/home/${user}/.local/share/Steam/steamrt32"
+      "/home/${user}/.local/share/Steam/ubuntu12_32"
+      "/home/${user}/.local/share/Steam/ubuntu12_64"
+      "/home/${user}/.local/share/Steam/package"
+      "/home/${user}/.local/share/Steam/steamui"
+      "/home/${user}/.local/share/Steam/appcache"
+      "/home/${user}/.local/share/Steam/linux32"
+      "/home/${user}/.local/share/Steam/linux64"
+      "/home/${user}/.local/share/Steam/legacycompat"
+      "/home/${user}/.local/share/Steam/clientui"
+      "/home/${user}/.local/share/Steam/bin"
+      "/home/${user}/.local/share/Steam/graphics"
+      "/home/${user}/.local/share/Steam/config/htmlcache"
+
+      # Cursor: agent worker binaries + editor caches/logs.
+      "/home/${user}/.config/Cursor/User/globalStorage/anysphere.cursor-agent-worker"
+      "/home/${user}/.config/Cursor/CachedData"
+      "/home/${user}/.config/Cursor/CachedProfilesData"
+      "/home/${user}/.config/Cursor/Cache"
+      "/home/${user}/.config/Cursor/Code Cache"
+      "/home/${user}/.config/Cursor/GPUCache"
+      "/home/${user}/.config/Cursor/DawnWebGPUCache"
+      "/home/${user}/.config/Cursor/DawnGraphiteCache"
+      "/home/${user}/.config/Cursor/IndexedDB"
+      "/home/${user}/.config/Cursor/logs"
+
+      # Vivaldi: regenerable caches, DRM/components, extensions, site WebStorage.
+      "/home/${user}/.config/vivaldi/Default/Service Worker"
+      "/home/${user}/.config/vivaldi/Default/GPUCache"
+      "/home/${user}/.config/vivaldi/Default/Code Cache"
+      "/home/${user}/.config/vivaldi/Default/Cache"
+      "/home/${user}/.config/vivaldi/Default/Extensions"
+      "/home/${user}/.config/vivaldi/Default/WebStorage"
+      "/home/${user}/.config/vivaldi/component_crx_cache"
+      "/home/${user}/.config/vivaldi/WasmTtsEngine"
+      "/home/${user}/.config/vivaldi/WidevineCdm"
+      "/home/${user}/.config/vivaldi/Safe Browsing"
+      "/home/${user}/.config/vivaldi/GPUPersistentCache"
+      "/home/${user}/.config/vivaldi/GraphiteDawnCache"
+
       "/home/${user}/MySettings"
       "/home/${user}/.bash_history"
       "/home/${user}/.bash_profile"
@@ -490,9 +554,9 @@ in
       )"
       if [ "''${SERVICE_RESULT:-}" = success ]; then
         ${resticPanel} set "バックアップ完了" \
-          "''${summary:-/home/${user} + Wi-Fi → Google Drive}" done || true
+          "''${summary:-/home/${user} + システム → Google Drive}" done || true
         ${resticNotify} normal "バックアップ完了" \
-          "''${summary:-/home/${user} + Wi-Fi → Google Drive}" || true
+          "''${summary:-/home/${user} + システム → Google Drive}" || true
       else
         ${resticPanel} set "バックアップ失敗" \
           "結果: ''${SERVICE_RESULT:-unknown}" failed || true
@@ -527,10 +591,10 @@ in
     ];
     wants = [ "restic-backups-home-progress.service" ];
     after = [ "restic-backups-home-progress.service" ];
-    # "+" = run as root even though the unit User= is mitac (NM files are 0600).
+    # "+" = run as root even though the unit User= is mitac (system trees are 0600/0700).
     serviceConfig = {
-      ExecStartPre = [ "+${stageNmConnections}" ];
-      ExecStopPost = [ "+${clearNmStaging}" ];
+      ExecStartPre = [ "+${stageSystemState}" ];
+      ExecStopPost = [ "+${clearSystemStaging}" ];
     };
   };
 

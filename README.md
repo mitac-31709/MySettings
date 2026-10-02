@@ -187,11 +187,12 @@ Fcitx5 + Mozc を有効化しています。パネルの入力インジケータ
 
 ## Encrypted /home backup
 
-`modules/nixos/backup.nix` backs up the user's home **and Wi-Fi profiles** to
+`modules/nixos/backup.nix` backs up the user's home **and selected system state** to
 **Google Drive**, encrypted:
 
-- **restic** — encrypted, deduplicated, snapshot backups (`/home/mitac`, plus a
-  staged copy of `/etc/NetworkManager/system-connections`).
+- **restic** — encrypted, deduplicated, snapshot backups of `/home/mitac` plus staged
+  copies of NetworkManager Wi-Fi profiles, Bluetooth pairings, and Cloudflare WARP
+  state.
 - **rclone** — Google Drive backend (restic repo `rclone:gdrive:restic/mitac-home`).
 - **Bitwarden (`rbw`)** — holds the restic encryption key. restic fetches it at
   runtime via `RESTIC_PASSWORD_COMMAND=rbw get restic-home`, so **no key material is
@@ -259,15 +260,27 @@ restic-home snapshots
 restic-home restore latest --target /tmp/restore
 ```
 
-Wi-Fi profiles land under
-`/tmp/restore/run/restic-backups-home/nm-connections/` (SSIDs/PSKs). To reinstate:
+System state lands under `/tmp/restore/run/restic-backups-home/system/`:
 
 ```bash
-sudo cp /tmp/restore/run/restic-backups-home/nm-connections/* \
+# Wi-Fi
+sudo cp /tmp/restore/run/restic-backups-home/system/nm-connections/* \
   /etc/NetworkManager/system-connections/
 sudo chown root:root /etc/NetworkManager/system-connections/*
 sudo chmod 600 /etc/NetworkManager/system-connections/*
 sudo nmcli connection reload
+
+# Bluetooth pairings
+sudo cp -a /tmp/restore/run/restic-backups-home/system/bluetooth/. \
+  /var/lib/bluetooth/
+sudo chown -R root:root /var/lib/bluetooth
+sudo systemctl restart bluetooth
+
+# Cloudflare WARP device registration
+sudo cp -a /tmp/restore/run/restic-backups-home/system/cloudflare-warp/. \
+  /var/lib/cloudflare-warp/
+sudo chown -R root:root /var/lib/cloudflare-warp
+sudo systemctl restart warp-svc 2>/dev/null || true
 ```
 
 If Drive restore is still rate-limited, copy the repo locally first, then restore from disk:
@@ -288,12 +301,12 @@ restic restore latest \
   vault is locked when the timer fires, the password command imports your session
   D-Bus / Wayland (or X11) so `pinentry-qt` can prompt; with no session, unlock first
   (`rbw unlock`) and start the unit manually.
-- NetworkManager system connections are root-only (`0600`); a root `ExecStartPre`
-  stages them into `/run/restic-backups-home/nm-connections` for the backup user,
-  then clears the staging dir on stop.
-- Steam **game installs** under `~/.local/share/Steam/steamapps/common` (plus
-  downloading / temp / shadercache / workshop / depotcache) are excluded;
-  client config, `userdata`, and Proton `compatdata` (saves) remain included.
+- Root-only trees (Wi-Fi, Bluetooth, Cloudflare WARP) are staged by a root
+  `ExecStartPre` into `/run/restic-backups-home/system/…`, then cleared on stop.
+  `/etc/shadow` (login password) and `~/MySettings` (git) are **not** backed up.
+- Excluded regenerable bulk includes Steam client/runtime + game installs (saves in
+  `userdata` / `compatdata` stay), Cursor agent-worker binaries and caches, Vivaldi
+  caches / extensions / WebStorage, and Firefox `storage`.
 - To back up **all** of `/home` (multiple users), change the service to run as `root`
   and configure root's `rclone`/`rbw` instead.
 - The rclone OAuth token and Bitwarden login live under `~/.config` — never in this repo.
