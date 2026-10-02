@@ -429,8 +429,9 @@ in
       nmStagingDir
     ];
 
-    # Skip caches, trash, regenerable HM/Nix links, and the MySettings flake
-    # checkout (tracked in git; restore copies are not wanted in the repo).
+    # Skip caches, trash, regenerable HM/Nix links, Steam game installs
+    # (re-downloadable; saves stay in userdata/compatdata), and the MySettings
+    # flake checkout (tracked in git; restore copies are not wanted in the repo).
     exclude = [
       "/home/${user}/.cache"
       "/home/${user}/.local/share/Trash"
@@ -439,6 +440,12 @@ in
       "/home/${user}/**/.direnv"
       "/home/${user}/**/target"
       "/home/${user}/.local/state/nvim/swap"
+      "/home/${user}/.local/share/Steam/steamapps/common"
+      "/home/${user}/.local/share/Steam/steamapps/downloading"
+      "/home/${user}/.local/share/Steam/steamapps/temp"
+      "/home/${user}/.local/share/Steam/steamapps/shadercache"
+      "/home/${user}/.local/share/Steam/steamapps/workshop"
+      "/home/${user}/.local/share/Steam/depotcache"
       "/home/${user}/MySettings"
       "/home/${user}/.bash_history"
       "/home/${user}/.bash_profile"

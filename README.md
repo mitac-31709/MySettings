@@ -291,6 +291,9 @@ restic restore latest \
 - NetworkManager system connections are root-only (`0600`); a root `ExecStartPre`
   stages them into `/run/restic-backups-home/nm-connections` for the backup user,
   then clears the staging dir on stop.
+- Steam **game installs** under `~/.local/share/Steam/steamapps/common` (plus
+  downloading / temp / shadercache / workshop / depotcache) are excluded;
+  client config, `userdata`, and Proton `compatdata` (saves) remain included.
 - To back up **all** of `/home` (multiple users), change the service to run as `root`
   and configure root's `rclone`/`rbw` instead.
 - The rclone OAuth token and Bitwarden login live under `~/.config` — never in this repo.
