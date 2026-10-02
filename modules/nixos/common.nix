@@ -28,10 +28,10 @@
   };
 
   # Cap journald disk use so logs cannot grow without bound.
-  services.journald.extraConfig = ''
-    SystemMaxUse=1G
-    RuntimeMaxUse=100M
-  '';
+  services.journald.settings.Journal = {
+    SystemMaxUse = "1G";
+    RuntimeMaxUse = "100M";
+  };
 
   time.timeZone = "Asia/Tokyo";
 
