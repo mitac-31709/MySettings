@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "lan-mouse" ];
+  system.nixos.tags = [ "slim-desktop-thermald" ];
 }
