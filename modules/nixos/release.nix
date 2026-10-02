@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "uniclipboard" ];
+  system.nixos.tags = [ "nvim-lazy-nix-path" ];
 }
