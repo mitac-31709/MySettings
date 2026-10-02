@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "taildrop-downloads" ];
+  system.nixos.tags = [ "restic-tailscale" ];
 }
