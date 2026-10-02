@@ -191,8 +191,8 @@ Fcitx5 + Mozc を有効化しています。パネルの入力インジケータ
 **Google Drive**, encrypted:
 
 - **restic** — encrypted, deduplicated, snapshot backups of `/home/mitac` plus staged
-  copies of NetworkManager Wi-Fi profiles, Bluetooth pairings, and Cloudflare WARP
-  state.
+  copies of NetworkManager Wi-Fi profiles, Bluetooth pairings, Cloudflare WARP
+  state, and Tailscale node state.
 - **rclone** — Google Drive backend (restic repo `rclone:gdrive:restic/mitac-home`).
 - **Bitwarden (`rbw`)** — holds the restic encryption key. restic fetches it at
   runtime via `RESTIC_PASSWORD_COMMAND=rbw get restic-home`, so **no key material is
@@ -280,7 +280,13 @@ sudo systemctl restart bluetooth
 sudo cp -a /tmp/restore/run/restic-backups-home/system/cloudflare-warp/. \
   /var/lib/cloudflare-warp/
 sudo chown -R root:root /var/lib/cloudflare-warp
-sudo systemctl restart warp-svc 2>/dev/null || true
+sudo systemctl restart cloudflare-warp 2>/dev/null || true
+
+# Tailscale node state (login / keys)
+sudo cp -a /tmp/restore/run/restic-backups-home/system/tailscale/. \
+  /var/lib/tailscale/
+sudo chown -R root:root /var/lib/tailscale
+sudo systemctl restart tailscaled
 ```
 
 If Drive restore is still rate-limited, copy the repo locally first, then restore from disk:
@@ -301,8 +307,8 @@ restic restore latest \
   vault is locked when the timer fires, the password command imports your session
   D-Bus / Wayland (or X11) so `pinentry-qt` can prompt; with no session, unlock first
   (`rbw unlock`) and start the unit manually.
-- Root-only trees (Wi-Fi, Bluetooth, Cloudflare WARP) are staged by a root
-  `ExecStartPre` into `/run/restic-backups-home/system/…`, then cleared on stop.
+- Root-only trees (Wi-Fi, Bluetooth, Cloudflare WARP, Tailscale) are staged by a
+  root `ExecStartPre` into `/run/restic-backups-home/system/…`, then cleared on stop.
   `/etc/shadow` (login password) and `~/MySettings` (git) are **not** backed up.
 - Excluded regenerable bulk includes Steam client/runtime + game installs (saves in
   `userdata` / `compatdata` stay), Cursor agent-worker binaries and caches, Vivaldi

@@ -10,7 +10,8 @@
 # Paths:
 #   - /home/mitac (with excludes for regenerable bulky trees)
 #   - Root-only system state staged into the unit RuntimeDirectory:
-#       NetworkManager Wi-Fi profiles, Bluetooth pairings, Cloudflare WARP.
+#       NetworkManager Wi-Fi profiles, Bluetooth pairings, Cloudflare WARP,
+#       Tailscale node state.
 #     (/etc/shadow and ~/MySettings are intentionally not backed up.)
 #
 # What is declarative (this file) vs. manual (secrets, kept out of the store):
@@ -45,6 +46,7 @@ let
   nmStagingDir = "${stagingRoot}/nm-connections";
   bluetoothStagingDir = "${stagingRoot}/bluetooth";
   warpStagingDir = "${stagingRoot}/cloudflare-warp";
+  tailscaleStagingDir = "${stagingRoot}/tailscale";
 
   # Root-only sources → staged copies readable by the backup user.
   systemStagingSources = [
@@ -59,6 +61,10 @@ let
     {
       src = "/var/lib/cloudflare-warp";
       dest = warpStagingDir;
+    }
+    {
+      src = "/var/lib/tailscale";
+      dest = tailscaleStagingDir;
     }
   ];
 
@@ -465,7 +471,7 @@ in
     # Prefer a short `backup` CLI over nixpkgs' default `restic-home` wrapper.
     createWrapper = false;
 
-    # Home plus staged root-only system state (Wi-Fi, Bluetooth, Cloudflare WARP).
+    # Home plus staged root-only system state (Wi-Fi, Bluetooth, WARP, Tailscale).
     # On this single-user host /home/${user} is effectively all of /home.
     paths = [
       "/home/${user}"
