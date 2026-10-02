@@ -112,7 +112,8 @@ let
     │ daemon 再起動      systemctl --user restart uniclipd     │
     │ ログ               journalctl --user -u uniclipd -f     │
     └──────────────────────────────────────────────────────────┘
-    必ず --user（systemctl status uniclipd だと Unit not found）。
+    必ず --user。daemon 再起動後は GUI も落として開き直す
+    （旧ポートに張り付いて接続できなくなる）。
 
     ┌─ Cloudflare WARP ────────────────────────────────────────┐
     │ warp-cli status    接続状態                              │
