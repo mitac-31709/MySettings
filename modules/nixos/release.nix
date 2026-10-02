@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "restic-tailscale" ];
+  system.nixos.tags = [ "rofi-alt-space" ];
 }
