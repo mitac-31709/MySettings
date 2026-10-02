@@ -39,6 +39,9 @@ in
           "--asterisks"
           "--remember"
           "--remember-session"
+          # Fallback when no remembered session (plasma6 would otherwise win via defaultSession).
+          "--cmd"
+          "sway"
           "--user-menu"
           "--sessions"
           "${curatedSessions}/wayland-sessions"

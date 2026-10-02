@@ -2,6 +2,9 @@
 { pkgs, ... }:
 
 {
+  # Override plasma6's mkDefault "plasma" so the system default is Sway.
+  services.displayManager.defaultSession = "sway";
+
   programs.sway = {
     enable = true;
     # Stock sway.desktop is curated into tuigreet as 00-sway; keep wrapper for dbus/env.
