@@ -159,7 +159,8 @@ passwd mitac
 
 ## 日本語入力（Mozc）
 
-Fcitx5 + Mozc を有効化しています。パネルの入力インジケータ、または **Super+Space**（Fcitx5 既定）で切り替えできます。
+Fcitx5 + Mozc を有効化しています。パネルの入力インジケータ、または **Super+Space** で切り替えできます。
+かな / Henkan は IME ON、英数 / Muhenkan は IME OFF（Activate/Deactivate。連打しても高速切替しない）。
 設定は **Fcitx5 設定**（`fcitx5-configtool`）から変更可能です。
 
 ## フォント
