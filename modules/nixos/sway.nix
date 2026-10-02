@@ -7,7 +7,7 @@
 
   programs.sway = {
     enable = true;
-    # Stock sway.desktop is curated into tuigreet as 00-sway; keep wrapper for dbus/env.
+    # Stock sway.desktop is curated into tuigreet as "1. Sway" (Name= sort).
     wrapperFeatures.gtk = true;
     extraPackages = with pkgs; [
       swaylock

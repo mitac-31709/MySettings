@@ -10,20 +10,38 @@ let
   sessionData = config.services.displayManager.sessionData.desktops;
   customSessions = config.mitac.greetd.customSessions;
 
-  # Curated tuigreet list: Sway first, then Hyprland customs, then DE Wayland.
-  # Hide stock hyprland / plasmax11; stock sway is renamed to 00-sway for sort order.
-  curatedSessions = pkgs.runCommand "mitac-greetd-sessions" { } ''
-    mkdir -p "$out/wayland-sessions"
-    if [ -f ${sessionData}/share/wayland-sessions/sway.desktop ]; then
-      cp -f ${sessionData}/share/wayland-sessions/sway.desktop "$out/wayland-sessions/00-sway.desktop"
-    fi
-    ${lib.concatMapStrings (s: ''
-      cp -f ${s}/share/wayland-sessions/*.desktop "$out/wayland-sessions/"
-    '') customSessions}
-    if [ -f ${sessionData}/share/wayland-sessions/plasma.desktop ]; then
-      cp -f ${sessionData}/share/wayland-sessions/plasma.desktop "$out/wayland-sessions/"
-    fi
-  '';
+  # Curated tuigreet list. tuigreet sorts by Name= (ASCII), not by filename —
+  # so we number Names to keep Sway first (Caelestia-AW / Plasma would otherwise win).
+  # Hide stock hyprland / plasmax11.
+  curatedSessions =
+    pkgs.runCommand "mitac-greetd-sessions" { nativeBuildInputs = [ pkgs.gnused ]; }
+      ''
+        mkdir -p "$out/wayland-sessions"
+        if [ -f ${sessionData}/share/wayland-sessions/sway.desktop ]; then
+          sed -e 's/^Name=.*/Name=1. Sway/' \
+            ${sessionData}/share/wayland-sessions/sway.desktop \
+            > "$out/wayland-sessions/sway.desktop"
+        fi
+        ${lib.concatImapStrings (
+          i: s:
+          let
+            n = i + 1; # 1 = Sway; imap1 starts at 1
+          in
+          ''
+            for desktop in ${s}/share/wayland-sessions/*.desktop; do
+              base=$(basename "$desktop")
+              sed -e 's/^Name=\(.*\)/Name=${toString n}. \1/' \
+                "$desktop" > "$out/wayland-sessions/$base"
+            done
+          ''
+        ) customSessions}
+        if [ -f ${sessionData}/share/wayland-sessions/plasma.desktop ]; then
+          plasma_n=$((2 + ${toString (builtins.length customSessions)}))
+          sed -e "s/^Name=.*/Name=''${plasma_n}. Plasma (Wayland)/" \
+            ${sessionData}/share/wayland-sessions/plasma.desktop \
+            > "$out/wayland-sessions/plasma.desktop"
+        fi
+      '';
 in
 {
   imports = [ ./greetd/sessions.nix ];
