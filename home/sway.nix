@@ -301,7 +301,7 @@ in
       mainBar = {
         layer = "top";
         position = "bottom";
-        height = 28;
+        height = 30;
         modules-left = [
           "custom/cheatsheet"
           "sway/workspaces"
@@ -390,7 +390,8 @@ in
       * {
         border: none;
         border-radius: 0;
-        font-family: "JetBrainsMono Nerd Font";
+        /* CJK fallback: JetBrains Mono alone metrics-clip Japanese in a short bar. */
+        font-family: "JetBrainsMono Nerd Font", "Noto Sans CJK JP", sans-serif;
         font-size: 11px;
         min-height: 0;
       }
@@ -432,9 +433,11 @@ in
         color: #e6edf3;
         background: #15383a;
       }
+      /* Left accent (not border-bottom / inset underline): those ate vertical
+         space in a short bar and clipped バックアップ … glyph tops/bottoms. */
       #custom-restic.running {
         color: #9fe7e7;
-        border-bottom: 2px solid #33c5c5;
+        border-left: 2px solid #33c5c5;
       }
       #custom-restic.done {
         color: #98c379;
