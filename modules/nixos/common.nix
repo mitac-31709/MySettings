@@ -27,9 +27,9 @@
     enableUserSlices = true;
   };
 
-  # Keep journald from filling the modest root partition.
+  # Cap journald disk use so logs cannot grow without bound.
   services.journald.extraConfig = ''
-    SystemMaxUse=200M
+    SystemMaxUse=1G
     RuntimeMaxUse=100M
   '';
 
