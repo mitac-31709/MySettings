@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "uniclip-keyring" ];
+  system.nixos.tags = [ "ime-kana-activate" ];
 }
