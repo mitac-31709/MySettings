@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "default-sway" ];
+  system.nixos.tags = [ "uniclip-keyring" ];
 }
