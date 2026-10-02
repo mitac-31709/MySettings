@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "backup-no-steam-games" ];
+  system.nixos.tags = [ "backup-trim-system" ];
 }
