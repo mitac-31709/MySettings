@@ -335,7 +335,9 @@ in
           "Print" = "exec ${grim} - | ${wlCopy}";
           "${mod}+Shift+s" = "exec ${grim} -g \"$(${slurp})\" - | ${wlCopy}";
           # Floating nvim cheatsheet (also waybar ?).
-          "${mod}+Shift+slash" = "exec ${showCheatsheet}";
+          # Physical Super+Shift+/ is bindsym --to-code in extraConfig (layout-independent).
+          # JP also emits keysym "question" for Shift+/; catch that here.
+          "${mod}+question" = "exec ${showCheatsheet}";
         };
 
       startup = [
@@ -362,6 +364,8 @@ in
       for_window [app_id="one.alynx.showmethekey"] floating enable, sticky enable, border none
       # Sway cheatsheet (Ghostty + colored nvim -R)
       for_window [app_id="com.mitac.SwayCheatsheet"] floating enable, sticky enable, resize set 760 720
+      # Layout-independent Super+Shift+/ (same toggle as waybar ?)
+      bindsym --to-code Mod4+Shift+slash exec ${showCheatsheet}
     '';
   };
 
