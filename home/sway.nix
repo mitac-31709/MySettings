@@ -209,8 +209,8 @@ let
         | jq -r '.. | objects | select(.app_id? == "com.mitac.SwayCheatsheet") | .pid' \
         | sort -u
     )
-    if ((${#pids[@]} > 0)); then
-      kill "${pids[@]}" 2>/dev/null || true
+    if ((''${#pids[@]} > 0)); then
+      kill "''${pids[@]}" 2>/dev/null || true
       exit 0
     fi
     # Ghostty requires a valid GTK app-id (reverse-DNS); hyphens-only ids are ignored.
