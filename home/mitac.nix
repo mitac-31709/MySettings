@@ -7,6 +7,7 @@
     ./programs.nix
     ./clipboard.nix
     ./lan-mouse.nix
+    ./uniclipboard.nix
     ./plasma.nix
     ./sway.nix
     ./sessions/hyprland.nix
