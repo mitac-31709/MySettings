@@ -106,6 +106,14 @@ let
     └──────────────────────────────────────────────────────────┘
     GUI 前に daemon が占有しているときは一度 stop してから開く。
 
+    ┌─ UniClipboard（Windows と CB 同期） ─────────────────────┐
+    │ GUI                uniclipboard                          │
+    │ daemon 状態        systemctl --user status uniclipd      │
+    │ daemon 再起動      systemctl --user restart uniclipd     │
+    │ ログ               journalctl --user -u uniclipd -f     │
+    └──────────────────────────────────────────────────────────┘
+    必ず --user（systemctl status uniclipd だと Unit not found）。
+
     ┌─ Cloudflare WARP ────────────────────────────────────────┐
     │ warp-cli status    接続状態                              │
     │ warp-cli connect   接続                                  │
