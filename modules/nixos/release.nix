@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "numlock-on" ];
+  system.nixos.tags = [ "backup-cmd" ];
 }
