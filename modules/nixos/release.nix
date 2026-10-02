@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "waybar-restic-clip" ];
+  system.nixos.tags = [ "lazyvim" ];
 }
