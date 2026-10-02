@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "cursor-3.22" ];
+  system.nixos.tags = [ "no-affinity-wine" ];
 }
