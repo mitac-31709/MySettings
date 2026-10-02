@@ -23,7 +23,7 @@ let
   lockCmd = "${swaylockBin} -f -c 0b0f14";
   rofiLauncher = "${rofiBin} -show drun";
 
-  # Nvim-help style reference (monospace two-column). Opened floating via Ghostty.
+  # Boxed reference opened floating via Ghostty + colored nvim (-u NONE).
   cheatsheetText = pkgs.writeText "sway-cheatsheet.txt" ''
     *sway-cheatsheet*                                          Sway チートシート
 
@@ -32,7 +32,7 @@ let
     ┌─ 起動・終了 ─────────────────────────────────────────────┐
     │ Super+Return       Ghostty を起動                        │
     │ Ctrl+Alt+T         Ghostty を起動                        │
-    │ Super+D / Alt+Space rofi（アプリ起動・drun）             │
+    │ Super+D / Alt+Space  rofi（アプリ起動・drun）            │
     │ Super+Shift+q      フォーカス中のウィンドウを閉じる      │
     │ Super+L            画面ロック（swaylock）                │
     │ Super+Shift+c      Sway 設定を再読み込み                 │
@@ -156,10 +156,46 @@ let
     音声デバイスは接続後、Pulse 側で出力シンクを選ぶことあり。
   '';
 
+  # Minimal nvim UI + dark/cyan syntax so keys / sections / notes stand out.
+  cheatsheetVim = pkgs.writeText "sway-cheatsheet.vim" ''
+    set laststatus=0 noruler nonumber norelativenumber noshowcmd nolist
+    set nocursorline noshowmode
+    set termguicolors
+    set background=dark
+    syntax enable
+    highlight clear
+    syntax clear
+
+    syntax match CheatTitle /^\*.*$/
+    syntax match CheatHint /^q で閉じる.*$/
+    syntax match CheatNote /^注:.*$/
+    syntax match CheatAside /^\(注:\|q で閉じる\)\@![^┌└│*].*$/
+    syntax match CheatSection /^┌─.*┐$/
+    syntax match CheatBorder /^[└│].*$/ contains=CheatKey,CheatDesc,CheatPipe
+    syntax match CheatPipe /│/ contained
+    syntax match CheatKey /\%(^│\)\@<= *\S.\{-}\ze \{2,}/ contained
+    syntax match CheatDesc / \{2,}.\{-}\ze│$/ contained
+
+    highlight Normal guifg=#9fe7e7 guibg=#0b0f14 ctermfg=14 ctermbg=NONE
+    highlight CheatTitle guifg=#9fe7e7 guibg=#0b0f14 gui=bold ctermfg=14
+    highlight CheatSection guifg=#33c5c5 guibg=#0b0f14 gui=bold ctermfg=51
+    highlight CheatPipe guifg=#1f4a4c guibg=#0b0f14 ctermfg=23
+    highlight CheatBorder guifg=#1f4a4c guibg=#0b0f14 ctermfg=23
+    highlight CheatKey guifg=#e5c07b guibg=#0b0f14 gui=bold ctermfg=221
+    highlight CheatDesc guifg=#e6edf3 guibg=#0b0f14 ctermfg=255
+    highlight CheatNote guifg=#e06c75 guibg=#0b0f14 gui=bold ctermfg=203
+    highlight CheatHint guifg=#6b7785 guibg=#0b0f14 ctermfg=245
+    highlight CheatAside guifg=#9aa7b5 guibg=#0b0f14 ctermfg=247
+
+    nnoremap q :qa!<CR>
+  '';
+
   showCheatsheet = pkgs.writeShellScript "sway-cheatsheet" ''
-    exec ${ghosttyBin} --class=sway-cheatsheet -e ${nvimBin} -R \
-      -c 'set laststatus=0 noruler nonumber norelativenumber noshowcmd' \
-      -c 'nnoremap q :qa!<CR>' \
+    # Ghostty requires a valid GTK app-id (reverse-DNS); hyphens-only ids are ignored.
+    exec ${ghosttyBin} --class=com.mitac.SwayCheatsheet \
+      -o gtk-single-instance=false \
+      -e ${nvimBin} -u NONE -R \
+      -S ${cheatsheetVim} \
       ${cheatsheetText}
   '';
 in
@@ -290,8 +326,8 @@ in
       # showmethekey floating overlay
       for_window [app_id="showmethekey-gtk"] floating enable, sticky enable, border none
       for_window [app_id="one.alynx.showmethekey"] floating enable, sticky enable, border none
-      # Sway cheatsheet (Ghostty + nvim -R)
-      for_window [app_id="sway-cheatsheet"] floating enable, sticky enable, resize set 760 720
+      # Sway cheatsheet (Ghostty + colored nvim -R)
+      for_window [app_id="com.mitac.SwayCheatsheet"] floating enable, sticky enable, resize set 760 720
     '';
   };
 
