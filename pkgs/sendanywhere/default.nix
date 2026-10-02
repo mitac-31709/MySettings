@@ -19,12 +19,18 @@
   libgbm,
   libnotify,
   libsecret,
+  libx11,
+  libxcomposite,
+  libxdamage,
+  libxext,
+  libxfixes,
   libxkbcommon,
+  libxrandr,
+  libxcb,
   nss,
   nspr,
   pango,
   systemd,
-  xorg,
 }:
 
 stdenv.mkDerivation {
@@ -58,18 +64,18 @@ stdenv.mkDerivation {
     libgbm
     libnotify
     libsecret
+    libx11
+    libxcomposite
+    libxdamage
+    libxext
+    libxfixes
     libxkbcommon
+    libxrandr
+    libxcb
     nss
     nspr
     pango
     systemd
-    xorg.libX11
-    xorg.libXcomposite
-    xorg.libXdamage
-    xorg.libXext
-    xorg.libXfixes
-    xorg.libXrandr
-    xorg.libxcb
     stdenv.cc.cc
   ];
 
