@@ -131,7 +131,7 @@ passwd mitac
 
 ## 同梱ソフトウェア
 
-- **Neovim** — 設定は `home/nvim`、プラグインは **lazy.nvim**（nixpkgs から同梱）
+- **Neovim** — **LazyVim**（`home/nvim`）。**lazy.nvim** 自体は nixpkgs から同梱、それ以外のプラグインは lazy が管理
 - **Cursor** — `code-cursor`
 - **Parsec** — `parsec-bin`（Intel VA-API / `intel-media-driver` でハードウェアエンコード）
 - **Steam** — `programs.steam.enable`
@@ -320,13 +320,18 @@ restic restore latest \
 
 ## Neovim 設定
 
+[LazyVim](https://github.com/LazyVim/LazyVim) スターター構成（NixOS 向けに調整）。
+
 | パス | 役割 |
 |------|------|
-| `home/nvim/init.lua` | オプション + lazy のブートストラップ |
-| `home/nvim/lua/plugins/` | プラグイン仕様 |
+| `home/nvim/init.lua` | `config.lazy` の読み込み |
+| `home/nvim/lua/config/` | options / keymaps / autocmds / lazy セットアップ |
+| `home/nvim/lua/plugins/` | 追加・上書き用のプラグイン仕様（`nix.lua` で Mason 無効化） |
 
-プラグインは `lua/plugins/` 以下に追加します。lazy.nvim 自体は Home Manager が `pkgs.vimPlugins.lazy-nvim` からインストールします（git clone によるブートストラップは不要）。
-`lazy-lock.json` は読み取り専用の `~/.config/nvim` ではなく `~/.local/state/nvim/lazy-lock.json` に置きます。
+- **lazy.nvim** 自体は Home Manager が `pkgs.vimPlugins.lazy-nvim` からインストール（git clone 不要）
+- **LazyVim 本体と依存プラグイン**は初回起動時に lazy がクローン（要ネットワーク）
+- `lazy-lock.json` は読み取り専用の `~/.config/nvim` ではなく `~/.local/state/nvim/lazy-lock.json`
+- LSP / formatter 等は Mason ではなく `programs.neovim.extraPackages`（`home/programs.nix`）
 
 ## Chromebook — ASUS CX5500FE / delbin
 

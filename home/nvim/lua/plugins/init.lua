@@ -1,10 +1,9 @@
--- Plugin specs for lazy.nvim.
--- Add plugins here, for example:
+-- Plugin specs for LazyVim / lazy.nvim.
+-- Every file under lua/plugins/ is loaded automatically.
+-- Examples: https://github.com/LazyVim/starter/blob/main/lua/plugins/example.lua
+--
 --   { "nvim-lua/plenary.nvim" },
---   {
---     "nvim-telescope/telescope.nvim",
---     dependencies = { "nvim-lua/plenary.nvim" },
---     opts = {},
---   },
+--   { import = "lazyvim.plugins.extras.lang.typescript" },
+--   { "folke/trouble.nvim", enabled = false },
 
 return {}

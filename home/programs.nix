@@ -34,7 +34,16 @@ in
     defaultEditor = true;
     viAlias = true;
     vimAlias = true;
-    # Plugins are managed by lazy.nvim (see ./nvim), not Home Manager.
+    # Plugins are managed by LazyVim / lazy.nvim (see ./nvim), not Home Manager.
+    # Mason is disabled under NixOS; put LSP / format / search CLIs here instead.
+    extraPackages = with pkgs; [
+      ripgrep
+      fd
+      gcc # treesitter parser builds
+      tree-sitter # nvim-treesitter CLI requirement
+      lua-language-server
+      stylua
+    ];
   };
 
   # Default terminal across Plasma / GNOME / Xfce / Sway / Hyprland.
