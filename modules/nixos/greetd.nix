@@ -78,7 +78,12 @@ in
     TTYVTDisallocate = true;
   };
 
-  security.pam.services.greetd.kwallet.enable = true;
+  # UniClipboard (and other libsecret apps) need an unlocked Secret Service.
+  # KWallet's ksecretd rejects UniClipboard's binary probe; use gnome-keyring.
+  # Plasma still gets KWallet via plasma6 → pam on login for native KDE apps.
+  services.gnome.gnome-keyring.enable = true;
+  security.pam.services.greetd.enableGnomeKeyring = true;
+  security.pam.services.login.enableGnomeKeyring = true;
 
   # NumLock on before tuigreet (and as the default for new VTs).
   # Compositors that reset LED state still need their own session option.
