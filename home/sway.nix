@@ -27,7 +27,7 @@ let
   cheatsheetText = pkgs.writeText "sway-cheatsheet.txt" ''
     *sway-cheatsheet*                                          Sway チートシート
 
-    q で閉じる / Super+Shift+/ または waybar の ? で開く
+    q で閉じる / Super+Shift+/ または waybar の ? でもう一度で閉じる
 
     ┌─ 起動・終了 ─────────────────────────────────────────────┐
     │ Super+Return       Ghostty を起動                        │
@@ -63,7 +63,7 @@ let
     │ 音量キー           上げ / 下げ / ミュート                │
     │ MicMute            マイクミュート                        │
     │ 輝度キー           画面輝度 ±5%                          │
-    │ Super+Shift+/      このチートシートを開く                │
+    │ Super+Shift+/      このチートシートを開閉               │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ 入力 ───────────────────────────────────────────────────┐
@@ -78,7 +78,7 @@ let
     │ showmethekey       キー押下オーバーレイ（rofi から起動） │
     │ LocalSend          LAN ファイル送受信（rofi から）       │
     │ waybar [restic]    バックアップ実行中の進捗表示          │
-    │ waybar ?           このチートシート                      │
+    │ waybar ?           このチートシート（再押下で閉じる）    │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ NixOS 適用 ─────────────────────────────────────────────┐
@@ -191,10 +191,32 @@ let
   '';
 
   showCheatsheet = pkgs.writeShellScript "sway-cheatsheet" ''
+    set -eu
+    export PATH="${
+      lib.makeBinPath [
+        pkgs.coreutils
+        pkgs.jq
+        pkgs.procps
+        pkgs.sway
+        pkgs.ghostty
+        pkgs.neovim
+      ]
+    }:$PATH"
+    # Toggle: second ? / Super+Shift+/ closes an existing sheet.
+    # swaymsg kill is a no-op for this Ghostty+-e window; terminate its PID instead.
+    mapfile -t pids < <(
+      swaymsg -t get_tree \
+        | jq -r '.. | objects | select(.app_id? == "com.mitac.SwayCheatsheet") | .pid' \
+        | sort -u
+    )
+    if ((${#pids[@]} > 0)); then
+      kill "${pids[@]}" 2>/dev/null || true
+      exit 0
+    fi
     # Ghostty requires a valid GTK app-id (reverse-DNS); hyphens-only ids are ignored.
-    exec ${ghosttyBin} --class=com.mitac.SwayCheatsheet \
+    exec ghostty --class=com.mitac.SwayCheatsheet \
       -o gtk-single-instance=false \
-      -e ${nvimBin} -u NONE -R \
+      -e nvim -u NONE -R \
       -S ${cheatsheetVim} \
       ${cheatsheetText}
   '';
