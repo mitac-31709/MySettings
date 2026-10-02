@@ -3,6 +3,8 @@
 
 let
   email = "mitac31709@gmail.com";
+  # Not in nixpkgs; packaged from the upstream .deb (see pkgs/sendanywhere).
+  sendanywhere = pkgs.callPackage ../pkgs/sendanywhere { };
 in
 {
   programs.git = {
@@ -106,5 +108,7 @@ in
     showmethekey
     # Google Quick Share / Nearby Share client for Linux.
     rquickshare
+    # Send Anywhere (upstream Electron .deb; not in nixpkgs).
+    sendanywhere
   ];
 }

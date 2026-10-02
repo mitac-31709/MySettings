@@ -115,7 +115,7 @@ git push origin "gen/NN-<slug>"
 
 - Flakes が有効な NixOS マシン（この flake でも有効化します）
 - 初回 rebuild の**前に**、`hosts/mitac/hardware-configuration.nix` を自分のマシンで生成したファイルに差し替えること
-- 非フリーパッケージ（`code-cursor`、`jquake`、`parsec-bin`、`steam`、`vivaldi`）は `flake.nix` で許可済み
+- 非フリーパッケージ（`code-cursor`、`jquake`、`parsec-bin`、`sendanywhere`、`steam`、`vivaldi`）は `flake.nix` で許可済み
 - Chromebook: MrChromebox（または同等）の UEFI／WP 無効を想定。ファームウェアの書き込みはこのリポジトリの範囲外
 
 ## 適用手順
@@ -151,6 +151,7 @@ passwd mitac
 - **ONLYOFFICE** — `onlyoffice-desktopeditors`（文書・表計算・プレゼン）
 - **LocalSend** — LAN ファイル転送（`programs.localsend`、ファイアウォール 53317）
 - **RQuickShare** — Google Quick Share / Nearby Share の Linux クライアント（`rquickshare`）
+- **Send Anywhere** — クロスプラットフォーム転送（`pkgs/sendanywhere`、upstream `.deb`）
 - **wol-pc** — Wake-on-LAN クライアント（`~/Projects/wol-pc`）。依存: `sshpass` / `zenity`（`home.packages`）。設定は同ディレクトリの `config.env`
 - **7-Zip** — `_7zz`（コマンド `7zz`）
 - **tmux** — `runbtop <cmd>` で上部に実行出力（約 10 行）、下部に `btop`
