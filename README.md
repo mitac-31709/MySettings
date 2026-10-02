@@ -149,6 +149,8 @@ passwd mitac
 - **Vivaldi** — `vivaldi`
 - **JQuake** — `jquake` 1.8.4（日本のリアルタイム地震マップ）
 - **ONLYOFFICE** — `onlyoffice-desktopeditors`（文書・表計算・プレゼン）
+- **LocalSend** — LAN ファイル転送（`programs.localsend`、ファイアウォール 53317）
+- **RQuickShare** — Google Quick Share / Nearby Share の Linux クライアント（`rquickshare`）
 - **wol-pc** — Wake-on-LAN クライアント（`~/Projects/wol-pc`）。依存: `sshpass` / `zenity`（`home.packages`）。設定は同ディレクトリの `config.env`
 - **7-Zip** — `_7zz`（コマンド `7zz`）
 - **tmux** — `runbtop <cmd>` で上部に実行出力（約 10 行）、下部に `btop`

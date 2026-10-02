@@ -104,5 +104,7 @@ in
     vivaldi
     # On-screen keystroke overlay (useful for demos / Chromebook Fn keys).
     showmethekey
+    # Google Quick Share / Nearby Share client for Linux.
+    rquickshare
   ];
 }

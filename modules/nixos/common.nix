@@ -123,6 +123,9 @@
   # Also pulls in hardware.graphics.enable32Bit, which Bottles/Wine need.
   programs.steam.enable = true;
 
+  # LocalSend (LAN file transfer); opens TCP/UDP 53317 by default.
+  programs.localsend.enable = true;
+
   hardware.enableRedistributableFirmware = true;
 
   services.openssh.enable = false;
