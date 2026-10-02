@@ -80,10 +80,17 @@
     emoji = [ "Noto Color Emoji" ];
   };
 
-  nix.settings.experimental-features = [
-    "nix-command"
-    "flakes"
-  ];
+  nix.settings = {
+    experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
+    # Binary cache for affinity-nix (Wine Affinity builds).
+    extra-substituters = [ "https://cache.forall.systems" ];
+    extra-trusted-public-keys = [
+      "cache.forall.systems:5PmD7QO4MSF8YgyRZtkSGXRDo96H3bybIf2SsQh8ScI="
+    ];
+  };
 
   users.users.mitac = {
     isNormalUser = true;

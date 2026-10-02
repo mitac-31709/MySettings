@@ -32,6 +32,8 @@
       url = "github:end-4/dots-hyprland/aed4d1ec63f584905c28d2a678db5845579fdafc";
       flake = false;
     };
+    # Affinity Photo/Designer/Publisher (Wine; Canva Affinity v3)
+    affinity-nix.url = "github:mrshmllow/affinity-nix";
   };
 
   outputs =
@@ -59,6 +61,7 @@
             system.configurationRevision = self.rev or self.dirtyRev or "dirty";
 
             nixpkgs.config.allowUnfree = true;
+            nixpkgs.overlays = [ inputs.affinity-nix.overlays.default ];
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
