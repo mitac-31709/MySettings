@@ -34,6 +34,8 @@
     };
     # Affinity Photo/Designer/Publisher (Wine; Canva Affinity v3)
     affinity-nix.url = "github:mrshmllow/affinity-nix";
+    # Fresher nixpkgs solely for code-cursor (avoid bumping the whole system).
+    nixpkgs-cursor.url = "github:NixOS/nixpkgs/nixos-unstable";
   };
 
   outputs =
@@ -61,7 +63,17 @@
             system.configurationRevision = self.rev or self.dirtyRev or "dirty";
 
             nixpkgs.config.allowUnfree = true;
-            nixpkgs.overlays = [ inputs.affinity-nix.overlays.default ];
+            nixpkgs.overlays = [
+              inputs.affinity-nix.overlays.default
+              (final: prev: {
+                # Electron app; pull latest Cursor without a full nixpkgs bump.
+                code-cursor =
+                  (import inputs.nixpkgs-cursor {
+                    system = prev.stdenv.hostPlatform.system;
+                    config.allowUnfree = true;
+                  }).code-cursor;
+              })
+            ];
             home-manager = {
               useGlobalPkgs = true;
               useUserPackages = true;
