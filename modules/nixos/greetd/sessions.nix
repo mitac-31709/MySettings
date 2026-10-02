@@ -55,6 +55,8 @@ let
         export XDG_CURRENT_DESKTOP=Hyprland
         export XDG_SESSION_DESKTOP=Hyprland
         export XDG_SESSION_TYPE=wayland
+        export QT_QPA_PLATFORM=wayland
+        export QML2_IMPORT_PATH="${config.mitac.hyprland.qmlImportPath}''${QML2_IMPORT_PATH:+:$QML2_IMPORT_PATH}"
         export MITAC_SESSION=${lib.escapeShellArg sessionId}
         ${lib.concatStringsSep "\n" (
           lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg v}") extraExports
@@ -82,29 +84,8 @@ let
   # Prefer aggregated system QML tree (shared with hyprland.nix).
   qmlImportPath = config.mitac.hyprland.qmlImportPath;
 
-  # Wait for Hyprland's Wayland socket, then start qs if II's hyprland.start
-  # did not. Must NOT run qs before WAYLAND_DISPLAY exists — that crashes Qt.
-  waitAndStartQs = ''
-    runtime="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-    qs_log="''${XDG_CACHE_HOME:-$HOME/.cache}/qs-end4.log"
-    i=0
-    while [ "$i" -lt 45 ]; do
-      for sock in wayland-1 wayland-0; do
-        if [ -S "$runtime/$sock" ] && ls "$runtime"/hypr/*/ >/dev/null 2>&1; then
-          export WAYLAND_DISPLAY="$sock"
-          sleep 3
-          printf '[%s] safety-net: WAYLAND_DISPLAY=%s — ensuring qs\n' "$(date -Is)" "$WAYLAND_DISPLAY"
-          qs -n -c end4-pC >>"$qs_log" 2>&1 &
-          exit 0
-        fi
-      done
-      i=$((i + 1))
-      sleep 1
-    done
-    printf '[%s] safety-net: no Wayland/Hyprland socket after 45s\n' "$(date -Is)"
-  '';
-
-  # end4-pC: Illogical Impulse hyprland.lua via start-hyprland; fall back to end4.conf.
+  # end4-pC: classic .conf first (PulseAudio + qs). II lua is a last resort —
+  # it assumes wpctl/easyeffects and often leaves a broken desktop here.
   hyprlandStartup = pkgs.writeShellApplication {
     name = "hyprland-startup";
     runtimeInputs = [
@@ -119,6 +100,7 @@ let
       export XDG_SESSION_TYPE=wayland
       export MITAC_SESSION=end4
       export qsConfig=end4-pC
+      export QUICKSHELL_CONFIG_NAME=end4-pC
       export QT_QPA_PLATFORM=wayland
       export QML2_IMPORT_PATH="${qmlImportPath}''${QML2_IMPORT_PATH:+:$QML2_IMPORT_PATH}"
 
@@ -129,23 +111,25 @@ let
       printf '[%s] hyprland-startup begin\n' "$(date -Is)"
 
       hypr_cfg="''${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
-      lua="$hypr_cfg/hyprland.lua"
       conf="$hypr_cfg/end4.conf"
+      lua="$hypr_cfg/hyprland.lua"
+
+      if [ -f "$conf" ]; then
+        printf 'using classic conf: %s\n' "$conf"
+        export HYPRLAND_CONFIG="$conf"
+        if command -v start-hyprland >/dev/null 2>&1; then
+          exec start-hyprland -- --config "$conf"
+        fi
+        exec Hyprland --config "$conf"
+      fi
 
       if [ -f "$lua" ]; then
-        printf 'using Illogical Impulse lua via start-hyprland: %s\n' "$lua"
-        (${waitAndStartQs}) &
+        printf 'classic conf missing; falling back to II lua: %s\n' "$lua"
         unset HYPRLAND_CONFIG || true
         exec start-hyprland
       fi
 
-      if [ -f "$conf" ]; then
-        printf 'lua missing; falling back to classic conf: %s\n' "$conf"
-        export HYPRLAND_CONFIG="$conf"
-        exec Hyprland --config "$conf"
-      fi
-
-      printf 'missing Hyprland config: need %s or %s\n' "$lua" "$conf"
+      printf 'missing Hyprland config: need %s or %s\n' "$conf" "$lua"
       exit 1
     '';
   };

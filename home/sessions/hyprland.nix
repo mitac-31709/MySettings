@@ -14,8 +14,11 @@ let
   ghostty = "${pkgs.ghostty}/bin/ghostty";
   hyprlock = "${pkgs.hyprlock}/bin/hyprlock";
 
-  # Shared classic-.conf preamble (Caelestia + end4 fallback).
+  qmlImportPath = "/run/current-system/sw/lib/qt-6/qml";
+
+  # Shared classic-.conf preamble (Caelestia + end4 primary).
   # Super+Space stays free for Fcitx5/Mozc; launchers use Super+R.
+  # Keep this path PulseAudio-native — II lua's wpctl/easyeffects break here.
   sharedPreamble = ''
     monitor=,preferred,auto,1
 
@@ -23,14 +26,16 @@ let
     env = XDG_SESSION_DESKTOP,Hyprland
     env = XDG_SESSION_TYPE,wayland
     env = QT_QPA_PLATFORM,wayland
+    env = QML2_IMPORT_PATH,${qmlImportPath}
     env = MOZ_ENABLE_WAYLAND,1
 
     exec-once = dbus-update-activation-environment --systemd --all
-    exec-once = systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE QT_QPA_PLATFORM
+    exec-once = systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE QT_QPA_PLATFORM QML2_IMPORT_PATH
     exec-once = ${polkitAgent}
     exec-once = fcitx5 -d --replace
     exec-once = wl-paste --type text --watch cliphist store
     exec-once = wl-paste --type image --watch cliphist store
+    exec-once = hypridle
 
     input {
       kb_layout = jp
@@ -74,6 +79,14 @@ let
     bind = SUPER, Q, killactive,
     bind = SUPER SHIFT, E, exit,
     bind = SUPER, F, fullscreen,
+    bind = SUPER, 1, workspace, 1
+    bind = SUPER, 2, workspace, 2
+    bind = SUPER, 3, workspace, 3
+    bind = SUPER, 4, workspace, 4
+    bind = SUPER SHIFT, 1, movetoworkspace, 1
+    bind = SUPER SHIFT, 2, movetoworkspace, 2
+    bind = SUPER SHIFT, 3, movetoworkspace, 3
+    bind = SUPER SHIFT, 4, movetoworkspace, 4
   '';
 
   caelestiaConf = ''
@@ -82,7 +95,7 @@ let
     bind = SUPER, R, exec, caelestia shell drawers toggle launcher
   '';
 
-  # Classic .conf fallback when greetd still runs an older wrapper, or lua is missing.
+  # Primary end4-pC path (hyprland-startup prefers this over II lua).
   end4Conf = ''
     ${sharedPreamble}
     env = qsConfig,end4-pC
@@ -158,6 +171,15 @@ let
         hl.bind("CTRL + ALT + T", hl.dsp.exec_cmd("${ghostty}"), { description = "Terminal: Ghostty" })
         hl.bind("SUPER + L", hl.dsp.exec_cmd("${hyprlock}"), { description = "Lock screen" })
         hl.bind("SUPER + V", hl.dsp.exec_cmd("clipboard-history"), { description = "Clipboard history" })
+        -- PulseAudio on this Chromebook (II defaults use wpctl / PipeWire).
+        hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("${pactl} set-sink-volume @DEFAULT_SINK@ +5%"),
+            { locked = true, repeating = true })
+        hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("${pactl} set-sink-volume @DEFAULT_SINK@ -5%"),
+            { locked = true, repeating = true })
+        hl.bind("XF86AudioMute", hl.dsp.exec_cmd("${pactl} set-sink-mute @DEFAULT_SINK@ toggle"),
+            { locked = true })
+        hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("${pactl} set-source-mute @DEFAULT_SOURCE@ toggle"),
+            { locked = true })
         EOF
       '';
 in
@@ -179,7 +201,7 @@ in
   # Caelestia-AW: dedicated classic .conf (greetd wrapper passes --config).
   xdg.configFile."hypr/caelestia.conf".text = caelestiaConf;
 
-  # end4-pC classic fallback (older greetd wrappers / missing lua).
+  # end4-pC primary classic conf (hyprland-startup prefers this over II lua).
   xdg.configFile."hypr/end4.conf".text = end4Conf;
 
   # end4-pC: Illogical Impulse Hyprland tree (required by hyprland-startup).

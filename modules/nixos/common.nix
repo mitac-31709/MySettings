@@ -116,11 +116,16 @@
 
   # Cloudflare WARP (1.1.1.1): daemon + CLI, plus official GUI (warp-taskbar tray).
   services.cloudflare-warp.enable = true;
+  # Upstream unit provides BindReadOnlyPaths=…:/usr: so warp-taskbar finds
+  # /usr/share/warp/images. It also ships warp-svc — disable that duplicate;
+  # NixOS owns cloudflare-warp.service.
   systemd.packages = [ pkgs.cloudflare-warp ];
-  # Tray applet is Plasma-oriented; keep it off Hyprland/Sway sessions.
+  systemd.services.warp-svc.enable = false;
+  # Tray needs a StatusNotifier host (waybar / Plasma). Start in every
+  # graphical session — not KDE-only (manual launch without /usr bind dies).
   systemd.user.services.warp-taskbar = {
     wantedBy = [ "graphical-session.target" ];
-    unitConfig.ConditionEnvironment = "XDG_CURRENT_DESKTOP=KDE";
+    after = [ "graphical-session-pre.target" ];
   };
 
   # Tailscale daemon; Trayscale (GUI) is in home.packages.
