@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "backup-trim-system" ];
+  system.nixos.tags = [ "numlock-on" ];
 }
