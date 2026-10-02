@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "backup-wifi" ];
+  system.nixos.tags = [ "backup-no-steam-games" ];
 }
