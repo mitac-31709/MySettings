@@ -14,5 +14,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "restic-exclude-hm" ];
+  system.nixos.tags = [ "gimp-affinity" ];
 }

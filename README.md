@@ -108,6 +108,7 @@ git push origin "gen/NN-<slug>"
 | 25 | （適用後にタグ予定） | `restic-notify` ラベル | restic バックアップ進捗を Plasma 通知で表示。`sudo nixos-rebuild switch` 後に `gen/25-restic-notify` を打つ |
 | 26 | （適用後にタグ予定） | `session-stable` ラベル | 全セッション安定化（start-hyprland・Console TTY・end4 依存・Hyprland IM/polkit）。`sudo nixos-rebuild switch` 後に `gen/26-session-stable` を打つ |
 | — | （適用後にタグ予定） | `power-back-logout` ラベル | power+Back 強制ログアウト（chord 検出）。`sudo nixos-rebuild switch` 後にタグを打つ |
+| — | （適用後にタグ予定） | `gimp-affinity` ラベル | GIMP + Affinity v3（affinity-nix）。`sudo nixos-rebuild switch` 後にタグを打つ |
 
 タグ一覧: `git tag -l 'gen/*'` または GitHub の Tags ページ。
 
