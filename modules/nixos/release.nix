@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "no-affinity-wine" ];
+  system.nixos.tags = [ "uniclipboard" ];
 }
