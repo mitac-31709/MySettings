@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "gimp-affinity" ];
+  system.nixos.tags = [ "backup-wifi" ];
 }
