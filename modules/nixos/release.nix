@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "cliphist-paste" ];
+  system.nixos.tags = [ "default-sway" ];
 }
