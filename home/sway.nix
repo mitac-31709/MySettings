@@ -130,10 +130,13 @@ let
     │ daemon 再起動      systemctl --user restart uniclipd     │
     │ ログ               journalctl --user -u uniclipd -f     │
     │ 鍵環ロック時       seahorse（Default Keyring を解錠）    │
+    │ ピア拒否           Devices→相手→「この端末と同期」ON    │
+    │                    （tray Device Sync のチェックでも可） │
     └──────────────────────────────────────────────────────────┘
     必ず --user。daemon 再起動後は GUI も落として開き直す
     （旧ポートに張り付いて接続できなくなる）。
     起動失敗（engine 1223）は鍵環未解錠が典型。再ログインか seahorse。
+    「ピア拒否」は受信オフ時の正常動作。ファイル種別も both/receive に。
 
     ┌─ Cloudflare WARP ────────────────────────────────────────┐
     │ warp-cli status    接続状態                              │
