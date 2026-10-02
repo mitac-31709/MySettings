@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "backup-cmd" ];
+  system.nixos.tags = [ "lan-mouse" ];
 }
