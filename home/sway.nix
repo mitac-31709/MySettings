@@ -74,8 +74,43 @@ let
 
     ┌─ 便利ツール ─────────────────────────────────────────────┐
     │ showmethekey       キー押下オーバーレイ（rofi から起動） │
+    │ LocalSend          LAN ファイル送受信（rofi から）       │
     │ waybar [restic]    バックアップ実行中の進捗表示          │
     │ waybar ?           このチートシート                      │
+    └──────────────────────────────────────────────────────────┘
+
+    ┌─ NixOS 適用 ─────────────────────────────────────────────┐
+    │ rebuild            設定を適用（~/MySettings#mitac）      │
+    │ generations        世代一覧（list-generations）          │
+    └──────────────────────────────────────────────────────────┘
+
+    ┌─ バックアップ（restic → Google Drive） ──────────────────┐
+    │ 事前               rbw unlock（鍵が必要）                │
+    │ 手動実行           sudo systemctl start                  │
+    │                    restic-backups-home.service           │
+    │ 進捗ログ           journalctl -u restic-backups-home -f  │
+    │ backup snapshots   スナップショット一覧                  │
+    │ backup restore …   復元（必ず --target を付ける）        │
+    │   例: backup restore latest --target /tmp/restore        │
+    │ 初回セットアップ   restic-home-setup                     │
+    └──────────────────────────────────────────────────────────┘
+    注: --target なしは /home/mitac を直接上書きするので危険。
+    展開先は /tmp/restore/home/mitac/... になる。
+
+    ┌─ Lan Mouse（Windows のマウス／KB を受信） ───────────────┐
+    │ lan-mouse          GUI（Authorize / 設定）               │
+    │ daemon 停止        systemctl --user stop lan-mouse       │
+    │ daemon 再開        systemctl --user start lan-mouse      │
+    │ Windows            winget install lan-mouse → GUI で Add │
+    │ ポート             UDP 4242（同一 LAN / Tailscale）      │
+    └──────────────────────────────────────────────────────────┘
+    GUI 前に daemon が占有しているときは一度 stop してから開く。
+
+    ┌─ Cloudflare WARP ────────────────────────────────────────┐
+    │ warp-cli status    接続状態                              │
+    │ warp-cli connect   接続                                  │
+    │ warp-cli disconnect 切断                                 │
+    │ warp-taskbar       トレイ GUI                            │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ Chromebook 最上段キー ──────────────────────────────────┐
@@ -236,7 +271,7 @@ in
       for_window [app_id="showmethekey-gtk"] floating enable, sticky enable, border none
       for_window [app_id="one.alynx.showmethekey"] floating enable, sticky enable, border none
       # Sway cheatsheet (Ghostty + nvim -R)
-      for_window [app_id="sway-cheatsheet"] floating enable, sticky enable, resize set 720 560
+      for_window [app_id="sway-cheatsheet"] floating enable, sticky enable, resize set 760 720
     '';
   };
 
