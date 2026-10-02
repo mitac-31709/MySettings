@@ -214,8 +214,9 @@ let
       exit 0
     fi
     # Ghostty requires a valid GTK app-id (reverse-DNS); hyphens-only ids are ignored.
+    # Options use --key=value (no -o); needed so single-instance Ghostty doesn't swallow this.
     exec ghostty --class=com.mitac.SwayCheatsheet \
-      -o gtk-single-instance=false \
+      --gtk-single-instance=false \
       -e nvim -u NONE -R \
       -S ${cheatsheetVim} \
       ${cheatsheetText}
