@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "nvim-lazy-nix-path" ];
+  system.nixos.tags = [ "taildrop-downloads" ];
 }
