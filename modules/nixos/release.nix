@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "ime-kana-activate" ];
+  system.nixos.tags = [ "waybar-restic-clip" ];
 }
