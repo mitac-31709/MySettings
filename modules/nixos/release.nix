@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "lazyvim" ];
+  system.nixos.tags = [ "cursor-cli" ];
 }
