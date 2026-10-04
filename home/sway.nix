@@ -68,8 +68,6 @@ let
 
     ┌─ 入力 ───────────────────────────────────────────────────┐
     │ Super+Space        Fcitx5 / Mozc 切替（IME）             │
-    │ かな / Henkan      IME ON（Activate・連打しても安全）    │
-    │ 英数 / Muhenkan    IME OFF（Deactivate）                 │
     │ 配列               jp（xkb_layout）                      │
     │ NumLock            起動時オン                            │
     └──────────────────────────────────────────────────────────┘

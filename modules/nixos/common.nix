@@ -59,37 +59,15 @@
       kdePackages.fcitx5-qt
       kdePackages.fcitx5-configtool
     ];
-    fcitx5.settings = {
-      inputMethod = {
-        GroupOrder."0" = "Default";
-        "Groups/0" = {
-          Name = "Default";
-          "Default Layout" = "jp";
-          DefaultIM = "mozc";
-        };
-        "Groups/0/Items/0".Name = "keyboard-jp";
-        "Groups/0/Items/1".Name = "mozc";
+    fcitx5.settings.inputMethod = {
+      GroupOrder."0" = "Default";
+      "Groups/0" = {
+        Name = "Default";
+        "Default Layout" = "jp";
+        DefaultIM = "mozc";
       };
-      # Default TriggerKeys include Zenkaku_Hankaku + Hangul. Those keys
-      # auto-repeat on Linux/Wayland, so a short hold (or Windows key-repeat
-      # forwarded by lan-mouse) flips IME on/off many times per second.
-      # Use absolute Activate/Deactivate for かな/英数 instead (repeat = no-op).
-      globalOptions = {
-        "Hotkey/TriggerKeys"."0" = "Super+space";
-        # Free Super+space from the default group-enumerate binding.
-        "Hotkey/EnumerateGroupForwardKeys" = { };
-        "Hotkey/ActivateKeys" = {
-          "0" = "Hangul"; # Mac/Win LANG1 かな
-          "1" = "Hiragana";
-          "2" = "Katakana";
-          "3" = "Henkan";
-        };
-        "Hotkey/DeactivateKeys" = {
-          "0" = "Muhenkan"; # 英数 / 無変換
-          "1" = "Hangul_Hanja"; # Mac/Win LANG2 英数
-          "2" = "Hangul_Romaja";
-        };
-      };
+      "Groups/0/Items/0".Name = "keyboard-jp";
+      "Groups/0/Items/1".Name = "mozc";
     };
   };
 
