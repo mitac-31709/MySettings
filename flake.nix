@@ -34,7 +34,7 @@
     };
     # Affinity Photo/Designer/Publisher (Wine; Canva Affinity v3)
     affinity-nix.url = "github:mrshmllow/affinity-nix";
-    # Fresher nixpkgs solely for code-cursor (avoid bumping the whole system).
+    # Fresher nixpkgs solely for Cursor packages (avoid bumping the whole system).
     nixpkgs-cursor.url = "github:NixOS/nixpkgs/nixos-unstable";
     # Vendor .debs (flake update re-fetches; see scripts/flake-update.sh).
     sendanywhere-deb = {
@@ -77,21 +77,26 @@
             nixpkgs.config.allowUnfree = true;
             nixpkgs.overlays = [
               inputs.affinity-nix.overlays.default
-              (final: prev: {
-                # Electron app; pull latest Cursor without a full nixpkgs bump.
-                code-cursor =
-                  (import inputs.nixpkgs-cursor {
+              (
+                final: prev:
+                let
+                  # Electron app + Agent CLI; pull latest Cursor without a full nixpkgs bump.
+                  cursorPkgs = import inputs.nixpkgs-cursor {
                     system = prev.stdenv.hostPlatform.system;
                     config.allowUnfree = true;
-                  }).code-cursor;
-                sendanywhere = final.callPackage ./pkgs/sendanywhere {
-                  src = inputs.sendanywhere-deb;
-                };
-                uniclipboard = final.callPackage ./pkgs/uniclipboard {
-                  src = inputs.uniclipboard-deb;
-                  version = uniclipboardVersion;
-                };
-              })
+                  };
+                in
+                {
+                  inherit (cursorPkgs) code-cursor cursor-cli;
+                  sendanywhere = final.callPackage ./pkgs/sendanywhere {
+                    src = inputs.sendanywhere-deb;
+                  };
+                  uniclipboard = final.callPackage ./pkgs/uniclipboard {
+                    src = inputs.uniclipboard-deb;
+                    version = uniclipboardVersion;
+                  };
+                }
+              )
             ];
             home-manager = {
               useGlobalPkgs = true;

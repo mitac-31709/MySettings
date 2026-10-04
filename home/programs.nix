@@ -94,6 +94,8 @@ in
     # Official 7-Zip CLI (`7zz`). Attribute is `_7zz` because names can't start with a digit.
     _7zz
     code-cursor
+    # Terminal Agent CLI (`cursor-agent`; also aliased as `agent`).
+    cursor-cli
     # Pin 1.8.4 (nixpkgs currently ships 1.8.5). Same upstream zip layout.
     (jquake.overrideAttrs (_old: {
       version = "1.8.4";

@@ -29,6 +29,8 @@ in
       vivaldi = "gui vivaldi";
       cursor = "gui cursor";
       code-cursor = "gui cursor";
+      # Official Cursor Agent CLI name (`cursor-cli` ships cursor-agent only).
+      agent = "cursor-agent";
       onlyoffice-desktopeditors = "gui onlyoffice-desktopeditors";
       jquake = "gui jquake";
       parsec = "gui parsecd";

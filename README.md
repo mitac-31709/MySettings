@@ -105,7 +105,7 @@ git push origin "gen/NN-<slug>"
 
 - Flakes が有効な NixOS マシン（この flake でも有効化します）
 - 初回 rebuild の**前に**、`hosts/mitac/hardware-configuration.nix` を自分のマシンで生成したファイルに差し替えること
-- 非フリーパッケージ（`affinity-v3`、`code-cursor`、`jquake`、`parsec-bin`、`sendanywhere`、`steam`、`vivaldi`）は `flake.nix` で許可済み
+- 非フリーパッケージ（`affinity-v3`、`code-cursor`、`cursor-cli`、`jquake`、`parsec-bin`、`sendanywhere`、`steam`、`vivaldi`）は `flake.nix` で許可済み
 - Chromebook: MrChromebox（または同等）の UEFI／WP 無効を想定。ファームウェアの書き込みはこのリポジトリの範囲外
 
 ## 適用手順
@@ -132,7 +132,7 @@ passwd mitac
 ## 同梱ソフトウェア
 
 - **Neovim** — **LazyVim**（`home/nvim`）。**lazy.nvim** 自体は nixpkgs から同梱、それ以外のプラグインは lazy が管理
-- **Cursor** — `code-cursor`
+- **Cursor** — `code-cursor`（GUI）／`cursor-cli`（ターミナル Agent: `cursor-agent` / `agent`）
 - **Parsec** — `parsec-bin`（Intel VA-API / `intel-media-driver` でハードウェアエンコード）
 - **Steam** — `programs.steam.enable`
 - **Bottles** — Wine プレフィックス管理（一般の Windows アプリ用）。`home.packages`
