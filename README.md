@@ -164,7 +164,7 @@ Fcitx5 + Mozc を有効化しています。パネルの入力インジケータ
 
 ## フォント
 
-- システムの比例フォント既定: sans `Hiragino Kaku Gothic ProN` / serif `Hiragino Mincho ProN`（ローカル `~/Downloads/hiragino-otf` → flake input `hiragino-fonts-src`）
+- システムの比例フォント既定: sans `Hiragino Kaku Gothic ProN` / serif `Hiragino Mincho ProN`（ローカル `~/Documents/hiragino-otf` → flake input `hiragino-fonts-src`）
 - 等幅フォント既定: `JetBrainsMono Nerd Font`（日本語フォールバックにヒラギノ角ゴ ProN）
 - Ghostty も JetBrainsMono（12pt）。Konsole を開いた場合のプロファイルも同フォント（`home/plasma.nix`）
 - Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行し、ログアウトして再ログイン

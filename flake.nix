@@ -47,9 +47,9 @@
       flake = false;
     };
     # Proprietary Hiragino OTFs (local; not committed). Prepare with:
-    #   extract ~/Downloads/ヒラギノ.zip → ~/Downloads/hiragino-otf/*.otf (ASCII names)
+    #   extract ~/Documents/ヒラギノ.zip → ~/Documents/hiragino-otf/*.otf (ASCII names)
     hiragino-fonts-src = {
-      url = "path:/home/mitac/Downloads/hiragino-otf";
+      url = "path:/home/mitac/Documents/hiragino-otf";
       flake = false;
     };
   };
