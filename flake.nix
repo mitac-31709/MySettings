@@ -46,6 +46,12 @@
       url = "https://github.com/UniClipboard/UniClipboard/releases/download/v1.0.1/UniClipboard_1.0.1_amd64.deb";
       flake = false;
     };
+    # Proprietary Hiragino OTFs (local; not committed). Prepare with:
+    #   extract ~/Downloads/ヒラギノ.zip → ~/Downloads/hiragino-otf/*.otf (ASCII names)
+    hiragino-fonts-src = {
+      url = "path:/home/mitac/Downloads/hiragino-otf";
+      flake = false;
+    };
   };
 
   outputs =
@@ -94,6 +100,9 @@
                   uniclipboard = final.callPackage ./pkgs/uniclipboard {
                     src = inputs.uniclipboard-deb;
                     version = uniclipboardVersion;
+                  };
+                  hiragino-fonts = final.callPackage ./pkgs/hiragino {
+                    src = inputs.hiragino-fonts-src;
                   };
                 }
               )

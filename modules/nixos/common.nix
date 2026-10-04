@@ -74,9 +74,15 @@
   fonts.packages = with pkgs; [
     nerd-fonts.jetbrains-mono
     noto-fonts-color-emoji
+    hiragino-fonts
   ];
   fonts.fontconfig.defaultFonts = {
-    monospace = [ "JetBrainsMono Nerd Font" ];
+    sansSerif = [ "Hiragino Kaku Gothic ProN" ];
+    serif = [ "Hiragino Mincho ProN" ];
+    monospace = [
+      "JetBrainsMono Nerd Font"
+      "Hiragino Kaku Gothic ProN"
+    ];
     emoji = [ "Noto Color Emoji" ];
   };
 

@@ -247,6 +247,19 @@
         "type": "github"
       }
     },
+    "hiragino-fonts-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791091266,
+        "narHash": "sha256-sF9RVSYPVS638j9UBNPifxa6ZAp8EsqbMX84HLmh1Gw=",
+        "path": "/home/mitac/Downloads/hiragino-otf",
+        "type": "path"
+      },
+      "original": {
+        "path": "/home/mitac/Downloads/hiragino-otf",
+        "type": "path"
+      }
+    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -486,6 +499,7 @@
         "caelestia-shell-aw": "caelestia-shell-aw",
         "dots-hyprland": "dots-hyprland",
         "end4-pc": "end4-pc",
+        "hiragino-fonts-src": "hiragino-fonts-src",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs_4",
         "nixpkgs-cursor": "nixpkgs-cursor",
