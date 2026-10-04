@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "cursor-cli" ];
+  system.nixos.tags = [ "hiragino-defaults" ];
 }
