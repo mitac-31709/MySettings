@@ -163,6 +163,12 @@ let
     │ 電源+Refresh       再起動                                │
     └──────────────────────────────────────────────────────────┘
 
+    ┌─ Network（自宅 IP 固定はルータ DHCP 予約） ──────────────┐
+    │ ip -br addr        現在の IP                             │
+    │ cat /sys/class/net/wlp0s20f3/address   Wi-Fi MAC        │
+    │ ※接続時 MAC は固定（cloned-mac=preserve）。予約に使う    │
+    └──────────────────────────────────────────────────────────┘
+
     ┌─ Bluetooth（bluetoothctl） ──────────────────────────────┐
     │ bluetoothctl       対話モードを開始                      │
     │   power on         電源オン                              │
