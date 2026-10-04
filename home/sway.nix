@@ -163,8 +163,10 @@ let
     │ 電源+Refresh       再起動                                │
     └──────────────────────────────────────────────────────────┘
 
-    ┌─ Network（自宅 IP 固定はルータ DHCP 予約） ──────────────┐
-    │ ip -br addr        現在の IP                             │
+    ┌─ Network（IP 確認 / 自宅はルータ DHCP 予約） ────────────┐
+    │ ip -br addr        全 IF の IP（LAN/Tailscale/WARP）     │
+    │ ip route           デフォルト GW（dhcp / static）        │
+    │ nmcli -f IP4 device show wlp0s20f3   Wi-Fi IP/GW/DNS   │
     │ cat /sys/class/net/wlp0s20f3/address   Wi-Fi MAC        │
     │ ※接続時 MAC は固定（cloned-mac=preserve）。予約に使う    │
     └──────────────────────────────────────────────────────────┘
