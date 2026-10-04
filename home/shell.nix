@@ -17,7 +17,7 @@ in
     historyFileSize = -1;
     shellAliases = {
       ll = "ls -la";
-      batcat = "bat";
+      bcat = "bat";
       rebuild = "sudo nixos-rebuild switch --flake ${flakeUri}";
       generations = "nixos-rebuild list-generations";
       # UniClipboard latest + nix flake update (Cursor / Send Anywhere / inputs).
