@@ -145,7 +145,7 @@ passwd mitac
 - **RQuickShare** — Google Quick Share / Nearby Share の Linux クライアント（`rquickshare`）
 - **Send Anywhere** — クロスプラットフォーム転送（`pkgs/sendanywhere`、upstream `.deb`）
 - **wol-pc** — Wake-on-LAN クライアント（`~/Projects/wol-pc`）。依存: `sshpass` / `zenity`（`home.packages`）。設定は同ディレクトリの `config.env`
-- **7-Zip** — `_7zz`（コマンド `7zz`）
+- **7-Zip** — `_7zip-zstd`（コマンド `7z` / `7zz`、Zstd ほか対応）
 - **tmux** — `runbtop <cmd>` で上部に実行出力（約 10 行）、下部に `btop`
 - **Mozc** — Fcitx5 エンジン（日本語入力）
 - **フォント** — JetBrainsMono Nerd Font（ターミナル／等幅の既定）

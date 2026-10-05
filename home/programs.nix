@@ -91,8 +91,8 @@ in
     yt-dlp
     # Media file technical metadata.
     mediainfo
-    # Official 7-Zip CLI (`7zz`). Attribute is `_7zz` because names can't start with a digit.
-    _7zz
+    # 7-Zip with Zstd/Brotli/LZ4/etc. (`7z` / `7zz`). Attribute starts with `_` (digit).
+    _7zip-zstd
     code-cursor
     # Terminal Agent CLI (`cursor-agent`; also aliased as `agent`).
     cursor-cli
