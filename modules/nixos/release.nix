@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "hiragino-defaults" ];
+  system.nixos.tags = [ "iperf3" ];
 }
