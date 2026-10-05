@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "iperf3" ];
+  system.nixos.tags = [ "7zip-zstd" ];
 }
