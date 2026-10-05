@@ -170,6 +170,9 @@ let
     │ nmcli -f IP4 device show wlp0s20f3   Wi-Fi IP/GW/DNS   │
     │ cat /sys/class/net/wlp0s20f3/address   Wi-Fi MAC        │
     │ ※接続時 MAC は固定（cloned-mac=preserve）。予約に使う    │
+    │ iperf3 -s          帯域測定サーバ（TCP/UDP 5201）        │
+    │ iperf3 -c HOST     クライアント（サーバ側 IP を指定）    │
+    │ iperf3 -c HOST -R  下り方向も測る（reverse）             │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ Bluetooth（bluetoothctl） ──────────────────────────────┐
@@ -383,7 +386,7 @@ in
       for_window [app_id="showmethekey-gtk"] floating enable, sticky enable, border none
       for_window [app_id="one.alynx.showmethekey"] floating enable, sticky enable, border none
       # Sway cheatsheet (Ghostty + colored nvim -R)
-      for_window [app_id="com.mitac.SwayCheatsheet"] floating enable, sticky enable, resize set 760 720
+      for_window [app_id="com.mitac.SwayCheatsheet"] floating enable, sticky enable, resize set 760 760
       # Layout-independent Super+Shift+/ (same toggle as waybar ?)
       bindsym --to-code Mod4+Shift+slash exec ${showCheatsheet}
     '';

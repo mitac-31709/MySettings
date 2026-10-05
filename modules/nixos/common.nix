@@ -118,6 +118,7 @@
     curl
     alsa-utils # amixer/alsactl — mute SOF amps if audio wedges
     libva-utils # vainfo — verify VA-API / Parsec hw encode
+    iperf3 # LAN / WAN bandwidth test (server: -s, client: -c HOST)
   ];
 
   # Cloudflare WARP (1.1.1.1): daemon + CLI, plus official GUI (warp-taskbar tray).
@@ -149,7 +150,12 @@
   programs.localsend.enable = true;
 
   # Lan Mouse (software KVM from Windows); default UDP 4242.
-  networking.firewall.allowedUDPPorts = [ 4242 ];
+  # iperf3 server defaults to TCP/UDP 5201.
+  networking.firewall.allowedTCPPorts = [ 5201 ];
+  networking.firewall.allowedUDPPorts = [
+    4242
+    5201
+  ];
 
   hardware.enableRedistributableFirmware = true;
 
