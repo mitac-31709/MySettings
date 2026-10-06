@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "ext-kb-disables-internal" ];
+  system.nixos.tags = [ "gh-git-credential" ];
 }
