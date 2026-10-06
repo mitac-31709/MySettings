@@ -48,17 +48,29 @@
     LC_TIME = "ja_JP.UTF-8";
   };
 
-  # Meltype (IBus). Linux preview is IBus-only; Fcitx5 cannot host it.
-  # Keep Mozc as a second engine for fallback.
+  # Fcitx5 + Mozc (works on Sway / Hyprland / Plasma Wayland).
+  # Meltype's Linux preview is IBus+GNOME-oriented; enabling IBus system-wide
+  # broke Japanese input on Sway (no GTK_IM_MODULE, ibus-wayland not attached).
+  # Package remains at pkgs.meltype for a future opt-in / GNOME trial.
   i18n.inputMethod = {
     enable = true;
-    type = "ibus";
-    ibus = {
-      waylandFrontend = true;
-      engines = with pkgs; [
-        meltype
-        ibus-engines.mozc
-      ];
+    type = "fcitx5";
+    fcitx5.waylandFrontend = true;
+    fcitx5.addons = with pkgs; [
+      fcitx5-mozc
+      fcitx5-gtk
+      kdePackages.fcitx5-qt
+      kdePackages.fcitx5-configtool
+    ];
+    fcitx5.settings.inputMethod = {
+      GroupOrder."0" = "Default";
+      "Groups/0" = {
+        Name = "Default";
+        "Default Layout" = "jp";
+        DefaultIM = "mozc";
+      };
+      "Groups/0/Items/0".Name = "keyboard-jp";
+      "Groups/0/Items/1".Name = "mozc";
     };
   };
 

@@ -17,7 +17,7 @@ let
   qmlImportPath = "/run/current-system/sw/lib/qt-6/qml";
 
   # Shared classic-.conf preamble (Caelestia + end4 primary).
-  # Super+Space stays free for IBus (Meltype); launchers use Super+R.
+  # Super+Space stays free for Fcitx5/Mozc; launchers use Super+R.
   # Keep this path PulseAudio-native — II lua's wpctl/easyeffects break here.
   sharedPreamble = ''
     monitor=,preferred,auto,1
@@ -32,7 +32,7 @@ let
     exec-once = dbus-update-activation-environment --systemd --all
     exec-once = systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE QT_QPA_PLATFORM QML2_IMPORT_PATH
     exec-once = ${polkitAgent}
-    exec-once = ibus-daemon -drx
+    exec-once = fcitx5 -d --replace
     exec-once = wl-paste --type text --watch cliphist store
     exec-once = wl-paste --type image --watch cliphist store
     exec-once = hypridle
@@ -158,7 +158,7 @@ let
         cat > "$out/custom/execs.lua" <<EOF
         hl.on("hyprland.start", function ()
             hl.exec_cmd("${polkitAgent}")
-            hl.exec_cmd("ibus-daemon -drx")
+            hl.exec_cmd("fcitx5 -d --replace")
             hl.exec_cmd("wl-paste --type text --watch cliphist store")
             hl.exec_cmd("wl-paste --type image --watch cliphist store")
             -- hyprland.execs already starts qs; another launch duplicates the top bar.
