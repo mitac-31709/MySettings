@@ -72,6 +72,8 @@ let
     │ 外付けKB接続時     内蔵ATキーボードを自動無効            │
     │ systemctl start chromebook-internal-kb-guard  手動再評価 │
     │ cat /sys/class/input/input0/inhibited  0=有効 / 1=無効   │
+    │ ELECOM Fn+Q / Fn+W Windows / Mac モード（Scroll点滅1/2） │
+    │   Macのままだと Ctrl↔Win が入れ替わりショートカット死   │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ 便利ツール ─────────────────────────────────────────────┐
