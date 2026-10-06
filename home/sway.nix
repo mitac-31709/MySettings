@@ -69,6 +69,9 @@ let
     │ Super+Space        Fcitx5 / Mozc 切替（IME）             │
     │ 配列               jp（xkb_layout）                      │
     │ NumLock            起動時オン                            │
+    │ 外付けKB接続時     内蔵ATキーボードを自動無効            │
+    │ systemctl start chromebook-internal-kb-guard  手動再評価 │
+    │ cat /sys/class/input/input0/inhibited  0=有効 / 1=無効   │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ 便利ツール ─────────────────────────────────────────────┐

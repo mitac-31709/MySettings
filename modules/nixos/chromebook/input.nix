@@ -1,6 +1,17 @@
 # Chromebook keyboard (keyd) + libinput quirks for keyd virtual keyboard.
-{ ... }:
+# Also: inhibit built-in AT keyboard while USB/Bluetooth keyboards are present.
+{
+  pkgs,
+  ...
+}:
 
+let
+  chromebook-internal-kb-guard = pkgs.writeShellApplication {
+    name = "chromebook-internal-kb-guard";
+    runtimeInputs = [ pkgs.systemd ];
+    text = builtins.readFile ./internal-kb-guard.sh;
+  };
+in
 {
   # --- Keyboard: WeirdTreeThing cros-keyboard-map (keyd) ---
   # Chromebook top-row scancodes are Vivaldi keys (back/refresh/zoom/...), not
@@ -132,5 +143,22 @@
     MatchName=keyd virtual keyboard
     AttrKeyboardIntegration=internal
     ModelTabletModeNoSuspend=1
+  '';
+
+  # External USB/Bluetooth keyboard → inhibit built-in AT keyboard.
+  systemd.services.chromebook-internal-kb-guard = {
+    description = "Inhibit built-in keyboard while external keyboards are present";
+    documentation = [ "file://${./internal-kb-guard.sh}" ];
+    wantedBy = [ "multi-user.target" ];
+    after = [ "systemd-udev-settle.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${chromebook-internal-kb-guard}/bin/chromebook-internal-kb-guard";
+    };
+  };
+
+  services.udev.extraRules = ''
+    ACTION=="add|remove", SUBSYSTEM=="input", ENV{ID_INPUT_KEYBOARD}=="1", \
+      RUN+="${pkgs.systemd}/bin/systemctl --no-block start chromebook-internal-kb-guard.service"
   '';
 }

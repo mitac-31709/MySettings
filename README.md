@@ -341,7 +341,7 @@ restic restore latest \
 | プラットフォーム | `volteer`（Intel Tiger Lake） |
 | GPU | Iris Xe（i3-1115G4）。`intel-media-driver` + `LIBVA_DRIVER_NAME=iHD`（Parsec 等の VA-API） |
 | オーディオ | SOF + `sof-rt5682` / `max98373`（`alsa-ucm-conf-cros` + `sof-firmware`） |
-| キーボード | [cros-keyboard-map](https://github.com/WeirdTreeThing/cros-keyboard-map) 相当の `keyd`（delbin physmap）。最上段は ChromeOS キー。**Search+最上段**で F1–F10。tuigreet セッション一覧は **Search+3つ目のキー（zoom/全画面）**。電源コード: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+Back=強制ログアウト** / **電源+Refresh=再起動**（`chromebook-power-chords`） |
+| キーボード | [cros-keyboard-map](https://github.com/WeirdTreeThing/cros-keyboard-map) 相当の `keyd`（delbin physmap）。最上段は ChromeOS キー。**Search+最上段**で F1–F10。tuigreet セッション一覧は **Search+3つ目のキー（zoom/全画面）**。電源コード: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+Back=強制ログアウト** / **電源+Refresh=再起動**（`chromebook-power-chords`）。USB/Bluetooth 外付け KB 接続中は内蔵 AT を `inhibited`（`chromebook-internal-kb-guard`） |
 | Flip | タブレットモード向け libinput quirk `ModelTabletModeNoSuspend=1` |
 | USB-C 給電 | EC は Try.SRC 固定で `preferred_role` は書けない。デュアルロール（モババッ）接続時は `chromebook-typec-prefer-sink` が `power_role=sink` へ PR_SWAP（周辺機器へ給電したいときだけ `echo source > .../power_role`） |
 
@@ -384,6 +384,13 @@ Parsec を開き直してハードウェアエンコーダーが選べるか確�
 ### キーボード確認
 
 最上段キーは Back / Forward / Refresh / Fullscreen / Brightness / Volume として動作するはずです（単なる F1–F10 ではありません）。
+
+外付け（USB/Bluetooth）キーボードがあるあいだ、内蔵の `AT Translated Set 2 keyboard` は `chromebook-internal-kb-guard` が `inhibited=1` にします（抜き差しで自動再評価）。
+
+```bash
+cat /sys/class/input/input0/inhibited   # 0=内蔵有効 / 1=無効
+systemctl start chromebook-internal-kb-guard   # 手動再評価
+```
 
 ### モジュール
 
