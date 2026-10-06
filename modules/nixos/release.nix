@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "pulse-shm-waybar" ];
+  system.nixos.tags = [ "typec-prefer-sink" ];
 }
