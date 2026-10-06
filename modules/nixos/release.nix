@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "fcitx5-mozc" ];
+  system.nixos.tags = [ "pulse-shm-waybar" ];
 }
