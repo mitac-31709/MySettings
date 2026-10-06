@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "7zip-zstd" ];
+  system.nixos.tags = [ "meltype" ];
 }
