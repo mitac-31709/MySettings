@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "typec-prefer-sink" ];
+  system.nixos.tags = [ "ext-kb-disables-internal" ];
 }
