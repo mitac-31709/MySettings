@@ -40,6 +40,14 @@ in
     support32Bit = true;
     # A2DP / HSP need the full build (codec modules).
     package = pkgs.pulseaudioFull;
+    # Chromebook / this host: libpulse SHM (shared memfd) negotiates then the
+    # server drops the client ("接続失敗: 接続切断"). pactl and waybar's
+    # pulseaudio module then reconnect in a tight loop; waybar leaks ~50–70
+    # MiB/s and OOMs the 8 GiB machine within minutes. Private memory pools
+    # work. Keep this until SHM is diagnosed further.
+    extraClientConf = ''
+      enable-shm = no
+    '';
     # Slightly larger fragments reduce SOF underruns vs PipeWire's aggressive
     # scheduling on this DSP.
     daemon.config = {

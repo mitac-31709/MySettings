@@ -12,7 +12,6 @@ let
   nvimBin = "${pkgs.neovim}/bin/nvim";
   swaylockBin = "${pkgs.swaylock}/bin/swaylock";
   swayidleBin = "${pkgs.swayidle}/bin/swayidle";
-  waybarBin = "${pkgs.waybar}/bin/waybar";
   rofiBin = "${pkgs.rofi}/bin/rofi";
   polkitAgent = "${pkgs.kdePackages.polkit-kde-agent-1}/libexec/polkit-kde-authentication-agent-1";
   pactl = "${pkgs.pulseaudio}/bin/pactl";
@@ -368,7 +367,7 @@ in
         { command = "fcitx5 -d --replace"; }
         { command = "wl-paste --type text --watch cliphist store"; }
         { command = "wl-paste --type image --watch cliphist store"; }
-        { command = waybarBin; }
+        # waybar: programs.waybar.systemd (MemoryMax / Restart)
         {
           command = ''
             ${swayidleBin} -w \
@@ -392,8 +391,20 @@ in
     '';
   };
 
+  # Cap waybar so a module leak cannot OOM the whole 8 GiB session again.
+  # Started via programs.waybar.systemd (sway-session → graphical-session).
+  systemd.user.services.waybar = {
+    Service = {
+      MemoryMax = "256M";
+      MemoryHigh = "192M";
+      Restart = "on-failure";
+      RestartSec = "2";
+    };
+  };
+
   programs.waybar = {
     enable = true;
+    systemd.enable = true;
     settings = {
       mainBar = {
         layer = "top";
