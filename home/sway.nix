@@ -33,6 +33,7 @@ let
     │ Ctrl+Alt+T         Ghostty を起動                        │
     │ Super+D / Alt+Space  rofi（アプリ起動・drun）            │
     │ Super+Shift+q      フォーカス中のウィンドウを閉じる      │
+    │                    （Cursor上でも可 / --inhibited）      │
     │ Super+L            画面ロック（swaylock）                │
     │ Super+Shift+c      Sway 設定を再読み込み                 │
     │ Super+Shift+e      Sway を終了                           │
@@ -252,7 +253,7 @@ let
         pkgs.neovim
       ]
     }:$PATH"
-    # Toggle: second ? / Super+Shift+/ closes an existing sheet.
+    # Toggle: second ? / Super+/ closes an existing sheet.
     # swaymsg kill is a no-op for this Ghostty+-e window; terminate its PID instead.
     mapfile -t pids < <(
       swaymsg -t get_tree \
@@ -373,12 +374,16 @@ in
           # Screenshots.
           "Print" = "exec ${grim} - | ${wlCopy}";
           "${mod}+Shift+s" = "exec ${grim} -g \"$(${slurp})\" - | ${wlCopy}";
+          # Cursor / Vivaldi / Discord inhibit compositor shortcuts while focused.
+          # --inhibited keeps window-mgmt binds working inside those apps.
+          "${mod}+Shift+q" = null;
+          "--inhibited ${mod}+Shift+q" = "kill";
           # Floating nvim cheatsheet (also waybar ?).
           # Prefer Super+/ (no Shift): ELECOM TK-FCP097 often drops Super when
           # Super+Shift+/ is chorded (matrix ghosting). Keep Shift variants too.
-          "${mod}+slash" = "exec ${showCheatsheet}";
+          "--inhibited ${mod}+slash" = "exec ${showCheatsheet}";
           # JP emits keysym "question" for Shift+/ when Super is still held.
-          "${mod}+question" = "exec ${showCheatsheet}";
+          "--inhibited ${mod}+question" = "exec ${showCheatsheet}";
         };
 
       startup = [
@@ -406,8 +411,9 @@ in
       # Sway cheatsheet (Ghostty + colored nvim -R)
       for_window [app_id="com.mitac.SwayCheatsheet"] floating enable, sticky enable, resize set 760 860
       # Layout-independent cheatsheet toggles (same as waybar ?)
-      bindsym --to-code Mod4+slash exec ${showCheatsheet}
-      bindsym --to-code Mod4+Shift+slash exec ${showCheatsheet}
+      # --inhibited: work even when Cursor/Electron inhibit compositor shortcuts.
+      bindsym --inhibited --to-code Mod4+slash exec ${showCheatsheet}
+      bindsym --inhibited --to-code Mod4+Shift+slash exec ${showCheatsheet}
     '';
   };
 
