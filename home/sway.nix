@@ -163,6 +163,15 @@ let
     │ 電源+Refresh       再起動                                │
     └──────────────────────────────────────────────────────────┘
 
+    ┌─ USB-C 給電（モバイルバッテリー） ───────────────────────┐
+    │ 挿すと自動で PC 側が sink（充電される）側へ PR_SWAP      │
+    │ cat /sys/class/typec/port*/power_role   今の役割        │
+    │ echo sink|sudo tee /sys/class/typec/port0/power_role     │
+    │                    手動で PC を充電側に                  │
+    │ echo source|sudo tee .../port0/power_role  周辺機器へ給電│
+    │ systemctl start chromebook-typec-prefer-sink             │
+    └──────────────────────────────────────────────────────────┘
+
     ┌─ Network（IP 確認 / 自宅はルータ DHCP 予約） ────────────┐
     │ ip -br addr        全 IF の IP（LAN/Tailscale/WARP）     │
     │ ip route           デフォルト GW（dhcp / static）        │
@@ -385,7 +394,7 @@ in
       for_window [app_id="showmethekey-gtk"] floating enable, sticky enable, border none
       for_window [app_id="one.alynx.showmethekey"] floating enable, sticky enable, border none
       # Sway cheatsheet (Ghostty + colored nvim -R)
-      for_window [app_id="com.mitac.SwayCheatsheet"] floating enable, sticky enable, resize set 760 760
+      for_window [app_id="com.mitac.SwayCheatsheet"] floating enable, sticky enable, resize set 760 860
       # Layout-independent Super+Shift+/ (same toggle as waybar ?)
       bindsym --to-code Mod4+Shift+slash exec ${showCheatsheet}
     '';

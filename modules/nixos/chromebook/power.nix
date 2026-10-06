@@ -1,4 +1,5 @@
-# Chromebook power management: zram, auto-cpufreq, power-button chords.
+# Chromebook power management: zram, auto-cpufreq, power-button chords,
+# USB-C sink preference (power banks charge the laptop).
 {
   pkgs,
   config,
@@ -15,6 +16,13 @@ let
       "W503"
     ];
   } (builtins.readFile ../chromebook-power-chords.py);
+
+  # cros_ec_typec has no try_role; preferred_role stays source. Swap to sink
+  # after dual-role partners connect so power banks charge the Chromebook.
+  chromebook-typec-prefer-sink = pkgs.writeShellApplication {
+    name = "chromebook-typec-prefer-sink";
+    text = builtins.readFile ./typec-prefer-sink.sh;
+  };
 in
 {
   # ~8 GiB RAM, no disk swap partition, tight root (Chromebook leftover
@@ -78,4 +86,21 @@ in
       Environment = [ "POWER_CHORDS_USER=${config.users.users.mitac.name}" ];
     };
   };
+
+  systemd.services.chromebook-typec-prefer-sink = {
+    description = "Prefer USB-C sink role (charge from power banks)";
+    documentation = [ "file://${./typec-prefer-sink.sh}" ];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${chromebook-typec-prefer-sink}/bin/chromebook-typec-prefer-sink";
+    };
+  };
+
+  # Partner add + power_role change → oneshot PR_SWAP to sink (non-blocking).
+  services.udev.extraRules = ''
+    ACTION=="add", SUBSYSTEM=="typec", KERNEL=="port[0-9]*-partner", \
+      RUN+="${pkgs.systemd}/bin/systemctl --no-block start chromebook-typec-prefer-sink.service"
+    ACTION=="change", SUBSYSTEM=="typec", KERNEL=="port[0-9]*", ATTR{power_role}=="source [sink]", \
+      RUN+="${pkgs.systemd}/bin/systemctl --no-block start chromebook-typec-prefer-sink.service"
+  '';
 }

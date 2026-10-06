@@ -343,6 +343,7 @@ restic restore latest \
 | オーディオ | SOF + `sof-rt5682` / `max98373`（`alsa-ucm-conf-cros` + `sof-firmware`） |
 | キーボード | [cros-keyboard-map](https://github.com/WeirdTreeThing/cros-keyboard-map) 相当の `keyd`（delbin physmap）。最上段は ChromeOS キー。**Search+最上段**で F1–F10。tuigreet セッション一覧は **Search+3つ目のキー（zoom/全画面）**。電源コード: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+Back=強制ログアウト** / **電源+Refresh=再起動**（`chromebook-power-chords`） |
 | Flip | タブレットモード向け libinput quirk `ModelTabletModeNoSuspend=1` |
+| USB-C 給電 | EC は Try.SRC 固定で `preferred_role` は書けない。デュアルロール（モババッ）接続時は `chromebook-typec-prefer-sink` が `power_role=sink` へ PR_SWAP（周辺機器へ給電したいときだけ `echo source > .../power_role`） |
 
 ### オーディオ確認
 
