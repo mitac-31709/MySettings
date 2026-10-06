@@ -32,8 +32,8 @@ let
     │ Super+Return       Ghostty を起動                        │
     │ Ctrl+Alt+T         Ghostty を起動                        │
     │ Super+D / Alt+Space  rofi（アプリ起動・drun）            │
-    │ Super+Shift+q      フォーカス中のウィンドウを閉じる      │
-    │                    （Cursor上でも可 / --inhibited）      │
+    │ Super+q            フォーカス中のウィンドウを閉じる      │
+    │ Super+Shift+q      同上（ELECOMだと Win+Shift が欠けること有）│
     │ Super+L            画面ロック（swaylock）                │
     │ Super+Shift+c      Sway 設定を再読み込み                 │
     │ Super+Shift+e      Sway を終了                           │
@@ -76,6 +76,7 @@ let
     │ cat /sys/class/input/input0/inhibited  0=有効 / 1=無効   │
     │ ELECOM Fn+Q / Fn+W Windows / Mac モード（Scroll点滅1/2） │
     │   Macのままだと Ctrl↔Win が入れ替わりショートカット死   │
+    │ ELECOM Win+Shift   同時押しが欠けること有 → Super+q 等  │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ 便利ツール ─────────────────────────────────────────────┐
@@ -376,11 +377,13 @@ in
           "${mod}+Shift+s" = "exec ${grim} -g \"$(${slurp})\" - | ${wlCopy}";
           # Cursor / Vivaldi / Discord inhibit compositor shortcuts while focused.
           # --inhibited keeps window-mgmt binds working inside those apps.
+          # ELECOM TK-FCP097 often fails to register Win+Shift+* (matrix); prefer
+          # Super+q without Shift. Keep Super+Shift+q for other keyboards.
           "${mod}+Shift+q" = null;
+          "--inhibited ${mod}+q" = "kill";
           "--inhibited ${mod}+Shift+q" = "kill";
           # Floating nvim cheatsheet (also waybar ?).
-          # Prefer Super+/ (no Shift): ELECOM TK-FCP097 often drops Super when
-          # Super+Shift+/ is chorded (matrix ghosting). Keep Shift variants too.
+          # Prefer Super+/ (no Shift): same ELECOM Win+Shift ghosting issue.
           "--inhibited ${mod}+slash" = "exec ${showCheatsheet}";
           # JP emits keysym "question" for Shift+/ when Super is still held.
           "--inhibited ${mod}+question" = "exec ${showCheatsheet}";
