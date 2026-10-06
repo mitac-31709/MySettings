@@ -58,6 +58,23 @@ in
 
   home.sessionVariables.TERMINAL = "ghostty";
 
+  # Preload Meltype (and Mozc fallback) so IBus is ready without ibus-setup.
+  dconf.settings = {
+    "desktop/ibus/general" = {
+      preload-engines = [
+        "meltype"
+        "mozc-jp"
+      ];
+      engines-order = [
+        "meltype"
+        "mozc-jp"
+      ];
+    };
+    "desktop/ibus/general/hotkey" = {
+      triggers = [ "<Super>space" ];
+    };
+  };
+
   # Keep XDG dirs in English even with ja_JP.UTF-8 locale.
   xdg.userDirs = {
     enable = true;

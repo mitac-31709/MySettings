@@ -67,9 +67,11 @@ let
     └──────────────────────────────────────────────────────────┘
 
     ┌─ 入力 ───────────────────────────────────────────────────┐
-    │ Super+Space        Fcitx5 / Mozc 切替（IME）             │
+    │ Super+Space        IBus 入力ソース切替（Meltype / Mozc） │
+    │ 半角/全角          Meltype 内: 英数 ⇔ 日本語             │
     │ 配列               jp（xkb_layout）                      │
     │ NumLock            起動時オン                            │
+    │ 学習データ         ~/.local/share/Meltype                │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ 便利ツール ─────────────────────────────────────────────┐
@@ -340,7 +342,7 @@ in
         in
         lib.mkOptionDefault {
           # Super+D → rofi (via menu). Alt+Space also opens the launcher.
-          # Super+F fullscreen, Super+R resize. Super+Space stays IME.
+          # Super+F fullscreen, Super+R resize. Super+Space stays IBus.
           "Mod1+space" = "exec ${rofiLauncher}";
           "Ctrl+Alt+t" = "exec ${ghosttyBin}";
           "${mod}+Return" = "exec ${ghosttyBin}";
@@ -365,7 +367,7 @@ in
 
       startup = [
         { command = polkitAgent; }
-        { command = "fcitx5 -d --replace"; }
+        { command = "ibus-daemon -drx"; }
         { command = "wl-paste --type text --watch cliphist store"; }
         { command = "wl-paste --type image --watch cliphist store"; }
         { command = waybarBin; }
@@ -386,7 +388,7 @@ in
       for_window [app_id="showmethekey-gtk"] floating enable, sticky enable, border none
       for_window [app_id="one.alynx.showmethekey"] floating enable, sticky enable, border none
       # Sway cheatsheet (Ghostty + colored nvim -R)
-      for_window [app_id="com.mitac.SwayCheatsheet"] floating enable, sticky enable, resize set 760 760
+      for_window [app_id="com.mitac.SwayCheatsheet"] floating enable, sticky enable, resize set 760 800
       # Layout-independent Super+Shift+/ (same toggle as waybar ?)
       bindsym --to-code Mod4+Shift+slash exec ${showCheatsheet}
     '';
