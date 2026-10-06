@@ -1,13 +1,16 @@
 # Inhibit the built-in AT Translated Set 2 keyboard while any
 # USB/Bluetooth keyboard is present (palm / accidental keypresses).
 #
-# keyd virtual keyboards and other non-usb/bluetooth buses are ignored.
+# keyd grabs AT and exposes "keyd virtual keyboard". After toggling
+# inhibit, restart keyd so its grab/modifier state cannot go stale
+# (symptoms: Super+Shift chords stop working on the external KB).
+#
 # Manual re-check: systemctl start chromebook-internal-kb-guard
 
 settle_sec="${INTERNAL_KB_GUARD_SETTLE_SEC:-0.5}"
 
 set_internal_inhibited() {
-  local want="$1" namef attr current
+  local want="$1" namef attr current changed=0
   shopt -s nullglob
   for namef in /sys/class/input/input*/name; do
     [[ $(<"$namef") == 'AT Translated Set 2 keyboard' ]] || continue
@@ -16,8 +19,13 @@ set_internal_inhibited() {
     current="$(<"$attr")"
     if [[ $current != "$want" ]]; then
       printf '%s\n' "$want" >"$attr" || true
+      changed=1
     fi
   done
+  # Only bounce keyd when inhibit actually flipped (avoid udev storms).
+  if [[ $changed -eq 1 ]] && command -v systemctl >/dev/null; then
+    systemctl try-restart keyd.service >/dev/null 2>&1 || true
+  fi
 }
 
 has_external_keyboard() {

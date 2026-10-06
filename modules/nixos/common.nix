@@ -69,6 +69,15 @@
       "Groups/0/Items/0".Name = "keyboard-jp";
       "Groups/0/Items/1".Name = "mozc";
     };
+    # Avoid Super+Shift / lone-Shift hotkeys that steal compositor chords
+    # (Win+Shift+q, etc.) on the same seat as Sway.
+    fcitx5.settings.globalOptions = {
+      "Hotkey/AltTriggerKeys" = { };
+      "Hotkey/EnumerateForwardKeys" = { };
+      "Hotkey/EnumerateBackwardKeys" = { };
+      "Hotkey/EnumerateGroupForwardKeys"."0" = "Control+Shift+space";
+      "Hotkey/EnumerateGroupBackwardKeys" = { };
+    };
   };
 
   fonts.packages = with pkgs; [
