@@ -26,7 +26,7 @@ let
   cheatsheetText = pkgs.writeText "sway-cheatsheet.txt" ''
     *sway-cheatsheet*                                          Sway チートシート
 
-    q で閉じる / Super+Shift+/ または waybar の ? でもう一度で閉じる
+    q で閉じる / Super+/（Shiftなし可）または waybar の ? でもう一度で閉じる
 
     ┌─ 起動・終了 ─────────────────────────────────────────────┐
     │ Super+Return       Ghostty を起動                        │
@@ -62,7 +62,8 @@ let
     │ 音量キー           上げ / 下げ / ミュート                │
     │ MicMute            マイクミュート                        │
     │ 輝度キー           画面輝度 ±5%                          │
-    │ Super+Shift+/      このチートシートを開閉               │
+    │ Super+/            このチートシートを開閉（Shiftなし）   │
+    │ Super+Shift+/      同上（ELECOMだと同時押しが欠けること有）│
     └──────────────────────────────────────────────────────────┘
 
     ┌─ 入力 ───────────────────────────────────────────────────┐
@@ -373,8 +374,10 @@ in
           "Print" = "exec ${grim} - | ${wlCopy}";
           "${mod}+Shift+s" = "exec ${grim} -g \"$(${slurp})\" - | ${wlCopy}";
           # Floating nvim cheatsheet (also waybar ?).
-          # Physical Super+Shift+/ is bindsym --to-code in extraConfig (layout-independent).
-          # JP also emits keysym "question" for Shift+/; catch that here.
+          # Prefer Super+/ (no Shift): ELECOM TK-FCP097 often drops Super when
+          # Super+Shift+/ is chorded (matrix ghosting). Keep Shift variants too.
+          "${mod}+slash" = "exec ${showCheatsheet}";
+          # JP emits keysym "question" for Shift+/ when Super is still held.
           "${mod}+question" = "exec ${showCheatsheet}";
         };
 
@@ -402,7 +405,8 @@ in
       for_window [app_id="one.alynx.showmethekey"] floating enable, sticky enable, border none
       # Sway cheatsheet (Ghostty + colored nvim -R)
       for_window [app_id="com.mitac.SwayCheatsheet"] floating enable, sticky enable, resize set 760 860
-      # Layout-independent Super+Shift+/ (same toggle as waybar ?)
+      # Layout-independent cheatsheet toggles (same as waybar ?)
+      bindsym --to-code Mod4+slash exec ${showCheatsheet}
       bindsym --to-code Mod4+Shift+slash exec ${showCheatsheet}
     '';
   };
