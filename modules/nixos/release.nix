@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "meltype" ];
+  system.nixos.tags = [ "fcitx5-mozc" ];
 }
