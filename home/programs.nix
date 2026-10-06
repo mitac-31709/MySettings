@@ -13,6 +13,14 @@ in
     };
   };
 
+  # GitHub CLI. gitCredentialHelper (default on) wires HTTPS push/pull to
+  # `gh auth git-credential` so we never need to write ~/.config/git/config
+  # (that path is a Home Manager → Nix store symlink on this host).
+  programs.gh = {
+    enable = true;
+    settings.git_protocol = "https";
+  };
+
   # Bitwarden client (rbw). Holds the restic backup encryption key; see
   # modules/nixos/backup.nix. Log in once with `rbw login` after first switch.
   programs.rbw = {
