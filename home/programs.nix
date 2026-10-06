@@ -93,6 +93,8 @@ in
     mediainfo
     # 7-Zip with Zstd/Brotli/LZ4/etc. (`7z` / `7zz`). Attribute starts with `_` (digit).
     _7zip-zstd
+    # Archive manager GUI (7z / Zstd / zip / tar / …). Desktop: PeaZip.
+    peazip
     code-cursor
     # Terminal Agent CLI (`cursor-agent`; also aliased as `agent`).
     cursor-cli
