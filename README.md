@@ -147,7 +147,7 @@ passwd mitac
 - **wol-pc** — Wake-on-LAN クライアント（`~/Projects/wol-pc`）。依存: `sshpass` / `zenity`（`home.packages`）。設定は同ディレクトリの `config.env`
 - **7-Zip** — `_7zip-zstd`（コマンド `7z` / `7zz`、Zstd ほか対応）+ GUI `peazip`（PeaZip）
 - **tmux** — `runbtop <cmd>` で上部に実行出力（約 10 行）、下部に `btop`
-- **Mozc** — Fcitx5 エンジン（日本語入力）。`pkgs.meltype` はパッケージのみ（後述）
+- **Mozc** — Fcitx5 エンジン（日本語入力）
 - **フォント** — JetBrainsMono Nerd Font（ターミナル／等幅の既定）
 - **暗号化バックアップ** — `restic` + `rclone` で `/home` を Google Drive へ。鍵は Bitwarden（`rbw`）。詳細は下記。
 - **マルチセッション** — greetd + tuigreet（Sway 第一 / Plasma / GNOME / Xfce / Caelestia-AW / end4-pC）
@@ -161,8 +161,6 @@ passwd mitac
 
 Fcitx5 + Mozc を有効化しています。パネルの入力インジケータ、または **Super+Space**（Fcitx5 既定）で切り替えできます。
 設定は **Fcitx5 設定**（`fcitx5-configtool`）から変更可能です。
-
-[Meltype](https://github.com/yksr-melt/Meltype) の Linux プレビューは IBus エンジンで、upstream も GNOME+IBus 向けです。Sway でシステムを IBus に切り替えると `GTK_IM_MODULE` が空のまま Wayland IM も繋がらず日本語入力が死ぬため、既定の IME にはしていません。パッケージだけ `pkgs.meltype`（`pkgs/meltype`）として残してあります。
 
 ## フォント
 

@@ -48,10 +48,7 @@
     LC_TIME = "ja_JP.UTF-8";
   };
 
-  # Fcitx5 + Mozc (works on Sway / Hyprland / Plasma Wayland).
-  # Meltype's Linux preview is IBus+GNOME-oriented; enabling IBus system-wide
-  # broke Japanese input on Sway (no GTK_IM_MODULE, ibus-wayland not attached).
-  # Package remains at pkgs.meltype for a future opt-in / GNOME trial.
+  # Fcitx5 + Mozc (works well with Plasma Wayland)
   i18n.inputMethod = {
     enable = true;
     type = "fcitx5";

@@ -104,8 +104,6 @@
                   hiragino-fonts = final.callPackage ./pkgs/hiragino {
                     src = inputs.hiragino-fonts-src;
                   };
-                  # Meltype Linux preview (IBus engine; not in nixpkgs).
-                  meltype = final.callPackage ./pkgs/meltype { };
                 }
               )
             ];
