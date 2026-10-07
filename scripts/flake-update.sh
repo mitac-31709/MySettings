@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Bump UniClipboard release URL (versioned assets) then `nix flake update`
-# so Cursor (nixpkgs-cursor), Send Anywhere (rolling .deb), and UniClipboard
-# all refresh in one shot.
+# Bump versioned .deb URLs then `nix flake update` so Cursor (nixpkgs-cursor),
+# Send Anywhere (rolling .deb), UniClipboard, and ChatGPT desktop all refresh.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -13,34 +12,54 @@ if [[ -z "$tag" ]]; then
   echo "flake-update: could not parse UniClipboard latest tag" >&2
   exit 1
 fi
-ver="${tag#v}"
-url="https://github.com/UniClipboard/UniClipboard/releases/download/v${ver}/UniClipboard_${ver}_amd64.deb"
+uc_ver="${tag#v}"
+uc_url="https://github.com/UniClipboard/UniClipboard/releases/download/v${uc_ver}/UniClipboard_${uc_ver}_amd64.deb"
 
-python3 - "$root/flake.nix" "$ver" "$url" <<'PY'
+chatgpt_ver="$(
+  curl -fsSL https://persistent.oaistatic.com/codex-app-prod/linux/deb/dists/stable/main/binary-amd64/Packages |
+    awk '/^Package: chatgpt$/{p=1;next} p&&/^Version:/{print $2;exit} p&&/^$/{exit}'
+)"
+if [[ -z "$chatgpt_ver" ]]; then
+  echo "flake-update: could not parse ChatGPT package version" >&2
+  exit 1
+fi
+chatgpt_url="https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_${chatgpt_ver}_amd64.deb"
+
+python3 - "$root/flake.nix" "$uc_ver" "$uc_url" "$chatgpt_ver" "$chatgpt_url" <<'PY'
 import pathlib, re, sys
+
 path = pathlib.Path(sys.argv[1])
-ver, url = sys.argv[2], sys.argv[3]
+uc_ver, uc_url, chatgpt_ver, chatgpt_url = sys.argv[2:6]
 text = path.read_text()
-text2, n1 = re.subn(
-    r'(uniclipboardVersion\s*=\s*")[^"]*(";)',
-    rf"\g<1>{ver}\2",
-    text,
-    count=1,
-)
-text3, n2 = re.subn(
-    r'(uniclipboard-deb\s*=\s*\{[^}]*?url\s*=\s*")[^"]*(")',
-    rf"\g<1>{url}\2",
-    text2,
-    count=1,
-    flags=re.S,
-)
-if n1 != 1 or n2 != 1:
-    sys.exit(f"flake-update: expected one uniclipboardVersion and one uniclipboard-deb url (got {n1}, {n2})")
-if text3 != text:
-    path.write_text(text3)
-    print(f"UniClipboard → {ver}")
+
+replacements = [
+    (r'(uniclipboardVersion\s*=\s*")[^"]*(";)', uc_ver, "uniclipboardVersion"),
+    (
+        r'(uniclipboard-deb\s*=\s*\{[^}]*?url\s*=\s*")[^"]*(")',
+        uc_url,
+        "uniclipboard-deb url",
+    ),
+    (r'(chatgptVersion\s*=\s*")[^"]*(";)', chatgpt_ver, "chatgptVersion"),
+    (
+        r'(chatgpt-deb\s*=\s*\{[^}]*?url\s*=\s*")[^"]*(")',
+        chatgpt_url,
+        "chatgpt-deb url",
+    ),
+]
+
+for pattern, value, label in replacements:
+    text, n = re.subn(pattern, rf"\g<1>{value}\2", text, count=1, flags=re.S)
+    if n != 1:
+        sys.exit(f"flake-update: expected one {label} (got {n})")
+
+old = path.read_text()
+if text != old:
+    path.write_text(text)
+    print(f"UniClipboard → {uc_ver}")
+    print(f"ChatGPT → {chatgpt_ver}")
 else:
-    print(f"UniClipboard already {ver}")
+    print(f"UniClipboard already {uc_ver}")
+    print(f"ChatGPT already {chatgpt_ver}")
 PY
 
 nix flake update

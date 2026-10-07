@@ -1,5 +1,5 @@
-# LibreChat (local ChatGPT-style UI) + bootstrap for credentials / API keys.
-# Codex CLI and DeepSeek Harness (dsh) are user packages in home/programs.nix.
+# LibreChat server (local UI) + bootstrap for credentials / API keys.
+# Desktop launchers: chatgpt / deepseek-harness / librechat-app in home.packages.
 {
   pkgs,
   ...

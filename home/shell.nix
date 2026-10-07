@@ -22,7 +22,7 @@ in
       ll = "ls -la";
       bcat = "bat";
       generations = "nixos-rebuild list-generations";
-      # UniClipboard latest + nix flake update (Cursor / Send Anywhere / inputs).
+      # UniClipboard / ChatGPT .deb + nix flake update (Cursor / Send Anywhere / …).
       flake-update = "${config.home.homeDirectory}/MySettings/scripts/flake-update.sh";
       # Emergency: stop looping SOF amp playback (Broken pipe / stuck buffer).
       # Mute levels via the shared chromebook-speaker-levels helper (systemPackages).
@@ -33,8 +33,9 @@ in
       code-cursor = "gui cursor";
       # Official Cursor Agent CLI name (`cursor-cli` ships cursor-agent only).
       agent = "cursor-agent";
-      # LibreChat UI (loopback; see modules/nixos/ai-chat.nix).
-      librechat = "xdg-open http://127.0.0.1:3081";
+      chatgpt = "gui chatgpt";
+      deepseek-harness = "gui deepseek-harness";
+      librechat = "gui librechat";
       onlyoffice-desktopeditors = "gui onlyoffice-desktopeditors";
       jquake = "gui jquake";
       parsec = "gui parsecd";

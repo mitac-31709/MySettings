@@ -117,6 +117,18 @@
         "type": "github"
       }
     },
+    "chatgpt-deb": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-xCG/kUBdiysyoEwDLbbH/hLCf71sXyL4mE0R+IaYP3M=",
+        "type": "file",
+        "url": "https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.1002.52244_amd64.deb"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.1002.52244_amd64.deb"
+      }
+    },
     "corefonts": {
       "flake": false,
       "locked": {
@@ -497,6 +509,7 @@
         "alsa-ucm-conf-cros": "alsa-ucm-conf-cros",
         "caelestia-cli-aw": "caelestia-cli-aw",
         "caelestia-shell-aw": "caelestia-shell-aw",
+        "chatgpt-deb": "chatgpt-deb",
         "dots-hyprland": "dots-hyprland",
         "end4-pc": "end4-pc",
         "hiragino-fonts-src": "hiragino-fonts-src",

@@ -46,6 +46,11 @@
       url = "https://github.com/UniClipboard/UniClipboard/releases/download/v1.0.1/UniClipboard_1.0.1_amd64.deb";
       flake = false;
     };
+    # Keep URL version in sync with chatgptVersion below (flake-update.sh).
+    chatgpt-deb = {
+      url = "https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.1002.52244_amd64.deb";
+      flake = false;
+    };
     # Proprietary Hiragino OTFs (local; not committed). Prepare with:
     #   extract ~/Documents/ヒラギノ.zip → ~/Documents/hiragino-otf/*.otf (ASCII names)
     hiragino-fonts-src = {
@@ -66,6 +71,8 @@
       system = "x86_64-linux";
       # Must match inputs.uniclipboard-deb URL (updated by scripts/flake-update.sh).
       uniclipboardVersion = "1.0.1";
+      # Must match inputs.chatgpt-deb URL (updated by scripts/flake-update.sh).
+      chatgptVersion = "26.1002.52244";
     in
     {
       nixosConfigurations.mitac = nixpkgs.lib.nixosSystem {
@@ -104,7 +111,13 @@
                   hiragino-fonts = final.callPackage ./pkgs/hiragino {
                     src = inputs.hiragino-fonts-src;
                   };
+                  # Official ChatGPT Linux desktop (Codex included); overrides darwin-only nixpkgs attr.
+                  chatgpt = final.callPackage ./pkgs/chatgpt {
+                    src = inputs.chatgpt-deb;
+                    version = chatgptVersion;
+                  };
                   deepseek-harness = final.callPackage ./pkgs/deepseek-harness { };
+                  librechat-app = final.callPackage ./pkgs/librechat-app { };
                 }
               )
             ];
