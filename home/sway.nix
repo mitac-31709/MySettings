@@ -16,11 +16,14 @@ let
   polkitAgent = "${pkgs.kdePackages.polkit-kde-agent-1}/libexec/polkit-kde-authentication-agent-1";
   pactl = "${pkgs.pulseaudio}/bin/pactl";
   brightnessctl = "${pkgs.brightnessctl}/bin/brightnessctl";
+  btopBin = "${pkgs.btop}/bin/btop";
   grim = "${pkgs.grim}/bin/grim";
   slurp = "${pkgs.slurp}/bin/slurp";
   wlCopy = "${pkgs.wl-clipboard}/bin/wl-copy";
   lockCmd = "${swaylockBin} -f -c 0b0f14";
   rofiLauncher = "${rofiBin} -show drun";
+  # waybar cpu / mem / network → Ghostty + btop
+  openBtop = "${ghosttyBin} -e ${btopBin}";
 
   # Boxed reference opened floating via Ghostty + colored nvim (-u NONE).
   cheatsheetText = pkgs.writeText "sway-cheatsheet.txt" ''
@@ -85,6 +88,8 @@ let
     │ bcat               bat（シンタックスハイライト付き cat） │
     │ waybar [restic]    バックアップ実行中の進捗表示          │
     │ waybar ?           このチートシート（再押下で閉じる）    │
+    │ waybar net / bri   通信速度（↓↑） / 画面輝度             │
+    │ waybar cpu/mem/net クリックで btop（Ghostty）            │
     │ gh auth login      GitHub 認証（初回・期限切れ時）       │
     │ git push           HTTPS は gh 資格情報を自動使用        │
     └──────────────────────────────────────────────────────────┘
@@ -466,6 +471,7 @@ in
           "memory"
           "battery"
           "network"
+          "backlight"
           "pulseaudio"
           "clock"
           "tray"
@@ -501,10 +507,12 @@ in
         cpu = {
           format = "cpu {usage}%";
           interval = 5;
+          on-click = openBtop;
         };
         memory = {
           format = "mem {percentage}%";
           interval = 5;
+          on-click = openBtop;
         };
         battery = {
           format = "{capacity}% {icon}";
@@ -522,10 +530,16 @@ in
           };
         };
         network = {
-          format-wifi = "{essid}";
-          format-ethernet = "eth";
+          interval = 2;
+          format-wifi = "↓{bandwidthDownBytes} ↑{bandwidthUpBytes}";
+          format-ethernet = "↓{bandwidthDownBytes} ↑{bandwidthUpBytes}";
           format-disconnected = "offline";
-          tooltip-format = "{ifname}: {ipaddr}";
+          tooltip-format = "{ifname} {essid} {ipaddr}";
+          on-click = openBtop;
+        };
+        backlight = {
+          device = "intel_backlight";
+          format = "bri {percent}%";
         };
         pulseaudio = {
           format = "vol {volume}%";
@@ -573,7 +587,7 @@ in
         color: #9aa7b5;
         padding: 0 8px;
       }
-      #custom-cheatsheet, #cpu, #memory, #battery, #network, #pulseaudio, #clock, #tray {
+      #custom-cheatsheet, #cpu, #memory, #battery, #network, #backlight, #pulseaudio, #clock, #tray {
         padding: 0 8px;
         color: #9fe7e7;
       }
