@@ -191,6 +191,7 @@ let
     │ daemon 状態        systemctl --user status uniclipd      │
     │ daemon 再起動      systemctl --user restart uniclipd     │
     │ ログ               journalctl --user -u uniclipd -f     │
+    │ 詳細ログ           ~/.local/state/app.uniclipboard.desktop/logs │
     │ 鍵環ロック時       seahorse（Default Keyring を解錠）    │
     │ ピア拒否           Devices→相手→「この端末と同期」ON    │
     │                    （tray Device Sync のチェックでも可） │
@@ -199,6 +200,8 @@ let
     （旧ポートに張り付いて接続できなくなる）。
     起動失敗（engine 1223）は鍵環未解錠が典型。再ログインか seahorse。
     「ピア拒否」は受信オフ時の正常動作。ファイル種別も both/receive に。
+    アプリ内 Update は触らない（deb を入れようとして daemon を止め、
+    失敗したまま同期が止まる）。版上げは flake の pkgs.uniclipboard。
 
     ┌─ Cloudflare WARP ────────────────────────────────────────┐
     │ warp-cli status    接続状態                              │
