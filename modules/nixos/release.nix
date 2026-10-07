@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "gh-git-credential" ];
+  system.nixos.tags = [ "lock-date-ascii" ];
 }
