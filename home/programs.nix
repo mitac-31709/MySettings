@@ -229,6 +229,7 @@ in
 
   home.packages = with pkgs; [
     btop
+    nix-output-monitor
     # Cat clone with syntax highlighting (`bat`; Debian package name is batcat).
     bat
     # Steam Locomotive — joke for mistyping `ls`.

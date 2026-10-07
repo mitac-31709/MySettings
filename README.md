@@ -127,7 +127,7 @@ sudo nixos-rebuild switch --flake .#mitac
 passwd mitac
 ```
 
-`flake.lock` はリポジトリに含まれます。シェルエイリアス `rebuild` / `generations` は `home/shell.nix` で定義され、flake パスは `~/MySettings` 固定です（ホーム直下など、リポジトリ外からも実行可）。
+`flake.lock` はリポジトリに含まれます。シェル関数 `rebuild`（tmux: 上 `btop` / 下 3 行 `nom` 進捗・ETA）と `generations` は `home/shell.nix` で定義され、flake パスは `~/MySettings` 固定です（ホーム直下など、リポジトリ外からも実行可）。
 
 ## 同梱ソフトウェア
 
@@ -152,7 +152,7 @@ passwd mitac
 - **Send Anywhere** — クロスプラットフォーム転送（`pkgs/sendanywhere`、upstream `.deb`）
 - **wol-pc** — Wake-on-LAN クライアント（`~/Projects/wol-pc`）。依存: `sshpass` / `zenity`（`home.packages`）。設定は同ディレクトリの `config.env`
 - **7-Zip** — `_7zip-zstd`（コマンド `7z` / `7zz`、Zstd ほか対応）+ GUI `peazip`（PeaZip）
-- **tmux** — `runbtop <cmd>` で上部に実行出力（約 10 行）、下部に `btop`
+- **tmux** — `runbtop <cmd>` で上部に実行出力（約 10 行）、下部に `btop`；`rebuild` は逆（上 `btop` / 下 3 行 `nom`）
 - **Mozc** — Fcitx5 エンジン（日本語入力）
 - **フォント** — JetBrainsMono Nerd Font（ターミナル／等幅の既定）
 - **暗号化バックアップ** — `restic` + `rclone` で `/home` を Google Drive へ。鍵は Bitwarden（`rbw`）。詳細は下記。
