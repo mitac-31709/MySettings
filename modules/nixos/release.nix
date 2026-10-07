@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "firefox-tor-browser" ];
+  system.nixos.tags = [ "libvirt-qemu-kvm" ];
 }
