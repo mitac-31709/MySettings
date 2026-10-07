@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "typec-ec-force-sink" ];
+  system.nixos.tags = [ "typec-sink-soft-reset" ];
 }
