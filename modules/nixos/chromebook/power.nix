@@ -93,7 +93,7 @@ in
   environment.systemPackages = [ chromebook-typec-prefer-sink ];
 
   systemd.services.chromebook-typec-prefer-sink = {
-    description = "Prefer USB-C sink role (charge from power banks)";
+    description = "USB-C power-role policy (sink power banks; source phones/AC)";
     documentation = [ "file://${./typec-prefer-sink.py}" ];
     serviceConfig = {
       Type = "oneshot";
@@ -101,25 +101,27 @@ in
     };
   };
 
-  # Idle preference: FORCE_SINK on all ports so the next attach tries as sink
-  # (avoids Try.SRC winning against power banks before userspace can react).
-  systemd.services.chromebook-typec-force-sink-boot = {
-    description = "Force Cros EC USB-C ports to sink at boot";
+  # Boot: AC → idle ports FORCE_SOURCE; on battery → idle FORCE_SOURCE (phones).
+  # Power banks are switched to sink when detected on plug.
+  systemd.services.chromebook-typec-power-policy-boot = {
+    description = "Apply Cros EC USB-C power-role policy at boot";
     documentation = [ "file://${./typec-prefer-sink.py}" ];
     wantedBy = [ "multi-user.target" ];
     after = [ "multi-user.target" ];
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
-      ExecStart = "${chromebook-typec-prefer-sink}/bin/chromebook-typec-prefer-sink --force-all-sink --retries 1 --settle 0.2";
+      ExecStart = "${chromebook-typec-prefer-sink}/bin/chromebook-typec-prefer-sink --boot";
     };
   };
 
-  # Partner add / port change → FORCE_SINK + charge override (non-blocking).
+  # Plug events + AC/charger online changes.
   services.udev.extraRules = ''
     ACTION=="add", SUBSYSTEM=="typec", KERNEL=="port[0-9]*-partner", \
       RUN+="${pkgs.systemd}/bin/systemctl --no-block start chromebook-typec-prefer-sink.service"
     ACTION=="change", SUBSYSTEM=="typec", KERNEL=="port[0-9]*", \
+      RUN+="${pkgs.systemd}/bin/systemctl --no-block start chromebook-typec-prefer-sink.service"
+    ACTION=="change", SUBSYSTEM=="power_supply", ENV{POWER_SUPPLY_NAME}=="AC|CROS_USBPD_CHARGER*", \
       RUN+="${pkgs.systemd}/bin/systemctl --no-block start chromebook-typec-prefer-sink.service"
   '';
 }

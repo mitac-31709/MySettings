@@ -204,12 +204,12 @@ let
     │ 電源+Refresh       再起動                                │
     └──────────────────────────────────────────────────────────┘
 
-    ┌─ USB-C 給電（モバイルバッテリー） ───────────────────────┐
-    │ 手順: 抜く → sudo chromebook-typec-prefer-sink → 挿す   │
-    │ （接続中 FORCE_SINK は切れて 0mA になりやすい）          │
-    │ cat /sys/class/typec/port*/power_role   役割確認        │
-    │ cat /sys/class/power_supply/CROS_USBPD_CHARGER*/current_max│
-    │ ※source [sink]=受電 / current_max が 500000超ならOK     │
+    ┌─ USB-C 電力ロール ───────────────────────────────────────┐
+    │ モババッ(電池駆動時) 受電 / スマホ・AC時の他ポート 給電 │
+    │ sudo chromebook-typec-prefer-sink   ポリシー再適用      │
+    │ モババッ手順: 抜く → 上記 → 挿す（接続中切替は不安定） │
+    │ cat /sys/class/typec/port*/power_role                   │
+    │ ※[source] sink=給電中 / source [sink]=受電中            │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ Network（IP 確認 / 自宅はルータ DHCP 予約） ────────────┐
