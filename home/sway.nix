@@ -144,8 +144,7 @@ let
     ┌─ リモートビルド（galleria-mitac WSL :2222） ─────────────┐
     │ 鍵                 ~/.ssh/id_wsl_builder（パスフレーズ無し）│
     │ 疎通（ユーザー）   ssh wsl-builder nix --version         │
-    │ 疎通（daemon）     sudo ssh -i ~/.ssh/id_wsl_builder     │
-    │                    -p 2222 mitac@galleria-mitac nix --version │
+    │ 疎通（daemon）     sudo ssh wsl-builder nix --version    │
     │ 強制リモート       --max-jobs 0（ローカルを使わない）    │
     │ リモート無効       --builders ''                         │
     │ 向こうでビルド→持込  nix copy --from ssh://wsl-builder … │

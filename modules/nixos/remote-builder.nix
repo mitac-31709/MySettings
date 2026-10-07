@@ -8,11 +8,14 @@
 { ... }:
 
 {
+  # Tailscale MagicDNS is unreliable while Cloudflare WARP owns resolv.conf;
+  # pin the stable CGNAT address (galleria-mitac).
   programs.ssh.extraConfig = ''
     Host wsl-builder galleria-mitac
-      HostName galleria-mitac
+      HostName 100.102.102.53
       Port 2222
       User mitac
+      IdentityFile /home/mitac/.ssh/id_wsl_builder
       IdentitiesOnly yes
   '';
 
