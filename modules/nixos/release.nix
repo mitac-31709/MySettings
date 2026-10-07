@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "wsl-remote-builder" ];
+  system.nixos.tags = [ "mongodb-ce-rebuild-nom" ];
 }
