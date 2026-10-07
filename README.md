@@ -138,6 +138,7 @@ passwd mitac
 - **LibreChat** — ローカル UI（`http://127.0.0.1:3081`、エイリアス `librechat`）。MongoDB 同梱。API 鍵は `/var/lib/librechat/credentials.env`
 - **Parsec** — `parsec-bin`（Intel VA-API / `intel-media-driver` でハードウェアエンコード）
 - **Steam** — `programs.steam.enable`
+- **libvirt / QEMU/KVM** — `modules/nixos/virtualisation.nix`（`virt-manager` GUI、`virt-viewer`、Spice USB、`virtiofsd`）。初回は `virsh net-start default` / `net-autostart default`
 - **Bottles** — Wine プレフィックス管理（一般の Windows アプリ用）。`home.packages`
 - **Vivaldi** — `vivaldi`
 - **Firefox** — `firefox`

@@ -140,6 +140,17 @@ let
     │ nix store optimise 重複パスをハードリンクして容量節約    │
     └──────────────────────────────────────────────────────────┘
 
+    ┌─ VM（libvirt / QEMU/KVM） ───────────────────────────────┐
+    │ virt-manager       GUI（qemu:///system）                 │
+    │ virsh list --all   VM 一覧                               │
+    │ virsh net-list --all  仮想ネットワーク一覧               │
+    │ virsh net-start default  初回: NAT (virbr0) を起動       │
+    │ virsh net-autostart default  起動時に default を有効     │
+    │ virt-viewer NAME   ゲスト画面だけ開く                    │
+    │ ls /dev/kvm        あればハードウェア仮想化 OK           │
+    └──────────────────────────────────────────────────────────┘
+    グループ変更後は一度ログアウト／再ログイン。
+
     ┌─ バックアップ（restic → Google Drive） ──────────────────┐
     │ 事前               rbw unlock（鍵が必要）                │
     │ 手動実行           sudo systemctl start                  │

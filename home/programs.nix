@@ -151,6 +151,14 @@ in
     settings.git_protocol = "https";
   };
 
+  # virt-manager: default to system QEMU/KVM (see modules/nixos/virtualisation.nix).
+  dconf.settings = {
+    "org/virt-manager/virt-manager/connections" = {
+      autoconnect = [ "qemu:///system" ];
+      uris = [ "qemu:///system" ];
+    };
+  };
+
   # Bitwarden client (rbw). Holds the restic backup encryption key; see
   # modules/nixos/backup.nix. Log in once with `rbw login` after first switch.
   programs.rbw = {
