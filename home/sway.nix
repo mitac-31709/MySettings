@@ -128,7 +128,7 @@ let
     ┌─ NixOS 適用 ─────────────────────────────────────────────┐
     │ flake-update       入力一括＋Cursor/SendAnywhere/UniClip │
     │ nix flake update   入力のみ（UniClipboard の版は動かない）│
-    │ rebuild            設定を適用（~/MySettings#mitac）      │
+    │ rebuild            適用＋nom ETA（~/MySettings#mitac）   │
     │ generations        世代一覧（list-generations）          │
     │ 更新で壊れたとき   sudo nixos-rebuild --rollback switch  │
     │                    または git checkout <良いコミット> --  │
