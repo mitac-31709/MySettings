@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "lock-date-ascii" ];
+  system.nixos.tags = [ "sl" ];
 }
