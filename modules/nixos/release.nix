@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "sway-keep-screen-on" ];
+  system.nixos.tags = [ "wsl-remote-builder" ];
 }
