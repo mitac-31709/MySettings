@@ -140,6 +140,8 @@ passwd mitac
 - **Steam** — `programs.steam.enable`
 - **Bottles** — Wine プレフィックス管理（一般の Windows アプリ用）。`home.packages`
 - **Vivaldi** — `vivaldi`
+- **Firefox** — `firefox`
+- **Tor Browser** — `tor-browser`
 - **JQuake** — `jquake` 1.8.4（日本のリアルタイム地震マップ）
 - **ONLYOFFICE** — `onlyoffice-desktopeditors`（文書・表計算・プレゼン）
 - **GIMP** — `gimp`（画像編集）

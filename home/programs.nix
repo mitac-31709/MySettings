@@ -266,6 +266,9 @@ in
     tmux
     trayscale
     vivaldi
+    firefox
+    # Tor Browser Bundle (not the tor daemon alone).
+    tor-browser
     # On-screen keystroke overlay (useful for demos / Chromebook Fn keys).
     showmethekey
     # Google Quick Share / Nearby Share client for Linux.
