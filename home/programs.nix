@@ -93,6 +93,8 @@ in
     btop
     # Cat clone with syntax highlighting (`bat`; Debian package name is batcat).
     bat
+    # Steam Locomotive — joke for mistyping `ls`.
+    sl
     # Download utility (command: aria2c).
     aria2
     # YouTube / media downloader.
