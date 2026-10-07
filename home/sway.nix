@@ -118,6 +118,11 @@ let
     │ 更新で壊れたとき   sudo nixos-rebuild --rollback switch  │
     │                    または git checkout <良いコミット> --  │
     │                    flake.lock → rebuild                  │
+    │ nix-collect-garbage  未参照ストアのみ削除（世代は残る）  │
+    │ sudo nix-collect-garbage -d  全世代削除＋GC（ロールバック不可）│
+    │ sudo nix-collect-garbage --delete-older-than 30d         │
+    │                    30日より古い世代だけ削除してから GC   │
+    │ nix store optimise 重複パスをハードリンクして容量節約    │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ バックアップ（restic → Google Drive） ──────────────────┐
