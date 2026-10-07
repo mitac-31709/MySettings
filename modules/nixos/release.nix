@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "ai-gui-apps" ];
+  system.nixos.tags = [ "dsh-official-node" ];
 }
