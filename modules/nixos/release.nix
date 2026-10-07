@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "typec-source-phones-ac" ];
+  system.nixos.tags = [ "sway-keep-screen-on" ];
 }
