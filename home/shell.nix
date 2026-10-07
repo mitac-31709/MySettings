@@ -42,7 +42,7 @@ in
       trayscale = "gui trayscale";
     };
     # Top ~10 lines: command output; bottom: btop. Usage: runbtop <cmd> [args...]
-    # rebuild: same TTY as plain nixos-rebuild, with nom ETA alongside progress.
+    # rebuild: sudo on this TTY first; then human-readable logs + nom ETA while building.
     initExtra = ''
       runbtop() {
         if [ "$#" -eq 0 ]; then
@@ -58,7 +58,10 @@ in
       }
 
       rebuild() {
-        sudo nixos-rebuild switch --flake ${flakeUri} --log-format internal-json -v |& ${nomBin} --json
+        # Ask for the password on the real TTY (|& nom swallows/hides the prompt).
+        sudo -v || return $?
+        # Human-readable mode: pass-through eval/activation; ETA only while building.
+        sudo nixos-rebuild switch --flake ${flakeUri} |& ${nomBin}
         return "''${PIPESTATUS[0]}"
       }
     '';
