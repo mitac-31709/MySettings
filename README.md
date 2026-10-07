@@ -127,7 +127,7 @@ sudo nixos-rebuild switch --flake .#mitac
 passwd mitac
 ```
 
-`flake.lock` はリポジトリに含まれます。シェル関数 `rebuild`（先に `sudo` 認証 → tmux: 上 `btop` / 下 3 行 `nom` 進捗・ETA）と `generations` は `home/shell.nix` で定義され、flake パスは `~/MySettings` 固定です（ホーム直下など、リポジトリ外からも実行可）。
+`flake.lock` はリポジトリに含まれます。シェル関数 `rebuild`（tmux: 上 `btop` / 下 3 行 `nom` 進捗・ETA）と `generations` は `home/shell.nix` で定義され、flake パスは `~/MySettings` 固定です（ホーム直下など、リポジトリ外からも実行可）。
 
 ## 同梱ソフトウェア
 
