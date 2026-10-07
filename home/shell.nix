@@ -59,6 +59,9 @@ in
       }
 
       rebuild() {
+        # Prompt for sudo in this TTY first; only then open btop + nom panes
+        # (a 3-line pane is a bad place to type a password).
+        sudo -v || return $?
         tmux new-session \; \
           send-keys -- ${btopBin} C-m \; \
           split-window -v -l 3 \; \
