@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "typec-sink-match-fix" ];
+  system.nixos.tags = [ "typec-ec-force-sink" ];
 }
