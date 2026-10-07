@@ -146,7 +146,7 @@ let
     │ 疎通（ユーザー）   ssh wsl-builder nix --version         │
     │ 疎通（daemon）     sudo ssh wsl-builder nix --version    │
     │ 強制リモート       --max-jobs 0（ローカルを使わない）    │
-    │ リモート無効       --builders ''                         │
+    │ リモート無効       --builders ''''（空文字）              │
     │ 向こうでビルド→持込  nix copy --from ssh://wsl-builder … │
     └──────────────────────────────────────────────────────────┘
 
