@@ -4,27 +4,43 @@
   writeShellApplication,
   makeDesktopItem,
   stdenvNoCC,
-  nodejs_24,
+  nodejs-official,
   chromium,
   curl,
   coreutils,
+  gnused,
   procps,
 }:
 
 let
-  # Internal CLI used by the GUI launcher (first run installs under ~/.local/share).
+  nodeBin = "${nodejs-official}/bin/node";
+  npmBin = "${nodejs-official}/bin/npm";
+
+  # Internal CLI: install under ~/.local/share and run with official Node
+  # (nixpkgs Node breaks node-addon-require-builtin on NixOS).
   dsh = writeShellApplication {
     name = "dsh";
-    runtimeInputs = [ nodejs_24 ];
+    runtimeInputs = [
+      coreutils
+    ];
     text = ''
       export NPM_CONFIG_CACHE="''${XDG_CACHE_HOME:-$HOME/.cache}/npm"
       prefix="''${XDG_DATA_HOME:-$HOME/.local/share}/deepseek-harness"
-      bin="$prefix/bin/dsh"
-      if [ ! -x "$bin" ]; then
+      entry="$prefix/node_modules/@deepseek-ai/dsh/lib/bin.js"
+      if [ ! -f "$entry" ]; then
         mkdir -p "$prefix"
-        npm install --prefix "$prefix" --no-fund --no-audit @deepseek-ai/dsh@0.2.0-rc.2
+        # Local prefix install puts bins under node_modules/.bin (not $prefix/bin).
+        # Allow native install scripts (node-pty / koffi / spawn-helper).
+        NPM_CONFIG_IGNORE_SCRIPTS=false \
+          ${npmBin} install --prefix "$prefix" --no-fund --no-audit \
+          @deepseek-ai/dsh@0.2.0-rc.2
       fi
-      exec "$bin" "$@"
+      if [ ! -f "$entry" ]; then
+        printf 'dsh: missing %s after npm install\n' "$entry" >&2
+        exit 1
+      fi
+      # Prefer argv flag over native addon (also required for HMR on some builds).
+      exec ${nodeBin} --expose-internals "$entry" "$@"
     '';
   };
 
@@ -35,33 +51,42 @@ let
       chromium
       curl
       coreutils
+      gnused
       procps
     ];
     text = ''
       host=127.0.0.1
       port=3080
-      url="http://''${host}:''${port}"
       profile="''${XDG_CONFIG_HOME:-$HOME/.config}/deepseek-harness-app"
+      state_dir="''${XDG_STATE_HOME:-$HOME/.local/state}"
+      mkdir -p "$state_dir" "$profile"
+      log="$state_dir/deepseek-harness-web.log"
 
-      if ! curl -sf -o /dev/null --connect-timeout 1 "$url/"; then
-        # Detach so closing the Chromium window does not kill the harness.
-        nohup dsh web --host "$host" --port "$port" --no-open \
-          >"''${XDG_STATE_HOME:-$HOME/.local/state}/deepseek-harness-web.log" 2>&1 &
-        for _ in $(seq 1 90); do
-          if curl -sf -o /dev/null --connect-timeout 1 "$url/"; then
+      url=""
+      # Reuse if port is up and the last log URL still answers (any HTTP status).
+      if [[ -f "$log" ]] && curl -s -o /dev/null --connect-timeout 1 "http://''${host}:''${port}/"; then
+        url="$(sed -n 's|^dsh web: \(http://[^ ]*\)|\1|p' "$log" | tail -n1 || true)"
+      fi
+
+      if [[ -z "$url" ]]; then
+        : >"$log"
+        # Detach so closing Chromium does not kill the harness.
+        nohup dsh web --host "$host" --port "$port" --no-open >>"$log" 2>&1 &
+        for _ in $(seq 1 120); do
+          url="$(sed -n 's|^dsh web: \(http://[^ ]*\)|\1|p' "$log" | tail -n1 || true)"
+          if [[ -n "$url" ]]; then
             break
           fi
           sleep 0.5
         done
       fi
 
-      if ! curl -sf -o /dev/null --connect-timeout 1 "$url/"; then
-        printf 'deepseek-harness: web UI did not start at %s\n' "$url" >&2
-        printf 'see %s\n' "''${XDG_STATE_HOME:-$HOME/.local/state}/deepseek-harness-web.log" >&2
+      if [[ -z "$url" ]]; then
+        printf 'deepseek-harness: web UI did not start (expected "dsh web: http://…" in log)\n' >&2
+        printf 'see %s\n' "$log" >&2
         exit 1
       fi
 
-      mkdir -p "$profile"
       exec chromium \
         --user-data-dir="$profile" \
         --class=DeepSeekHarness \
