@@ -358,7 +358,7 @@ restic restore latest \
 | オーディオ | SOF + `sof-rt5682` / `max98373`（`alsa-ucm-conf-cros` + `sof-firmware`） |
 | キーボード | [cros-keyboard-map](https://github.com/WeirdTreeThing/cros-keyboard-map) 相当の `keyd`（delbin physmap）。最上段は ChromeOS キー。**Search+最上段**で F1–F10。tuigreet セッション一覧は **Search+3つ目のキー（zoom/全画面）**。電源コード: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+Back=強制ログアウト** / **電源+Refresh=再起動**（`chromebook-power-chords`）。USB/Bluetooth 外付け KB 接続中は内蔵 AT を `inhibited`（`chromebook-internal-kb-guard`） |
 | Flip | タブレットモード向け libinput quirk `ModelTabletModeNoSuspend=1` |
-| USB-C 給電 | Try.SRC のためモババッ接続で PC が給電側になりやすい。sysfs の PR_SWAP は EIO になりがちなので、`chromebook-typec-prefer-sink` が Cros EC に `FORCE_SINK` + charge-port override を送る（起動時＋挿抜時） |
+| USB-C 給電 | Try.SRC でモババッに給電しがち。接続中の FORCE_SINK はリンク切断→5V/500mA（0mA充電）になりやすい。起動時は idle FORCE_SINK、給電中ならポート soft-reset。手動は「抜く → `sudo chromebook-typec-prefer-sink` → 挿す」 |
 
 ### オーディオ確認
 

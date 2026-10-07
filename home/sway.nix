@@ -205,11 +205,11 @@ let
     └──────────────────────────────────────────────────────────┘
 
     ┌─ USB-C 給電（モバイルバッテリー） ───────────────────────┐
-    │ 起動時/挿抜時に EC FORCE_SINK（PR_SWAP は効かないこと多）│
-    │ cat /sys/class/typec/port*/power_role   今の役割        │
-    │ sudo chromebook-typec-prefer-sink       手動で sink 強制 │
-    │ sudo systemctl start chromebook-typec-prefer-sink        │
-    │ ※[source] sink=給電中 / source [sink]=充電される側      │
+    │ 手順: 抜く → sudo chromebook-typec-prefer-sink → 挿す   │
+    │ （接続中 FORCE_SINK は切れて 0mA になりやすい）          │
+    │ cat /sys/class/typec/port*/power_role   役割確認        │
+    │ cat /sys/class/power_supply/CROS_USBPD_CHARGER*/current_max│
+    │ ※source [sink]=受電 / current_max が 500000超ならOK     │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ Network（IP 確認 / 自宅はルータ DHCP 予約） ────────────┐
