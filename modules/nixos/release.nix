@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "sl" ];
+  system.nixos.tags = [ "rofi-cli" ];
 }
