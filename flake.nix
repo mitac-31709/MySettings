@@ -104,6 +104,7 @@
                   hiragino-fonts = final.callPackage ./pkgs/hiragino {
                     src = inputs.hiragino-fonts-src;
                   };
+                  deepseek-harness = final.callPackage ./pkgs/deepseek-harness { };
                 }
               )
             ];

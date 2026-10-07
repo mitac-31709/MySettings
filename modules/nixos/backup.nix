@@ -47,6 +47,7 @@ let
   bluetoothStagingDir = "${stagingRoot}/bluetooth";
   warpStagingDir = "${stagingRoot}/cloudflare-warp";
   tailscaleStagingDir = "${stagingRoot}/tailscale";
+  librechatStagingDir = "${stagingRoot}/librechat";
 
   # Root-only sources → staged copies readable by the backup user.
   systemStagingSources = [
@@ -65,6 +66,11 @@ let
     {
       src = "/var/lib/tailscale";
       dest = tailscaleStagingDir;
+    }
+    # LibreChat secrets / uploads (not MongoDB chat DB under /var/db/mongodb).
+    {
+      src = "/var/lib/librechat";
+      dest = librechatStagingDir;
     }
   ];
 

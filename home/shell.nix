@@ -31,6 +31,8 @@ in
       code-cursor = "gui cursor";
       # Official Cursor Agent CLI name (`cursor-cli` ships cursor-agent only).
       agent = "cursor-agent";
+      # LibreChat UI (loopback; see modules/nixos/ai-chat.nix).
+      librechat = "xdg-open http://127.0.0.1:3081";
       onlyoffice-desktopeditors = "gui onlyoffice-desktopeditors";
       jquake = "gui jquake";
       parsec = "gui parsecd";

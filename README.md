@@ -133,6 +133,9 @@ passwd mitac
 
 - **Neovim** — **LazyVim**（`home/nvim`）。**lazy.nvim** 自体は nixpkgs から同梱、それ以外のプラグインは lazy が管理
 - **Cursor** — `code-cursor`（GUI）／`cursor-cli`（ターミナル Agent: `cursor-agent` / `agent`）
+- **OpenAI Codex** — `codex`（ChatGPT ログイン: `codex login`）
+- **DeepSeek Harness** — `dsh`（`dsh web` → `http://127.0.0.1:3080`。初回は npm で `~/.local/share/deepseek-harness` にインストール）
+- **LibreChat** — ローカル UI（`http://127.0.0.1:3081`、エイリアス `librechat`）。MongoDB 同梱。API 鍵は `/var/lib/librechat/credentials.env`
 - **Parsec** — `parsec-bin`（Intel VA-API / `intel-media-driver` でハードウェアエンコード）
 - **Steam** — `programs.steam.enable`
 - **Bottles** — Wine プレフィックス管理（一般の Windows アプリ用）。`home.packages`
@@ -288,6 +291,13 @@ sudo cp -a /tmp/restore/run/restic-backups-home/system/tailscale/. \
   /var/lib/tailscale/
 sudo chown -R root:root /var/lib/tailscale
 sudo systemctl restart tailscaled
+
+# LibreChat credentials / uploads（会話 DB は MongoDB 側で別途）
+sudo mkdir -p /var/lib/librechat
+sudo cp -a /tmp/restore/run/restic-backups-home/system/librechat/. \
+  /var/lib/librechat/
+sudo chown -R librechat:librechat /var/lib/librechat
+sudo systemctl restart librechat
 ```
 
 If Drive restore is still rate-limited, copy the repo locally first, then restore from disk:
@@ -308,8 +318,10 @@ restic restore latest \
   vault is locked when the timer fires, the password command imports your session
   D-Bus / Wayland (or X11) so `pinentry-qt` can prompt; with no session, unlock first
   (`rbw unlock`) and start the unit manually.
-- Root-only trees (Wi-Fi, Bluetooth, Cloudflare WARP, Tailscale) are staged by a
-  root `ExecStartPre` into `/run/restic-backups-home/system/…`, then cleared on stop.
+- Root-only trees (Wi-Fi, Bluetooth, Cloudflare WARP, Tailscale, LibreChat
+  `/var/lib/librechat`) are staged by a root `ExecStartPre` into
+  `/run/restic-backups-home/system/…`, then cleared on stop. MongoDB chat data is
+  not staged.
   `/etc/shadow` (login password) and `~/MySettings` (git) are **not** backed up.
 - Excluded regenerable bulk includes Steam client/runtime + game installs (saves in
   `userdata` / `compatdata` stay), Cursor agent-worker binaries and caches, Vivaldi

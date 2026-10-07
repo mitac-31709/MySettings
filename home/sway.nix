@@ -99,6 +99,16 @@ let
     │ @ファイル          コンテキストに追加                    │
     └──────────────────────────────────────────────────────────┘
 
+    ┌─ AI（Codex / DeepSeek / LibreChat） ─────────────────────┐
+    │ codex login        ChatGPT で認証（Plus 等）             │
+    │ codex              対話コーディングエージェント          │
+    │ dsh web            DeepSeek Harness UI（:3080、初回は npm）│
+    │ librechat          LibreChat を開く（:3081）             │
+    │ sudoedit /var/lib/librechat/credentials.env              │
+    │                    OPENAI_API_KEY / DEEPSEEK_API_KEY を追加│
+    │ sudo systemctl restart librechat   鍵変更後              │
+    └──────────────────────────────────────────────────────────┘
+
     ┌─ Neovim（LazyVim） ──────────────────────────────────────┐
     │ Space              リーダー（どのキーマップもここから）  │
     │ Space e            エクスプローラー                      │
@@ -417,7 +427,7 @@ in
       for_window [app_id="showmethekey-gtk"] floating enable, sticky enable, border none
       for_window [app_id="one.alynx.showmethekey"] floating enable, sticky enable, border none
       # Sway cheatsheet (Ghostty + colored nvim -R)
-      for_window [app_id="com.mitac.SwayCheatsheet"] floating enable, sticky enable, resize set 760 860
+      for_window [app_id="com.mitac.SwayCheatsheet"] floating enable, sticky enable, resize set 760 980
       # Layout-independent cheatsheet toggles (same as waybar ?)
       # --inhibited: work even when Cursor/Electron inhibit compositor shortcuts.
       bindsym --inhibited --to-code Mod4+slash exec ${showCheatsheet}
