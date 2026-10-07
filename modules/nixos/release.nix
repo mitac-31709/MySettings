@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "mongodb-ce-rebuild-nom" ];
+  system.nixos.tags = [ "ai-gui-apps" ];
 }
