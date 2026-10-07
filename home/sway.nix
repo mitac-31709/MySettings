@@ -88,6 +88,7 @@ let
     │ bcat               bat（シンタックスハイライト付き cat） │
     │ waybar [restic]    バックアップ実行中の進捗表示          │
     │ waybar ?           このチートシート（再押下で閉じる）    │
+    │ waybar scr / scr ON  画面常時オン切替（ロック・消灯を抑制）│
     │ waybar net / bri   通信速度（↓↑） / 画面輝度             │
     │ waybar cpu/mem/net クリックで btop（Ghostty）            │
     │ gh auth login      GitHub 認証（初回・期限切れ時）       │
@@ -479,6 +480,7 @@ in
           "custom/restic"
           "cpu"
           "memory"
+          "idle_inhibitor"
           "battery"
           "network"
           "backlight"
@@ -513,6 +515,17 @@ in
           signal = 8;
           hide-empty-text = true;
           tooltip = true;
+        };
+        # Plasma-like "keep screen on": inhibits swayidle lock / DPMS via
+        # zwp_idle_inhibit. Click toggles (presentation mode).
+        idle_inhibitor = {
+          format = "{icon}";
+          format-icons = {
+            activated = "scr ON";
+            deactivated = "scr";
+          };
+          tooltip-format-activated = "画面常時オン（クリックで解除）";
+          tooltip-format-deactivated = "画面を常時オンにする";
         };
         cpu = {
           format = "cpu {usage}%";
@@ -597,12 +610,20 @@ in
         color: #9aa7b5;
         padding: 0 8px;
       }
-      #custom-cheatsheet, #cpu, #memory, #battery, #network, #backlight, #pulseaudio, #clock, #tray {
+      #custom-cheatsheet, #cpu, #memory, #idle_inhibitor, #battery, #network, #backlight, #pulseaudio, #clock, #tray {
         padding: 0 8px;
         color: #9fe7e7;
       }
       #custom-cheatsheet {
         color: #33c5c5;
+      }
+      #idle_inhibitor.activated {
+        color: #e6edf3;
+        background: #15383a;
+        border-left: 2px solid #33c5c5;
+      }
+      #idle_inhibitor.deactivated {
+        color: #6b7785;
       }
       #custom-restic {
         padding: 0 8px;
