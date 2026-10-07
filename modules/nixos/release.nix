@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "waybar-net-bri-btop" ];
+  system.nixos.tags = [ "firefox-tor-browser" ];
 }
