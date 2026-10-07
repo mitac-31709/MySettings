@@ -1,7 +1,6 @@
 # Bash aliases and helpers shared across all greetd sessions.
 {
   config,
-  pkgs,
   ...
 }:
 
@@ -9,8 +8,6 @@ let
   # Absolute flake path so `rebuild` works from $HOME (or any cwd), not only
   # when the shell is already inside the MySettings checkout.
   flakeUri = "${config.home.homeDirectory}/MySettings#mitac";
-  btopBin = "${pkgs.btop}/bin/btop";
-  nomBin = "${pkgs.nix-output-monitor}/bin/nom";
 in
 {
   programs.bash = {
@@ -21,6 +18,7 @@ in
     shellAliases = {
       ll = "ls -la";
       bcat = "bat";
+      rebuild = "sudo nixos-rebuild switch --flake ${flakeUri}";
       generations = "nixos-rebuild list-generations";
       # UniClipboard / ChatGPT .deb + nix flake update (Cursor / Send Anywhere / …).
       flake-update = "${config.home.homeDirectory}/MySettings/scripts/flake-update.sh";
@@ -43,7 +41,6 @@ in
       trayscale = "gui trayscale";
     };
     # Top ~10 lines: command output; bottom: btop. Usage: runbtop <cmd> [args...]
-    # rebuild: top btop, bottom 3 lines — nixos-rebuild progress via nom (ETA).
     initExtra = ''
       runbtop() {
         if [ "$#" -eq 0 ]; then
@@ -52,18 +49,10 @@ in
         fi
         tmux new-session \; \
           send-keys -- "$(printf '%q ' "$@")" C-m \; \
-          split-window -v -- ${btopBin} \; \
+          split-window -v -- btop \; \
           select-pane -t '{top}' \; \
           resize-pane -y 10 \; \
           select-pane -t '{bottom}'
-      }
-
-      rebuild() {
-        tmux new-session \; \
-          send-keys -- ${btopBin} C-m \; \
-          split-window -v -l 3 \; \
-          send-keys -- "sudo nixos-rebuild switch --flake ${flakeUri} --log-format internal-json -v 2>&1 |& ${nomBin} --json" C-m \; \
-          select-pane -t 0
       }
     '';
   };
