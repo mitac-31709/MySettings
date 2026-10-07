@@ -205,12 +205,11 @@ let
     └──────────────────────────────────────────────────────────┘
 
     ┌─ USB-C 給電（モバイルバッテリー） ───────────────────────┐
-    │ 挿すと自動で PC 側が sink（充電される）側へ PR_SWAP      │
+    │ 起動時/挿抜時に EC FORCE_SINK（PR_SWAP は効かないこと多）│
     │ cat /sys/class/typec/port*/power_role   今の役割        │
-    │ echo sink|sudo tee /sys/class/typec/port0/power_role     │
-    │                    手動で PC を充電側に                  │
-    │ echo source|sudo tee .../port0/power_role  周辺機器へ給電│
-    │ systemctl start chromebook-typec-prefer-sink             │
+    │ sudo chromebook-typec-prefer-sink       手動で sink 強制 │
+    │ sudo systemctl start chromebook-typec-prefer-sink        │
+    │ ※[source] sink=給電中 / source [sink]=充電される側      │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ Network（IP 確認 / 自宅はルータ DHCP 予約） ────────────┐

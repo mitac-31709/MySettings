@@ -17,12 +17,15 @@ let
     ];
   } (builtins.readFile ../chromebook-power-chords.py);
 
-  # cros_ec_typec has no try_role; preferred_role stays source. Swap to sink
-  # after dual-role partners connect so power banks charge the Chromebook.
-  chromebook-typec-prefer-sink = pkgs.writeShellApplication {
-    name = "chromebook-typec-prefer-sink";
-    text = builtins.readFile ./typec-prefer-sink.sh;
-  };
+  # PR_SWAP via sysfs often returns EIO (partner keeps us as source). Talk to
+  # the Cros EC: USB_PD_CTRL_ROLE_FORCE_SINK + charge-port override.
+  chromebook-typec-prefer-sink = pkgs.writers.writePython3Bin "chromebook-typec-prefer-sink" {
+    flakeIgnore = [
+      "E501"
+      "W503"
+      "E203"
+    ];
+  } (builtins.readFile ./typec-prefer-sink.py);
 in
 {
   # ~8 GiB RAM, no disk swap partition, tight root (Chromebook leftover
@@ -87,18 +90,32 @@ in
     };
   };
 
+  environment.systemPackages = [ chromebook-typec-prefer-sink ];
+
   systemd.services.chromebook-typec-prefer-sink = {
     description = "Prefer USB-C sink role (charge from power banks)";
-    documentation = [ "file://${./typec-prefer-sink.sh}" ];
+    documentation = [ "file://${./typec-prefer-sink.py}" ];
     serviceConfig = {
       Type = "oneshot";
       ExecStart = "${chromebook-typec-prefer-sink}/bin/chromebook-typec-prefer-sink";
     };
   };
 
-  # Partner add / port change → oneshot PR_SWAP to sink (non-blocking).
-  # Do not ATTR-match power_role: udev fnmatch treats [source] as a char class,
-  # and the old rule matched sink mode ("source [sink]") instead of source.
+  # Idle preference: FORCE_SINK on all ports so the next attach tries as sink
+  # (avoids Try.SRC winning against power banks before userspace can react).
+  systemd.services.chromebook-typec-force-sink-boot = {
+    description = "Force Cros EC USB-C ports to sink at boot";
+    documentation = [ "file://${./typec-prefer-sink.py}" ];
+    wantedBy = [ "multi-user.target" ];
+    after = [ "multi-user.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${chromebook-typec-prefer-sink}/bin/chromebook-typec-prefer-sink --force-all-sink --retries 1 --settle 0.2";
+    };
+  };
+
+  # Partner add / port change → FORCE_SINK + charge override (non-blocking).
   services.udev.extraRules = ''
     ACTION=="add", SUBSYSTEM=="typec", KERNEL=="port[0-9]*-partner", \
       RUN+="${pkgs.systemd}/bin/systemctl --no-block start chromebook-typec-prefer-sink.service"
