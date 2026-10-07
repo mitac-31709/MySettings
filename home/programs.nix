@@ -3,6 +3,11 @@
 
 let
   email = "mitac31709@gmail.com";
+  # Rasi unquoted value (same shape as config.lib.formats.rasi.mkLiteral).
+  mkLiteral = value: {
+    _type = "literal";
+    inherit value;
+  };
 in
 {
   programs.git = {
@@ -10,6 +15,131 @@ in
     settings.user = {
       name = "mitac";
       inherit email;
+    };
+  };
+
+  # App launcher / dmenu: TUI look matching Sway (dark + cyan, monospace).
+  programs.rofi = {
+    enable = true;
+    package = pkgs.rofi;
+    terminal = "${pkgs.ghostty}/bin/ghostty";
+    settings = {
+      modes = "drun,run";
+      font = "JetBrainsMono Nerd Font 12";
+      show-icons = false;
+      disable-history = false;
+      sort = true;
+      sorting-method = "fzf";
+      case-sensitive = false;
+      cycle = true;
+      drun-display-format = "{name}";
+      display-drun = ">";
+      display-run = "$";
+      display-dmenu = ">";
+      location = 0;
+    };
+    theme = {
+      "*" = {
+        bg = mkLiteral "#0b0f14";
+        bg-alt = mkLiteral "#15383a";
+        fg = mkLiteral "#e6edf3";
+        fg-dim = mkLiteral "#6b7785";
+        accent = mkLiteral "#33c5c5";
+        urgent = mkLiteral "#e06c75";
+        background-color = mkLiteral "transparent";
+        text-color = mkLiteral "@fg";
+      };
+
+      "window" = {
+        background-color = mkLiteral "@bg";
+        border = mkLiteral "1px";
+        border-color = mkLiteral "@accent";
+        border-radius = mkLiteral "0";
+        width = mkLiteral "42em";
+        padding = mkLiteral "0.6em";
+      };
+
+      "mainbox" = {
+        children = map mkLiteral [
+          "inputbar"
+          "message"
+          "listview"
+        ];
+        spacing = mkLiteral "0.5em";
+      };
+
+      "inputbar" = {
+        children = map mkLiteral [
+          "prompt"
+          "entry"
+        ];
+        spacing = mkLiteral "0.5em";
+        background-color = mkLiteral "@bg";
+        text-color = mkLiteral "@accent";
+      };
+
+      "prompt" = {
+        text-color = mkLiteral "@accent";
+        background-color = mkLiteral "@bg";
+      };
+
+      "entry" = {
+        placeholder = "run…";
+        placeholder-color = mkLiteral "@fg-dim";
+        text-color = mkLiteral "@fg";
+        background-color = mkLiteral "@bg";
+        cursor = mkLiteral "text";
+      };
+
+      "listview" = {
+        lines = 10;
+        columns = 1;
+        fixed-height = true;
+        dynamic = true;
+        scrollbar = false;
+        spacing = mkLiteral "0.1em";
+        background-color = mkLiteral "@bg";
+      };
+
+      "element" = {
+        padding = mkLiteral "0.25em 0.4em";
+        spacing = mkLiteral "0.5em";
+        border-radius = mkLiteral "0";
+        background-color = mkLiteral "@bg";
+        text-color = mkLiteral "@fg";
+        children = map mkLiteral [ "element-text" ];
+      };
+
+      "element-text" = {
+        background-color = mkLiteral "inherit";
+        text-color = mkLiteral "inherit";
+        vertical-align = mkLiteral "0.5";
+      };
+
+      "element selected" = {
+        background-color = mkLiteral "@bg-alt";
+        text-color = mkLiteral "@accent";
+      };
+
+      "element alternate" = {
+        background-color = mkLiteral "@bg";
+        text-color = mkLiteral "@fg";
+      };
+
+      "element urgent" = {
+        text-color = mkLiteral "@urgent";
+      };
+
+      "message" = {
+        background-color = mkLiteral "@bg";
+        border = mkLiteral "0";
+        padding = mkLiteral "0";
+      };
+
+      "textbox" = {
+        background-color = mkLiteral "@bg";
+        text-color = mkLiteral "@fg-dim";
+      };
     };
   };
 
