@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "rofi-cli" ];
+  system.nixos.tags = [ "ai-codex-librechat" ];
 }
