@@ -96,11 +96,13 @@ in
     };
   };
 
-  # Partner add + power_role change → oneshot PR_SWAP to sink (non-blocking).
+  # Partner add / port change → oneshot PR_SWAP to sink (non-blocking).
+  # Do not ATTR-match power_role: udev fnmatch treats [source] as a char class,
+  # and the old rule matched sink mode ("source [sink]") instead of source.
   services.udev.extraRules = ''
     ACTION=="add", SUBSYSTEM=="typec", KERNEL=="port[0-9]*-partner", \
       RUN+="${pkgs.systemd}/bin/systemctl --no-block start chromebook-typec-prefer-sink.service"
-    ACTION=="change", SUBSYSTEM=="typec", KERNEL=="port[0-9]*", ATTR{power_role}=="source [sink]", \
+    ACTION=="change", SUBSYSTEM=="typec", KERNEL=="port[0-9]*", \
       RUN+="${pkgs.systemd}/bin/systemctl --no-block start chromebook-typec-prefer-sink.service"
   '';
 }

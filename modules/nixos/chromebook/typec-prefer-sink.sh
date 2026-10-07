@@ -5,9 +5,13 @@
 # Chromebook. Request a PD power-role swap to sink (ChromeOS-like: charge the
 # laptop). Intentional accessory charging:
 #   echo source | sudo tee /sys/class/typec/port0/power_role
+#
+# Kernel power_role strings (brackets = current role):
+#   "[source] sink"  → we are sourcing (need swap)
+#   "source [sink]"  → we are sinking (already OK)
 
 settle_sec="${TYPEC_PREFER_SINK_SETTLE_SEC:-1}"
-retries="${TYPEC_PREFER_SINK_RETRIES:-3}"
+retries="${TYPEC_PREFER_SINK_RETRIES:-5}"
 
 prefer_sink_once() {
   local partner port role_file current
@@ -18,8 +22,16 @@ prefer_sink_once() {
     role_file="/sys/class/typec/${port}/power_role"
     [[ -w $role_file ]] || continue
     current="$(<"$role_file")"
-    if [[ $current == 'source [sink]' ]]; then
-      printf 'sink\n' >"$role_file" || true
+    # TYPEC_SOURCE — Chromebook is charging the partner (e.g. power bank).
+    if [[ $current == '[source] sink' ]]; then
+      echo "typec ${port}: ${current} → requesting sink"
+      if printf 'sink\n' >"$role_file"; then
+        echo "typec ${port}: wrote sink (now $(<"$role_file"))"
+      else
+        echo "typec ${port}: sink write failed (status $?)" >&2
+      fi
+    else
+      echo "typec ${port}: ${current} (no swap)"
     fi
   done
 }
