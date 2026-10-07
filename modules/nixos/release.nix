@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "typec-sink-soft-reset" ];
+  system.nixos.tags = [ "typec-source-phones-ac" ];
 }
