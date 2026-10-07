@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "ai-codex-librechat" ];
+  system.nixos.tags = [ "waybar-net-bri-btop" ];
 }
