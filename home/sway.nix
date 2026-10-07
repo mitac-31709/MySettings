@@ -141,6 +141,18 @@ let
     │ nix store optimise 重複パスをハードリンクして容量節約    │
     └──────────────────────────────────────────────────────────┘
 
+    ┌─ リモートビルド（LAN の Windows+WSL） ───────────────────┐
+    │ Windows            WSL2 に Nix を入れ、sshd を起動       │
+    │ 鍵                 パスフレーズ無し（nix-daemon 用）     │
+    │ 疎通               sudo ssh builder@HOST nix --version   │
+    │ 強制リモート       --max-jobs 0（ローカルを使わない）    │
+    │ 設定               nix.distributedBuilds + buildMachines │
+    │ プロトコル         WSL は protocol = "ssh"（ssh-ng は避ける）│
+    │ 向こうでビルド→持込  先に WSL で nix build、こちらで:    │
+    │   nix copy --from ssh-ng://user@HOST /nix/store/...      │
+    │   または nix copy --from ssh://user@HOST ./result        │
+    └──────────────────────────────────────────────────────────┘
+
     ┌─ VM（libvirt / QEMU/KVM） ───────────────────────────────┐
     │ virt-manager       GUI（qemu:///system）                 │
     │ virsh list --all   VM 一覧                               │
