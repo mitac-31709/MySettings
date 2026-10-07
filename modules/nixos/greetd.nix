@@ -51,9 +51,13 @@ in
     settings = {
       default_session = {
         user = "greeter";
+        # --time uses strftime under LANG=ja_JP.UTF-8 ("2026年 10月 …"), but the
+        # greeter TTY has no CJK console glyphs → garbled. Keep digits/ASCII only.
         command = lib.concatStringsSep " " [
           "${lib.getExe pkgs.tuigreet}"
           "--time"
+          "--time-format"
+          "'%Y-%m-%d %H:%M:%S'"
           "--asterisks"
           "--remember"
           "--remember-session"

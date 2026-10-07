@@ -141,6 +141,8 @@ let
         cp -a ${iiHypr}/hyprlock "$out/"
         cp -a ${iiHypr}/custom "$out/"
         chmod -R u+w "$out"
+        # Stock date uses locale weekday/month names; ja_JP + Latin clock font = tofu.
+        sed -i 's|date +"%A, %B %d"|LC_ALL=C date +"%A, %B %d"|' "$out/hyprlock.conf"
         cat > "$out/custom/env.lua" <<'EOF'
         -- Loaded before execs; keep qsConfig on end4-pC even if variables load late.
         hl.env("qsConfig", "end4-pC")
