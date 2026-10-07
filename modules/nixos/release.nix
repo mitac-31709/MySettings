@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "libvirt-qemu-kvm" ];
+  system.nixos.tags = [ "typec-sink-match-fix" ];
 }
