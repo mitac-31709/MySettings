@@ -22,8 +22,8 @@ in
   programs.rofi = {
     enable = true;
     package = pkgs.rofi;
-    terminal = "${pkgs.ghostty}/bin/ghostty";
     settings = {
+      terminal = "${pkgs.ghostty}/bin/ghostty";
       modes = "drun,run";
       font = "JetBrainsMono Nerd Font 12";
       show-icons = false;

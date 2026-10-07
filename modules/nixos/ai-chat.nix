@@ -47,6 +47,10 @@ in
     };
   };
 
+  # Default pkgs.mongodb is source-built (SSPL → no Hydra cache) and often OOM/fails
+  # on remote builders. mongodb-ce unpacks upstream Ubuntu binaries instead.
+  services.mongodb.package = pkgs.mongodb-ce;
+
   # nixpkgs librechat module does not wait on mongodb when enableLocalDB is set.
   systemd.services.librechat = {
     after = [ "mongodb.service" ];
