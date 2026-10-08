@@ -231,8 +231,8 @@ let
     │ 単体               Back/Refresh/全画面/輝度/音量 など    │
     │ Search+最上段      F1–F10                                │
     │ Search+3つ目       tuigreet セッション一覧（F3）         │
-    │ Alt+最上段5つ目+f  手動 OOM killer（画面固まり時用）     │
-    │                    （5つ目=SysRq/スクショ相当。カーネル） │
+    │ Ctrl+Alt+Del       手動 OOM killer（画面固まり時用）     │
+    │                    （内蔵KBは Ctrl+Alt+Backspace）       │
     │ 電源 短押し        suspend                               │
     │ 電源 長押し(~2.5s) poweroff                              │
     │ 電源+Back          強制ログアウト                        │
@@ -274,7 +274,7 @@ let
     └──────────────────────────────────────────────────────────┘
 
     ┌─ メモリ / OOM ───────────────────────────────────────────┐
-    │ Alt+最上段5つ目+f  手動で OOM killer（UI 固まり時）      │
+    │ Ctrl+Alt+Del       手動 OOM killer（内蔵は C-A-Backspace）│
     │ free -h / swapon --show   RAM・zram 使用量              │
     │ journalctl -k -b | rg -i 'Out of memory|oom-kill'       │
     │ journalctl -u systemd-oomd -b   userspace OOM の有無     │

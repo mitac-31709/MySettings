@@ -1,6 +1,7 @@
 # Chromebook keyboard (keyd) + libinput quirks for keyd virtual keyboard.
 # Also: inhibit built-in AT keyboard while USB/Bluetooth keyboards are present.
 {
+  lib,
   pkgs,
   ...
 }:
@@ -11,13 +12,30 @@ let
     runtimeInputs = [ pkgs.systemd ];
     text = builtins.readFile ./internal-kb-guard.sh;
   };
+
+  # keyd command(): invoke kernel OOM killer (SysRq-f). Prefer this over a
+  # Sway bind — compositor may be wedged. Chromebook has no Del key; use
+  # Ctrl+Alt+Backspace (same chord users mean by Ctrl+Alt+Del).
+  sysrqOom = pkgs.writeShellScript "sysrq-oom" ''
+    ${pkgs.coreutils}/bin/printf f > /proc/sysrq-trigger
+  '';
+
+  ctrlAltDelOom = ''
+    [control+alt]
+    delete = command(${sysrqOom})
+    backspace = command(${sysrqOom})
+  '';
 in
 {
-  # NixOS default kernel.sysrq=16 allows only sync (s). Bit 64 is required for
-  # Magic SysRq+f (manual OOM killer). 244 = sync|remount|signal|reboot|SAK
-  # (REISUB toolkit + oom). Keyboard SysRq is already mapped below (top-row 5th
-  # key / snapshot). Prefer this over a Sway bind — userspace may be wedged.
+  # Allow Magic SysRq via keyboard too (Alt+SysRq+letter). /proc/sysrq-trigger
+  # ignores this mask; kept so classic SysRq still works if needed.
   boot.kernel.sysctl."kernel.sysrq" = 244;
+
+  # NixOS keyd sets ProcSubset=pid, which hides /proc/sysrq-trigger.
+  systemd.services.keyd.serviceConfig.ProcSubset = lib.mkForce "all";
+
+  # Steal Ctrl+Alt+Del from systemd's reboot target (VT path); keyd handles it.
+  systemd.units."ctrl-alt-del.target".enable = false;
 
   # --- Keyboard: WeirdTreeThing cros-keyboard-map (keyd) ---
   # Chromebook top-row scancodes are Vivaldi keys (back/refresh/zoom/...), not
@@ -26,7 +44,7 @@ in
   # function_row_physmap (delbin: EA E7 91 92 93 94 95 A0 AE B0):
   #   bare top row → ChromeOS actions; Search+top row → F1–F10.
   # tuigreet sessions (F3): hold Search + 3rd key (zoom / 全画面).
-  # Manual OOM: hold Alt + 最上段5つ目(SysRq) + f (kernel; works when UI frozen).
+  # Manual OOM: Ctrl+Alt+Del (内蔵は Ctrl+Alt+Backspace).
   services.keyd = {
     enable = true;
     keyboards = {
@@ -117,7 +135,8 @@ in
           down = pagedown
 
           [control+alt]
-          backspace = C-A-delete
+          delete = command(${sysrqOom})
+          backspace = command(${sysrqOom})
           f1 = C-A-f1
           f2 = C-A-f2
           f3 = C-A-f3
@@ -139,6 +158,12 @@ in
           volumedown = C-A-f9
           volumeup = C-A-f10
         '';
+      };
+
+      # External USB/Bluetooth keyboards (cros ids take precedence for built-in).
+      ctrl-alt-del-oom = {
+        ids = [ "*" ];
+        extraConfig = ctrlAltDelOom;
       };
     };
   };
