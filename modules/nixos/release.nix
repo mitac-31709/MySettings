@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "rofi-launch-ws" ];
+  system.nixos.tags = [ "rofi-dense" ];
 }
