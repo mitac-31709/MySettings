@@ -89,7 +89,7 @@ let
     │ waybar [restic]    バックアップ実行中の進捗表示          │
     │ waybar ?           このチートシート（再押下で閉じる）    │
     │ waybar scr / scr ON  画面常時オン切替（ロック・消灯を抑制）│
-    │ waybar net / bri   通信速度（↓↑） / 画面輝度             │
+    │ waybar net / bri   SSID（ホバーで↓↑速度） / 画面輝度     │
     │ waybar cpu/mem/net クリックで btop（Ghostty）            │
     │ gh auth login      GitHub 認証（初回・期限切れ時）       │
     │ git push           HTTPS は gh 資格情報を自動使用        │
@@ -565,10 +565,10 @@ in
         };
         network = {
           interval = 2;
-          format-wifi = "↓{bandwidthDownBytes} ↑{bandwidthUpBytes}";
-          format-ethernet = "↓{bandwidthDownBytes} ↑{bandwidthUpBytes}";
+          format-wifi = "{essid}";
+          format-ethernet = "{ifname}";
           format-disconnected = "offline";
-          tooltip-format = "{ifname} {essid} {ipaddr}";
+          tooltip-format = "↓{bandwidthDownBytes} ↑{bandwidthUpBytes}\n{ifname} {ipaddr}";
           on-click = openBtop;
         };
         backlight = {
