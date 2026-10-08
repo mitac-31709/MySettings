@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "typec-idle-force-sink" ];
+  system.nixos.tags = [ "sway-autostart" ];
 }
