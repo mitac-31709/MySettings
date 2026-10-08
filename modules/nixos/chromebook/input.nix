@@ -34,9 +34,6 @@ in
   # NixOS keyd sets ProcSubset=pid, which hides /proc/sysrq-trigger.
   systemd.services.keyd.serviceConfig.ProcSubset = lib.mkForce "all";
 
-  # Steal Ctrl+Alt+Del from systemd's reboot target (VT path); keyd handles it.
-  systemd.units."ctrl-alt-del.target".enable = false;
-
   # --- Keyboard: WeirdTreeThing cros-keyboard-map (keyd) ---
   # Chromebook top-row scancodes are Vivaldi keys (back/refresh/zoom/...), not
   # F1–F10. Remapping only `fN` never reaches tuigreet. Use the layout from
