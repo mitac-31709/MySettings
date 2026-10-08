@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "sway-autostart" ];
+  system.nixos.tags = [ "thunar-yazi" ];
 }
