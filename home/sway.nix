@@ -33,7 +33,7 @@ let
   cheatsheetText = pkgs.writeText "sway-cheatsheet.txt" ''
     Sway チートシート
 
-    q で閉じる・ドラッグで選択コピー / Super+/ または waybar ? で再閉
+    q / Esc で閉じる・ドラッグで選択コピー / Super+/ または waybar ? で再閉
 
     ┌─ 起動・終了 ─────────────────────────────────────────────┐
     │ Super+Return       Ghostty を起動                        │
@@ -273,6 +273,12 @@ let
     音声デバイスは接続後、Pulse 側で出力シンクを選ぶことあり。
   '';
 
+  # Esc → quit (q still works). Lone Esc after less's timeout; arrows stay intact.
+  cheatsheetLesskey = pkgs.writeText "sway-cheatsheet.lesskey" ''
+    #command
+    \e quit
+  '';
+
   showCheatsheet = pkgs.writeShellScript "sway-cheatsheet" ''
     set -eu
     export PATH="${
@@ -305,6 +311,7 @@ let
       --gtk-single-instance=false \
       -e bat --style=plain --paging=always --theme=Coldark-Cold \
       --wrap=never \
+      --pager="less -R --lesskey-src=${cheatsheetLesskey}" \
       ${cheatsheetText}
   '';
 in
