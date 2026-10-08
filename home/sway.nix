@@ -96,6 +96,7 @@ let
     │ bcat               bat（シンタックスハイライト付き cat） │
     │ waybar [restic]    バックアップ実行中の進捗表示          │
     │ waybar ?           このチートシート（再押下で閉じる）    │
+    │ 無操作 10分→ロック / 15分→画面オフ（suspend しない）     │
     │ waybar scr / scr ON  画面常時オン切替（ロック・消灯を抑制）│
     │ waybar net / bri   SSID（ホバーで↓↑速度） / 画面輝度     │
     │ waybar cpu/mem クリックで btop / net で nmtui（Ghostty） │
