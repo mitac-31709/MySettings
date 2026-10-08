@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "sway-autostart-ws" ];
+  system.nixos.tags = [ "sway-cheatsheet-bat" ];
 }
