@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "typec-no-force-source-sink" ];
+  system.nixos.tags = [ "typec-idle-force-sink" ];
 }
