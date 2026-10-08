@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "thunar-yazi" ];
+  system.nixos.tags = [ "waybar-nmtui" ];
 }
