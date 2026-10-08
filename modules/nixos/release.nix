@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "ctrl-alt-del-oom" ];
+  system.nixos.tags = [ "sway-scr-on-no-lock" ];
 }
