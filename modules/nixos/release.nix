@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "yazi-hidden" ];
+  system.nixos.tags = [ "rofi-launch-ws" ];
 }
