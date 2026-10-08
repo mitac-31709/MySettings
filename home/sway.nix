@@ -150,6 +150,7 @@ let
     │ flake-update       入力一括＋Cursor/SendAnywhere/UniClip │
     │ nix flake update   入力のみ（UniClipboard の版は動かない）│
     │ rebuild            sudo後・適用（ビルド中のみ nom ETA）  │
+    │ nix-eval-low …     nice+ionice で nix eval（options木は避ける）│
     │ generations        世代一覧（list-generations）          │
     │ 更新で壊れたとき   sudo nixos-rebuild --rollback switch  │
     │                    または git checkout <良いコミット> --  │

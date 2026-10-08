@@ -64,6 +64,12 @@ in
         sudo nixos-rebuild switch --flake ${flakeUri} |& ${nomBin}
         return "''${PIPESTATUS[0]}"
       }
+
+      # Low-priority nix eval (CPU + IO). Prefer narrow config.… paths over options.…
+      nix-eval-low() {
+        nice -n 19 ionice -c3 nix eval "$@"
+      }
     '';
   };
 }
+

@@ -25,8 +25,14 @@ the daemon is not running — do step 1.
 
 ### Develop / lint / build / eval
 
-- Evaluate composed options (fast sanity check that all modules load):
+- Evaluate composed config (fast sanity check that all modules load):
   `nix eval .#nixosConfigurations.mitac.config.networking.hostName`
+- **Do not** eval `.#nixosConfigurations.mitac.options…` (especially
+  `options.home-manager.users`) — it forces the full options tree and stalls the
+  machine. Prefer narrow `config.…` paths, or read HM/nixpkgs module sources with
+  `rg` / file read. If an options attr is unavoidable, use a leaf path only and
+  run under low priority:
+  `nice -n 19 ionice -c3 nix eval '…'` (interactive: `nix-eval-low`).
 - Build a repo-declared package end-to-end (headline "included software"):
   `nix build .#nixosConfigurations.mitac.config.home-manager.users.mitac.programs.neovim.finalPackage`
 - Full configuration check / toplevel (works when hardware-configuration.nix is real):

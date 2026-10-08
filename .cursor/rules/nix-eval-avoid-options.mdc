@@ -1,0 +1,29 @@
+---
+description: 重い nix eval（特に options 木）を避け、やむを得ないときは nice で走らせる
+alwaysApply: true
+---
+
+# Nix eval: options 木を避ける / 優先度を下げる
+
+## やらないこと（通常禁止）
+
+- `nix eval .#nixosConfigurations.mitac.options…`
+- 特に `options.home-manager.users`（および末尾 `.` での属性探索）— オプション木全体の評価で極端に重い
+
+## 代わりにやること
+
+- **解決後の値**が欲しい: 狭い `config.…` だけ eval する  
+  例: `nix eval .#nixosConfigurations.mitac.config.networking.hostName`  
+  例: `nix eval .#nixosConfigurations.mitac.config.home-manager.users.mitac.programs.yazi.enable`
+- **オプション定義**（型・説明・デフォルト）が欲しい: `nix eval` せず、flake の home-manager / nixpkgs モジュール源を `rg` / Read する
+
+## どうしても options が必要なとき
+
+1. 親の `users` 全体ではなく、**最下位まで狭いパス**だけ（例: `….options.programs.yazi.enable.description`）
+2. 必ず低優先度で実行する（対話シェルのエイリアスに依存しない）:
+
+```bash
+nice -n 19 ionice -c3 nix eval '.#nixosConfigurations.mitac.options.…'
+```
+
+対話シェルでは `nix-eval-low`（同じ nice/ionice）を使ってよい。
