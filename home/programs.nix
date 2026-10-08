@@ -228,9 +228,24 @@ in
   xdg.dataFile."nvim/nix/lazy.nvim".source = "${pkgs.vimPlugins.lazy-nvim}";
 
   # Terminal file manager (Sway: Super+e → Ghostty -e yazi).
+  # Bash wrapper `y` cds into the last dir on quit.
   programs.yazi = {
     enable = true;
     enableBashIntegration = true;
+    settings = {
+      mgr = {
+        show_hidden = true;
+        show_symlink = true;
+        sort_by = "natural";
+        sort_dir_first = true;
+        # mtime on the right; toggle with m+m / m+p / m+o inside Yazi.
+        linemode = "mtime";
+      };
+      preview = {
+        wrap = "yes";
+        tab_size = 2;
+      };
+    };
   };
 
   home.packages = with pkgs; [

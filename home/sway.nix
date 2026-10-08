@@ -68,6 +68,7 @@ let
     │ Super+e            Yazi（Ghostty 内ファイラー）          │
     │ Super+V            履歴選択→貼り付け（cliphist+rofi）    │
 
+
     │ Print              全画面スクショ → クリップボード       │
     │ Super+Shift+s      範囲スクショ（slurp）→ クリップボード │
     │ 音量キー           上げ / 下げ / ミュート                │
@@ -87,6 +88,16 @@ let
     │ ELECOM Fn+Q / Fn+W Windows / Mac モード（Scroll点滅1/2） │
     │   Macのままだと Ctrl↔Win が入れ替わりショートカット死   │
     │ ELECOM Win+Shift   同時押しが欠けること有 → Super+q 等  │
+    └──────────────────────────────────────────────────────────┘
+
+    ┌─ Yazi（Super+e） ────────────────────────────────────────┐
+    │ .                  隠しファイル表示トグル                │
+    │ Tab                spot（MIME / メタ情報）               │
+    │ o / Enter          開く（既定エディタは nvim）           │
+    │ ; / :              シェルコマンド（非阻塞 / 阻塞）       │
+    │ m+p / m+o / m+m    行モード: 権限 / 所有者 / 更新時刻    │
+    │ f                  フィルタ / z → zoxide 等              │
+    │ y（bash）          起動→終了後そのディレクトリへ cd      │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ 便利ツール ─────────────────────────────────────────────┐
@@ -472,7 +483,7 @@ in
       for_window [app_id="showmethekey-gtk"] floating enable, sticky enable, border none
       for_window [app_id="one.alynx.showmethekey"] floating enable, sticky enable, border none
       # Sway cheatsheet (Ghostty + bat; selectable text)
-      for_window [app_id="com.mitac.SwayCheatsheet"] floating enable, sticky enable, resize set 760 980
+      for_window [app_id="com.mitac.SwayCheatsheet"] floating enable, sticky enable, resize set 760 1080
       # Layout-independent cheatsheet toggles (same as waybar ?)
       # --inhibited: work even when Cursor/Electron inhibit compositor shortcuts.
       bindsym --inhibited --to-code Mod4+slash exec ${showCheatsheet}
