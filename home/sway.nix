@@ -21,7 +21,38 @@ let
   grim = "${pkgs.grim}/bin/grim";
   slurp = "${pkgs.slurp}/bin/slurp";
   wlCopy = "${pkgs.wl-clipboard}/bin/wl-copy";
+  # Manual / before-sleep lock (always runs).
   lockCmd = "${swaylockBin} -f -c 0b0f14";
+  # Presentation marker toggled with waybar scr / scr ON. XDG_RUNTIME_DIR is
+  # session-scoped, so it clears on logout. Idle auto-lock / DPMS no-op while set.
+  idleLockCmd = pkgs.writeShellScript "sway-idle-lock" ''
+    if [ -e "''${XDG_RUNTIME_DIR}/sway-keep-screen-on" ]; then
+      exit 0
+    fi
+    exec ${swaylockBin} -f -c 0b0f14
+  '';
+  idleDpmsOffCmd = pkgs.writeShellScript "sway-idle-dpms-off" ''
+    if [ -e "''${XDG_RUNTIME_DIR}/sway-keep-screen-on" ]; then
+      exit 0
+    fi
+    exec swaymsg "output * power off"
+  '';
+  toggleKeepScreenOn = pkgs.writeShellScript "sway-toggle-keep-screen-on" ''
+    marker="''${XDG_RUNTIME_DIR}/sway-keep-screen-on"
+    if [ -e "$marker" ]; then
+      rm -f "$marker"
+    else
+      touch "$marker"
+    fi
+  '';
+  waybarKeepScreenOn = pkgs.writeShellScript "waybar-keep-screen-on" ''
+    marker="''${XDG_RUNTIME_DIR}/sway-keep-screen-on"
+    if [ -e "$marker" ]; then
+      printf '%s\n' '{"text":"scr ON","class":"activated","tooltip":"画面常時オン（ロック・消灯なし／クリックで解除）"}'
+    else
+      printf '%s\n' '{"text":"scr","class":"deactivated","tooltip":"画面を常時オンにする（ロック・消灯を抑制）"}'
+    fi
+  '';
   # Route launches through swaymsg exec so new windows land on the
   # workspace active at selection time (not wherever focus is when they map).
   rofiLauncher = "${rofiBin} -show drun -run-command \"swaymsg exec -- {cmd}\" -run-shell-command \"swaymsg exec -- {terminal} -e {cmd}\"";
@@ -109,7 +140,7 @@ let
     │ waybar [restic]    バックアップ実行中の進捗表示          │
     │ waybar ?           このチートシート（再押下で閉じる）    │
     │ 無操作 10分→ロック / 15分→画面オフ（suspend しない）     │
-    │ waybar scr / scr ON  画面常時オン切替（ロック・消灯を抑制）│
+    │ waybar scr / scr ON  常時オン（自動ロック・消灯を抑制）  │
     │ waybar net / bri   SSID（ホバーで↓↑速度） / 画面輝度     │
     │ waybar cpu/mem クリックで btop / net で nmtui（Ghostty） │
     │ gh auth login      GitHub 認証（初回・期限切れ時）       │
@@ -481,8 +512,8 @@ in
         {
           command = ''
             ${swayidleBin} -w \
-              timeout 600 '${lockCmd}' \
-              timeout 900 'swaymsg "output * power off"' \
+              timeout 600 '${idleLockCmd}' \
+              timeout 900 '${idleDpmsOffCmd}' \
               resume 'swaymsg "output * power on"' \
               before-sleep '${lockCmd}'
           '';
@@ -532,7 +563,7 @@ in
           "custom/restic"
           "cpu"
           "memory"
-          "idle_inhibitor"
+          "custom/keep-screen-on"
           "battery"
           "network"
           "backlight"
@@ -568,16 +599,13 @@ in
           hide-empty-text = true;
           tooltip = true;
         };
-        # Plasma-like "keep screen on": inhibits swayidle lock / DPMS via
-        # zwp_idle_inhibit. Click toggles (presentation mode).
-        idle_inhibitor = {
-          format = "{icon}";
-          format-icons = {
-            activated = "scr ON";
-            deactivated = "scr";
-          };
-          tooltip-format-activated = "画面常時オン（クリックで解除）";
-          tooltip-format-deactivated = "画面を常時オンにする";
+        # Plasma-like "keep screen on": marker gates swayidle auto-lock / DPMS.
+        # (Custom module so the label always matches the skip-lock state.)
+        "custom/keep-screen-on" = {
+          exec = "${waybarKeepScreenOn}";
+          return-type = "json";
+          interval = 1;
+          on-click = "${toggleKeepScreenOn}";
         };
         cpu = {
           format = "cpu {usage}%";
@@ -671,19 +699,19 @@ in
         color: #9aa7b5;
         padding: 0 8px;
       }
-      #custom-cheatsheet, #cpu, #memory, #idle_inhibitor, #battery, #network, #backlight, #pulseaudio, #clock, #tray {
+      #custom-cheatsheet, #cpu, #memory, #custom-keep-screen-on, #battery, #network, #backlight, #pulseaudio, #clock, #tray {
         padding: 0 8px;
         color: #9fe7e7;
       }
       #custom-cheatsheet {
         color: #33c5c5;
       }
-      #idle_inhibitor.activated {
+      #custom-keep-screen-on.activated {
         color: #e6edf3;
         background: #15383a;
         border-left: 2px solid #33c5c5;
       }
-      #idle_inhibitor.deactivated {
+      #custom-keep-screen-on.deactivated {
         color: #6b7785;
       }
       #custom-restic {
