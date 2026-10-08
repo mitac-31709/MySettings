@@ -26,13 +26,16 @@ in
       terminal = "${pkgs.ghostty}/bin/ghostty";
       modes = "drun,run";
       font = "JetBrainsMono Nerd Font 12";
-      show-icons = false;
+      show-icons = true;
       disable-history = false;
       sort = true;
       sorting-method = "fzf";
       case-sensitive = false;
       cycle = true;
-      drun-display-format = "{name}";
+      # comment must be listed here to appear in drun-display-format.
+      drun-match-fields = "name,generic,exec,categories,keywords,comment";
+      drun-display-format = "{name} <span weight='light' size='small' foreground='#6b7785'><i>{generic}</i>  {comment}</span>";
+      drun-show-actions = true;
       display-drun = ">";
       display-run = "$";
       display-dmenu = ">";
@@ -55,7 +58,7 @@ in
         border = mkLiteral "1px";
         border-color = mkLiteral "@accent";
         border-radius = mkLiteral "0";
-        width = mkLiteral "42em";
+        width = mkLiteral "56em";
         padding = mkLiteral "0.6em";
       };
 
@@ -92,28 +95,45 @@ in
       };
 
       "listview" = {
-        lines = 10;
+        lines = 12;
         columns = 1;
         fixed-height = true;
         dynamic = true;
-        scrollbar = false;
+        scrollbar = true;
         spacing = mkLiteral "0.1em";
         background-color = mkLiteral "@bg";
       };
 
+      "scrollbar" = {
+        width = mkLiteral "0.3em";
+        handle-color = mkLiteral "@accent";
+        handle-width = mkLiteral "0.3em";
+        background-color = mkLiteral "@bg";
+      };
+
       "element" = {
-        padding = mkLiteral "0.25em 0.4em";
-        spacing = mkLiteral "0.5em";
+        padding = mkLiteral "0.3em 0.4em";
+        spacing = mkLiteral "0.6em";
         border-radius = mkLiteral "0";
         background-color = mkLiteral "@bg";
         text-color = mkLiteral "@fg";
-        children = map mkLiteral [ "element-text" ];
+        children = map mkLiteral [
+          "element-icon"
+          "element-text"
+        ];
+      };
+
+      "element-icon" = {
+        size = mkLiteral "1.5em";
+        background-color = mkLiteral "inherit";
+        text-color = mkLiteral "inherit";
       };
 
       "element-text" = {
         background-color = mkLiteral "inherit";
         text-color = mkLiteral "inherit";
         vertical-align = mkLiteral "0.5";
+        markup = mkLiteral "true";
       };
 
       "element selected" = {
