@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "sysrq-oom" ];
+  system.nixos.tags = [ "ctrl-alt-del-oom" ];
 }
