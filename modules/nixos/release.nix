@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "typec-wall-charger-sink" ];
+  system.nixos.tags = [ "typec-no-force-source-sink" ];
 }
