@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "waybar-nmtui" ];
+  system.nixos.tags = [ "sway-autostart-ws" ];
 }
