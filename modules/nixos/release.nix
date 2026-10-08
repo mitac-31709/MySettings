@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "arduino-cli-esp32" ];
+  system.nixos.tags = [ "typec-wall-charger-sink" ];
 }
