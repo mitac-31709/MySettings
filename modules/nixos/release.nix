@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "yazi-only" ];
+  system.nixos.tags = [ "yazi-hidden" ];
 }
