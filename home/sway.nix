@@ -12,7 +12,6 @@ let
   swaylockBin = "${pkgs.swaylock}/bin/swaylock";
   swayidleBin = "${pkgs.swayidle}/bin/swayidle";
   rofiBin = "${pkgs.rofi}/bin/rofi";
-  thunarBin = "${pkgs.thunar}/bin/thunar";
   yaziBin = "${pkgs.yazi}/bin/yazi";
   polkitAgent = "${pkgs.kdePackages.polkit-kde-agent-1}/libexec/polkit-kde-authentication-agent-1";
   pactl = "${pkgs.pulseaudio}/bin/pactl";
@@ -56,8 +55,8 @@ let
     │ Super+b / Super+v  水平 / 垂直分割                       │
     │ Super+s/w          スタック / タブ（分割は Super+b/v）   │
     └──────────────────────────────────────────────────────────┘
-    注: Super+L はロック、Super+e は Thunar のため、右フォーカスは Super+Right。
-    注: 既定の Super+e（分割レイアウト）は Thunar に上書き。
+    注: Super+L はロック、Super+e は Yazi のため、右フォーカスは Super+Right。
+    注: 既定の Super+e（分割レイアウト）は Yazi に上書き。
 
     ┌─ ワークスペース ─────────────────────────────────────────┐
     │ Super+1 … 9        ワークスペースへ切替                  │
@@ -66,9 +65,9 @@ let
     └──────────────────────────────────────────────────────────┘
 
     ┌─ 自作バインド ───────────────────────────────────────────┐
-    │ Super+e            Thunar（GUI ファイラー）              │
-    │ Super+y            Yazi（Ghostty 内ターミナル）          │
+    │ Super+e            Yazi（Ghostty 内ファイラー）          │
     │ Super+V            履歴選択→貼り付け（cliphist+rofi）    │
+
     │ Print              全画面スクショ → クリップボード       │
     │ Super+Shift+s      範囲スクショ（slurp）→ クリップボード │
     │ 音量キー           上げ / 下げ / ミュート                │
@@ -416,10 +415,10 @@ in
           "Ctrl+Alt+t" = "exec ${ghosttyBin}";
           "${mod}+Return" = "exec ${ghosttyBin}";
           "${mod}+l" = "exec ${lockCmd}";
-          # File managers (overrides default Super+e layout toggle).
-          "${mod}+e" = "exec ${thunarBin}";
-          "${mod}+y" = "exec ${openYazi}";
+          # Yazi (overrides default Super+e layout toggle).
+          "${mod}+e" = "exec ${openYazi}";
           # Clipboard history (cliphist store runs in startup).
+
           "${mod}+v" = "exec clipboard-history";
           # Volume / mic (PulseAudio on sof-rt5682 Chromebook).
           "XF86AudioRaiseVolume" = "exec ${pactl} set-sink-volume @DEFAULT_SINK@ +5%";
