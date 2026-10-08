@@ -22,7 +22,9 @@ let
   slurp = "${pkgs.slurp}/bin/slurp";
   wlCopy = "${pkgs.wl-clipboard}/bin/wl-copy";
   lockCmd = "${swaylockBin} -f -c 0b0f14";
-  rofiLauncher = "${rofiBin} -show drun";
+  # Route launches through swaymsg exec so new windows land on the
+  # workspace active at selection time (not wherever focus is when they map).
+  rofiLauncher = "${rofiBin} -show drun -run-command \"swaymsg exec -- {cmd}\" -run-shell-command \"swaymsg exec -- {terminal} -e {cmd}\"";
   # waybar cpu / mem → Ghostty + btop; network → Ghostty + nmtui
   openBtop = "${ghosttyBin} -e ${btopBin}";
   openNmtui = "${ghosttyBin} -e ${nmtuiBin}";
@@ -37,7 +39,7 @@ let
     ┌─ 起動・終了 ─────────────────────────────────────────────┐
     │ Super+Return       Ghostty を起動                        │
     │ Ctrl+Alt+T         Ghostty を起動                        │
-    │ Super+D / Alt+Space  rofi（アプリ起動・drun）            │
+    │ Super+D / Alt+Space  rofi（選択時WSに起動・drun）        │
     │ Super+q            フォーカス中のウィンドウを閉じる      │
     │ Super+Shift+q      同上（ELECOMだと Win+Shift が欠けること有）│
     │ Super+L            画面ロック（swaylock）                │
