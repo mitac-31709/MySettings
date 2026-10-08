@@ -19,13 +19,15 @@ let
   pactl = "${pkgs.pulseaudio}/bin/pactl";
   brightnessctl = "${pkgs.brightnessctl}/bin/brightnessctl";
   btopBin = "${pkgs.btop}/bin/btop";
+  nmtuiBin = "${pkgs.networkmanager}/bin/nmtui";
   grim = "${pkgs.grim}/bin/grim";
   slurp = "${pkgs.slurp}/bin/slurp";
   wlCopy = "${pkgs.wl-clipboard}/bin/wl-copy";
   lockCmd = "${swaylockBin} -f -c 0b0f14";
   rofiLauncher = "${rofiBin} -show drun";
-  # waybar cpu / mem / network → Ghostty + btop
+  # waybar cpu / mem → Ghostty + btop; network → Ghostty + nmtui
   openBtop = "${ghosttyBin} -e ${btopBin}";
+  openNmtui = "${ghosttyBin} -e ${nmtuiBin}";
   openYazi = "${ghosttyBin} -e ${yaziBin}";
 
   # Boxed reference opened floating via Ghostty + colored nvim (-u NONE).
@@ -96,7 +98,7 @@ let
     │ waybar ?           このチートシート（再押下で閉じる）    │
     │ waybar scr / scr ON  画面常時オン切替（ロック・消灯を抑制）│
     │ waybar net / bri   SSID（ホバーで↓↑速度） / 画面輝度     │
-    │ waybar cpu/mem/net クリックで btop（Ghostty）            │
+    │ waybar cpu/mem クリックで btop / net で nmtui（Ghostty） │
     │ gh auth login      GitHub 認証（初回・期限切れ時）       │
     │ git push           HTTPS は gh 資格情報を自動使用        │
     └──────────────────────────────────────────────────────────┘
@@ -244,6 +246,8 @@ let
     └──────────────────────────────────────────────────────────┘
 
     ┌─ Network（IP 確認 / 自宅はルータ DHCP 予約） ────────────┐
+    │ nmtui              TUI で Wi-Fi/有線の接続設定           │
+    │                    （waybar の SSID クリックでも開く）   │
     │ ip -br addr        全 IF の IP（LAN/Tailscale/WARP）     │
     │ ip route           デフォルト GW（dhcp / static）        │
     │ nmcli -f IP4 device show wlp0s20f3   Wi-Fi IP/GW/DNS   │
@@ -595,7 +599,7 @@ in
           format-ethernet = "{ifname}";
           format-disconnected = "offline";
           tooltip-format = "↓{bandwidthDownBytes} ↑{bandwidthUpBytes}\n{ifname} {ipaddr}";
-          on-click = openBtop;
+          on-click = openNmtui;
         };
         backlight = {
           device = "intel_backlight";
