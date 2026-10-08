@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "dsh-official-node" ];
+  system.nixos.tags = [ "waybar-ssid" ];
 }
