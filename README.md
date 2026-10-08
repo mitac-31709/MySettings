@@ -358,7 +358,7 @@ restic restore latest \
 | オーディオ | SOF + `sof-rt5682` / `max98373`（`alsa-ucm-conf-cros` + `sof-firmware`） |
 | キーボード | [cros-keyboard-map](https://github.com/WeirdTreeThing/cros-keyboard-map) 相当の `keyd`（delbin physmap）。最上段は ChromeOS キー。**Search+最上段**で F1–F10。tuigreet セッション一覧は **Search+3つ目のキー（zoom/全画面）**。電源コード: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+Back=強制ログアウト** / **電源+Refresh=再起動**（`chromebook-power-chords`）。USB/Bluetooth 外付け KB 接続中は内蔵 AT を `inhibited`（`chromebook-internal-kb-guard`） |
 | Flip | タブレットモード向け libinput quirk `ModelTabletModeNoSuspend=1` |
-| USB-C 電力 | `chromebook-typec-prefer-sink`: モババッ／壁充電器→ sink、スマホ等→ source、AC給電中の他ポート→ source。接続中の無理な切替は soft-reset。「抜く → `sudo chromebook-typec-prefer-sink` → 挿す」が確実。ポリシー競合時は `systemctl mask --runtime chromebook-typec-prefer-sink.service` |
+| USB-C 電力 | `chromebook-typec-prefer-sink`: 空きポートは FORCE_SINK（壁充電器／モババッ受電）、スマホ(UFP)→ source、AC給電中の他ポート→ source。udev は partner 追加時のみ（typec CHANGE はループ防止で除外） |
 
 ### オーディオ確認
 

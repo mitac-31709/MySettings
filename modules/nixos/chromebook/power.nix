@@ -93,19 +93,20 @@ in
   environment.systemPackages = [ chromebook-typec-prefer-sink ];
 
   systemd.services.chromebook-typec-prefer-sink = {
-    description = "USB-C power-role policy (sink power banks; source phones/AC)";
+    description = "USB-C power-role policy (sink chargers; source phones/AC)";
     documentation = [ "file://${./typec-prefer-sink.py}" ];
-    # typec change storms otherwise re-enter every ~1s and race FORCE_SINK.
-    startLimitIntervalSec = 10;
-    startLimitBurst = 3;
+    # pd_control used to re-enter via typec CHANGE udev in a tight loop.
+    unitConfig = {
+      StartLimitIntervalSec = "30";
+      StartLimitBurst = "5";
+    };
     serviceConfig = {
       Type = "oneshot";
       ExecStart = "${chromebook-typec-prefer-sink}/bin/chromebook-typec-prefer-sink";
     };
   };
 
-  # Boot: AC → idle ports FORCE_SOURCE; on battery → idle FORCE_SOURCE (phones).
-  # Power banks are switched to sink when detected on plug.
+  # Boot: on battery → idle FORCE_SINK (wall chargers); on AC → other ports source.
   systemd.services.chromebook-typec-power-policy-boot = {
     description = "Apply Cros EC USB-C power-role policy at boot";
     documentation = [ "file://${./typec-prefer-sink.py}" ];
@@ -118,13 +119,11 @@ in
     };
   };
 
-  # Plug events + AC/charger online changes.
+  # Partner plug + charger online only (not every typec CHANGE — that loops).
   services.udev.extraRules = ''
     ACTION=="add", SUBSYSTEM=="typec", KERNEL=="port[0-9]*-partner", \
       RUN+="${pkgs.systemd}/bin/systemctl --no-block start chromebook-typec-prefer-sink.service"
-    ACTION=="change", SUBSYSTEM=="typec", KERNEL=="port[0-9]*", \
-      RUN+="${pkgs.systemd}/bin/systemctl --no-block start chromebook-typec-prefer-sink.service"
-    ACTION=="change", SUBSYSTEM=="power_supply", ENV{POWER_SUPPLY_NAME}=="AC|CROS_USBPD_CHARGER*", \
+    ACTION=="change", SUBSYSTEM=="power_supply", ENV{POWER_SUPPLY_NAME}=="AC|CROS_USBPD_CHARGER*", ENV{POWER_SUPPLY_ONLINE}=="1", \
       RUN+="${pkgs.systemd}/bin/systemctl --no-block start chromebook-typec-prefer-sink.service"
   '';
 }

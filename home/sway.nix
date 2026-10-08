@@ -217,13 +217,12 @@ let
     └──────────────────────────────────────────────────────────┘
 
     ┌─ USB-C 電力ロール ───────────────────────────────────────┐
-    │ モババッ/壁充電器→受電 / スマホ・AC時の他ポート→給電   │
+    │ 空きポートは受電優先 / スマホ検出時・AC時は他ポート給電 │
     │ sudo chromebook-typec-prefer-sink   ポリシー再適用      │
-    │ 充電できない: 抜く → 上記 → 挿す（刺したままは不安定） │
-    │ ポリシーが邪魔な時: sudo systemctl mask --runtime \     │
-    │   chromebook-typec-prefer-sink.service してから再挿抜   │
-    │ cat /sys/class/typec/port*/power_role                   │
-    │ ※[source] sink=給電中 / source [sink]=受電中            │
+    │ 充電できない(緊急): 抜く → mask → FORCE_SINK → 挿す    │
+    │   sudo systemctl mask --runtime \                       │
+    │     chromebook-typec-prefer-sink.service                │
+    │ cat /sys/class/typec/port*/power_role  (sink=受電)      │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ ESP32 / Arduino CLI ────────────────────────────────────┐

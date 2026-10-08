@@ -2,12 +2,15 @@
 
 Goals
 -----
-- Power bank (on battery): become sink and charge the laptop.
-- Phone / other peripherals: source (charge the accessory).
+- Idle on battery: FORCE_SINK so wall chargers / power banks can attach.
+- Phone / other UFP peripherals: source (charge the accessory).
 - While AC is powering the laptop: other ports source so phones charge.
 
 sysfs PR_SWAP often returns EIO. Mid-connect FORCE_SINK can drop the link
 into a useless 5V/500mA ghost — use soft-reset (TOGGLE_OFF → FORCE_*) instead.
+
+Do not re-issue idle FORCE_* when preferred_role already matches: each EC
+write can emit a typec change and udev-restart this unit in a tight loop.
 """
 
 from __future__ import annotations
@@ -21,6 +24,7 @@ import time
 from pathlib import Path
 
 EC_DEV = "/dev/cros_ec"
+LOCK_PATH = "/run/chromebook-typec-prefer-sink.lock"
 CROS_EC_DEV_IOCXCMD = 0xC014EC00
 
 EC_CMD_USB_PD_CONTROL = 0x0101
@@ -214,8 +218,17 @@ def soft_reset(fd: int, port: int, role: int, settle: float) -> None:
     pd_control(fd, port, role)
 
 
+def preferred_role(port: int) -> str:
+    return read_text(Path(f"/sys/class/typec/port{port}/preferred_role"))
+
+
 def set_idle_role(fd: int, port: int, role: int) -> None:
     name = "FORCE_SINK" if role == USB_PD_CTRL_ROLE_FORCE_SINK else "FORCE_SOURCE"
+    want = "sink" if role == USB_PD_CTRL_ROLE_FORCE_SINK else "source"
+    # pd_control emits typec CHANGE → udev → this service. Skip no-ops.
+    if preferred_role(port) == want and not has_partner(port):
+        print(f"port{port}: idle already {want}")
+        return
     print(f"port{port}: idle {name}")
     pd_control(fd, port, role)
 
@@ -307,10 +320,9 @@ def desired_role(port: int) -> str:
         return "source"
 
     if not partner:
-        # On battery, idle ports prefer source so phones charge on plug.
-        # Wall bricks that attach into this state are fixed by
-        # is_likely_wall_charger() → sink on the plug event.
-        return "source"
+        # Prefer sink when idle so wall chargers negotiate. Phones are
+        # switched to source when a UFP partner appears.
+        return "sink"
 
     if is_likely_power_bank(port) or is_likely_wall_charger(port):
         return "sink"
@@ -330,7 +342,7 @@ def handle_port(fd: int, port: int, settle: float, retries: int) -> bool:
         f"charger={charger_snapshot(port)}"
     )
     if want == "leave":
-        print(f"port{port}: AC input — leave sink")
+        print(f"port{port}: leave (already sinking / AC)")
         return True
     if want == "sink":
         return ensure_sink(fd, port, settle, retries)
@@ -357,33 +369,46 @@ def main() -> int:
         print(f"cannot access {EC_DEV} (need root)", file=sys.stderr)
         return 1
 
+    # Serialize: overlapping udev starts otherwise race the EC.
+    lock_fd = os.open(LOCK_PATH, os.O_CREAT | os.O_RDWR, 0o644)
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        print("another instance holds the lock; exit")
+        os.close(lock_fd)
+        return 0
+
     settle = 0.2 if args.boot else args.settle
     retries = 1 if args.boot else args.retries
 
-    with open(EC_DEV, "r+b", buffering=0) as ec:
-        fd = ec.fileno()
-        ports = args.port if args.port is not None else list_typec_ports()
-        if not ports:
-            print("no typec ports")
-            return 0
+    try:
+        with open(EC_DEV, "r+b", buffering=0) as ec:
+            fd = ec.fileno()
+            ports = args.port if args.port is not None else list_typec_ports()
+            if not ports:
+                print("no typec ports")
+                return 0
 
-        if not system_on_ac():
-            try:
-                # Drop stale overrides when running on battery only.
-                if not any(charger_useful(p) for p in ports):
-                    charge_override_off(fd)
-            except EcError as e:
-                print(f"override off: {e}", file=sys.stderr)
+            if not system_on_ac():
+                try:
+                    # Drop stale overrides when running on battery only.
+                    if not any(charger_useful(p) for p in ports):
+                        charge_override_off(fd)
+                except EcError as e:
+                    print(f"override off: {e}", file=sys.stderr)
 
-        # Let partner PD identity / source-caps show up before classification.
-        if not args.boot and any(has_partner(p) for p in ports):
-            time.sleep(max(settle, 0.8))
+            # Let partner PD identity / source-caps show up before classification.
+            if not args.boot and any(has_partner(p) for p in ports):
+                time.sleep(max(settle, 0.8))
 
-        any_ok = False
-        for port in ports:
-            if handle_port(fd, port, settle, retries):
-                any_ok = True
-        return 0 if any_ok else 2
+            any_ok = False
+            for port in ports:
+                if handle_port(fd, port, settle, retries):
+                    any_ok = True
+            return 0 if any_ok else 2
+    finally:
+        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        os.close(lock_fd)
 
 
 if __name__ == "__main__":
