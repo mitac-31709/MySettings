@@ -97,13 +97,28 @@ def charger_snapshot(port: int) -> dict[str, str]:
 
 
 def charger_useful(port: int) -> bool:
+    """True when this port is taking input power (including PD negotiate).
+
+    During contract setup current_max is often 0 while status is already
+    Charging / online=1 — treat that as useful so we do not FORCE_SOURCE
+    a live sink (seen as a port0↔port1 "jump" when the link drops).
+    """
     snap = charger_snapshot(port)
     try:
         online = int(snap.get("online") or "0")
         current_max = int(snap.get("current_max") or "0")
+        voltage = int(snap.get("voltage_now") or "0")
     except ValueError:
         return False
-    return online == 1 and current_max >= MIN_USEFUL_CURRENT_UA
+    if online != 1:
+        return False
+    status = (snap.get("status") or "").lower()
+    if "charging" in status or status == "full":
+        return True
+    if current_max >= MIN_USEFUL_CURRENT_UA:
+        return True
+    # Negotiating: online with real VBUS but current_max not filled yet.
+    return voltage >= 4_500_000
 
 
 def list_typec_ports() -> list[int]:
@@ -278,8 +293,13 @@ def desired_role(port: int) -> str:
     """Return 'sink', 'source', or 'leave' for this port."""
     on_ac = system_on_ac()
     partner = has_partner(port)
+    role = power_role(port)
 
     if is_ac_input_port(port):
+        return "leave"
+
+    # Already sinking with a partner: never FORCE_SOURCE (destroys charge).
+    if partner and role and not is_sourcing(role):
         return "leave"
 
     if on_ac:
