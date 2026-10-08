@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "rofi-dense" ];
+  system.nixos.tags = [ "sysrq-oom" ];
 }
