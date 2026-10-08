@@ -640,6 +640,15 @@ in
         background: #0b0f14;
         color: #9fe7e7;
       }
+      /* Match bar chrome; do not inherit Plasma light GTK tooltips. */
+      tooltip {
+        background: #0b0f14;
+        color: #9fe7e7;
+        border: 1px solid #33c5c5;
+      }
+      tooltip label {
+        color: #9fe7e7;
+      }
       #workspaces button {
         padding: 0 6px;
         color: #6b7785;
