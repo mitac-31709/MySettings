@@ -224,6 +224,18 @@ let
     │ ※[source] sink=給電中 / source [sink]=受電中            │
     └──────────────────────────────────────────────────────────┘
 
+    ┌─ ESP32 / Arduino CLI ────────────────────────────────────┐
+    │ ポート: /dev/ttyUSB0（CH340）。安定名:                   │
+    │   /dev/serial/by-id/usb-1a86_USB_Serial-if00-port0     │
+    │ esptool --port /dev/ttyUSB0 chip-id                    │
+    │ arduino-cli board list                                 │
+    │ arduino-cli core update-index                          │
+    │ arduino-cli core install esp32:esp32                   │
+    │ arduino-cli compile -b esp32:esp32:esp32 .             │
+    │ arduino-cli upload -p /dev/ttyUSB0 -b esp32:esp32:esp32 . │
+    │ ※シリアルは dialout 必須（rebuild 後に再ログイン）       │
+    └──────────────────────────────────────────────────────────┘
+
     ┌─ Network（IP 確認 / 自宅はルータ DHCP 予約） ────────────┐
     │ ip -br addr        全 IF の IP（LAN/Tailscale/WARP）     │
     │ ip route           デフォルト GW（dhcp / static）        │

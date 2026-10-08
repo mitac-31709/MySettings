@@ -116,6 +116,7 @@
       "video"
       "wheel"
       "systemd-journal" # restic backup notify reads unit logs for progress/summary
+      "dialout" # /dev/ttyUSB* / ttyACM* (ESP32, Arduino, …)
     ];
     # Set a password after first boot: passwd mitac
   };

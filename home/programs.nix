@@ -287,5 +287,9 @@ in
     discord
     # Send Anywhere (upstream Electron .deb; not in nixpkgs).
     sendanywhere
+    # ESP32 / Arduino CLI flash & board package manager.
+    arduino-cli
+    # Espressif ROM / flash probe (chip-id, flash-id, …).
+    esptool
   ];
 }
