@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "sway-cheatsheet-bat" ];
+  system.nixos.tags = [ "yazi-only" ];
 }
