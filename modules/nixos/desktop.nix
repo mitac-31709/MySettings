@@ -1,5 +1,5 @@
 # Graphical multi-session stack: greeter + Plasma + Sway + Hyprland.
-{ ... }:
+{ pkgs, ... }:
 
 {
   imports = [
@@ -17,4 +17,16 @@
     variant = "";
   };
   services.printing.enable = true;
+
+  # Thunar (Sway primary GUI filer). xfconf keeps preferences across sessions.
+  programs.thunar = {
+    enable = true;
+    plugins = with pkgs; [
+      thunar-archive-plugin
+      thunar-volman
+    ];
+  };
+  programs.xfconf.enable = true;
+  services.gvfs.enable = true; # trash / MTP / network mounts
+  services.tumbler.enable = true; # image thumbnails
 }

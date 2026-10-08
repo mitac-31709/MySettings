@@ -13,6 +13,8 @@ let
   swaylockBin = "${pkgs.swaylock}/bin/swaylock";
   swayidleBin = "${pkgs.swayidle}/bin/swayidle";
   rofiBin = "${pkgs.rofi}/bin/rofi";
+  thunarBin = "${pkgs.thunar}/bin/thunar";
+  yaziBin = "${pkgs.yazi}/bin/yazi";
   polkitAgent = "${pkgs.kdePackages.polkit-kde-agent-1}/libexec/polkit-kde-authentication-agent-1";
   pactl = "${pkgs.pulseaudio}/bin/pactl";
   brightnessctl = "${pkgs.brightnessctl}/bin/brightnessctl";
@@ -24,6 +26,7 @@ let
   rofiLauncher = "${rofiBin} -show drun";
   # waybar cpu / mem / network → Ghostty + btop
   openBtop = "${ghosttyBin} -e ${btopBin}";
+  openYazi = "${ghosttyBin} -e ${yaziBin}";
 
   # Boxed reference opened floating via Ghostty + colored nvim (-u NONE).
   cheatsheetText = pkgs.writeText "sway-cheatsheet.txt" ''
@@ -50,9 +53,10 @@ let
     │ Super+r            リサイズモード（hjkl / Esc で終了）   │
     │ Super+Shift+Space  フローティング切替                    │
     │ Super+b / Super+v  水平 / 垂直分割                       │
-    │ Super+s/w/e        スタック / タブ / 分割レイアウト      │
+    │ Super+s/w          スタック / タブ（分割は Super+b/v）   │
     └──────────────────────────────────────────────────────────┘
-    注: Super+L はロックに割当のため、右フォーカスは Super+Right。
+    注: Super+L はロック、Super+e は Thunar のため、右フォーカスは Super+Right。
+    注: 既定の Super+e（分割レイアウト）は Thunar に上書き。
 
     ┌─ ワークスペース ─────────────────────────────────────────┐
     │ Super+1 … 9        ワークスペースへ切替                  │
@@ -60,6 +64,8 @@ let
     └──────────────────────────────────────────────────────────┘
 
     ┌─ 自作バインド ───────────────────────────────────────────┐
+    │ Super+e            Thunar（GUI ファイラー）              │
+    │ Super+y            Yazi（Ghostty 内ターミナル）          │
     │ Super+V            履歴選択→貼り付け（cliphist+rofi）    │
     │ Print              全画面スクショ → クリップボード       │
     │ Super+Shift+s      範囲スクショ（slurp）→ クリップボード │
@@ -418,6 +424,9 @@ in
           "Ctrl+Alt+t" = "exec ${ghosttyBin}";
           "${mod}+Return" = "exec ${ghosttyBin}";
           "${mod}+l" = "exec ${lockCmd}";
+          # File managers (overrides default Super+e layout toggle).
+          "${mod}+e" = "exec ${thunarBin}";
+          "${mod}+y" = "exec ${openYazi}";
           # Clipboard history (cliphist store runs in startup).
           "${mod}+v" = "exec clipboard-history";
           # Volume / mic (PulseAudio on sof-rt5682 Chromebook).

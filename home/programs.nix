@@ -227,6 +227,12 @@ in
   # re-clone and fails with "should be a directory!".
   xdg.dataFile."nvim/nix/lazy.nvim".source = "${pkgs.vimPlugins.lazy-nvim}";
 
+  # Terminal file manager (Sway: Super+y → Ghostty -e yazi).
+  programs.yazi = {
+    enable = true;
+    enableBashIntegration = true;
+  };
+
   home.packages = with pkgs; [
     btop
     nix-output-monitor
