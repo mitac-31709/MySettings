@@ -449,6 +449,10 @@ in
         { command = "fcitx5 -d --replace"; }
         { command = "wl-paste --type text --watch cliphist store"; }
         { command = "wl-paste --type image --watch cliphist store"; }
+        # Fixed session apps (not dynamic restore).
+        { command = "cursor"; }
+        { command = "vivaldi"; }
+        { command = "chatgpt"; }
         # waybar: programs.waybar.systemd (MemoryMax / Restart)
         {
           command = ''
