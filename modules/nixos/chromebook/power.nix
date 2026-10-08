@@ -95,6 +95,9 @@ in
   systemd.services.chromebook-typec-prefer-sink = {
     description = "USB-C power-role policy (sink power banks; source phones/AC)";
     documentation = [ "file://${./typec-prefer-sink.py}" ];
+    # typec change storms otherwise re-enter every ~1s and race FORCE_SINK.
+    startLimitIntervalSec = 10;
+    startLimitBurst = 3;
     serviceConfig = {
       Type = "oneshot";
       ExecStart = "${chromebook-typec-prefer-sink}/bin/chromebook-typec-prefer-sink";

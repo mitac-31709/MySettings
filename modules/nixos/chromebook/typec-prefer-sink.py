@@ -139,18 +139,52 @@ def partner_source_caps(port: int) -> list[Path]:
     )
 
 
+def partner_type(port: int) -> str:
+    return read_text(Path(f"/sys/class/typec/port{port}-partner/type"))
+
+
 def is_likely_power_bank(port: int) -> bool:
     """Power banks advertise source PDOs / product type psd even while sinking."""
     partner = Path(f"/sys/class/typec/port{port}-partner")
     if not partner.exists():
         return False
-    ptype = read_text(partner / "type")
+    ptype = partner_type(port)
     if ptype == "psd":
         return True
     # Wall bricks are source-only from our POV while we sink with useful charge.
     if is_ac_input_port(port):
         return False
     return bool(partner_source_caps(port))
+
+
+def is_likely_wall_charger(port: int) -> bool:
+    """Dedicated PSU / brick, including 5V ghost while we wrongly stay source.
+
+    Idle FORCE_SOURCE + wall brick → partner present, online=0, still [source].
+    Phones are usually type=ufp; bricks often not_ufp with
+    supports_usb_power_delivery=no until we become sink.
+    """
+    partner = Path(f"/sys/class/typec/port{port}-partner")
+    if not partner.exists() or is_ac_input_port(port):
+        return False
+    ptype = partner_type(port)
+    supports_pd = read_text(partner / "supports_usb_power_delivery")
+    if ptype == "not_ufp" and supports_pd != "yes":
+        return True
+    snap = charger_snapshot(port)
+    try:
+        voltage = int(snap.get("voltage_now") or "0")
+        current_max = int(snap.get("current_max") or "0")
+        online = int(snap.get("online") or "0")
+    except ValueError:
+        return False
+    return (
+        online == 0
+        and is_sourcing(power_role(port))
+        and ptype != "ufp"
+        and voltage >= 4_500_000
+        and current_max >= MIN_USEFUL_CURRENT_UA
+    )
 
 
 def soft_reset(fd: int, port: int, role: int, settle: float) -> None:
@@ -254,9 +288,11 @@ def desired_role(port: int) -> str:
 
     if not partner:
         # On battery, idle ports prefer source so phones charge on plug.
+        # Wall bricks that attach into this state are fixed by
+        # is_likely_wall_charger() → sink on the plug event.
         return "source"
 
-    if is_likely_power_bank(port):
+    if is_likely_power_bank(port) or is_likely_wall_charger(port):
         return "sink"
 
     # Phone / hub / peripheral.
@@ -267,9 +303,10 @@ def handle_port(fd: int, port: int, settle: float, retries: int) -> bool:
     role = power_role(port)
     want = desired_role(port)
     bank = is_likely_power_bank(port) if has_partner(port) else False
+    wall = is_likely_wall_charger(port) if has_partner(port) else False
     print(
         f"port{port}: role={role or '?'} partner={has_partner(port)} "
-        f"bank={bank} on_ac={system_on_ac()} want={want} "
+        f"bank={bank} wall={wall} on_ac={system_on_ac()} want={want} "
         f"charger={charger_snapshot(port)}"
     )
     if want == "leave":
