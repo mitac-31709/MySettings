@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "waybar-ssid" ];
+  system.nixos.tags = [ "arduino-cli-esp32" ];
 }
