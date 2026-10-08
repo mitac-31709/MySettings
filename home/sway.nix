@@ -63,6 +63,7 @@ let
     ┌─ ワークスペース ─────────────────────────────────────────┐
     │ Super+1 … 9        ワークスペースへ切替                  │
     │ Super+Shift+1…9    ウィンドウを WS へ移動                │
+    │ 起動時             WS1 Cursor+ChatGPT / WS2 Vivaldi      │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ 自作バインド ───────────────────────────────────────────┐
@@ -350,6 +351,17 @@ in
       terminal = ghosttyBin;
       menu = rofiLauncher;
 
+      # Fixed autostart apps: place by criteria (ChatGPT is XWayland).
+      assigns = {
+        "1" = [
+          { app_id = "cursor"; }
+          { class = "ChatGPT"; }
+        ];
+        "2" = [
+          { app_id = "vivaldi-stable"; }
+        ];
+      };
+
       # Dark solid backdrop + cyan accents (greeter / classic TUI vibe).
       output."*" = {
         bg = "#0b0f14 solid_color";
@@ -462,10 +474,11 @@ in
         { command = "fcitx5 -d --replace"; }
         { command = "wl-paste --type text --watch cliphist store"; }
         { command = "wl-paste --type image --watch cliphist store"; }
-        # Fixed session apps (not dynamic restore).
+        # Fixed session apps (assigns: WS1 cursor/ChatGPT, WS2 vivaldi).
         { command = "cursor"; }
         { command = "vivaldi"; }
         { command = "chatgpt"; }
+        { command = "swaymsg 'workspace number 1'"; }
         # waybar: programs.waybar.systemd (MemoryMax / Restart)
         {
           command = ''
