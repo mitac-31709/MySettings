@@ -13,6 +13,12 @@ let
   };
 in
 {
+  # NixOS default kernel.sysrq=16 allows only sync (s). Bit 64 is required for
+  # Magic SysRq+f (manual OOM killer). 244 = sync|remount|signal|reboot|SAK
+  # (REISUB toolkit + oom). Keyboard SysRq is already mapped below (top-row 5th
+  # key / snapshot). Prefer this over a Sway bind — userspace may be wedged.
+  boot.kernel.sysctl."kernel.sysrq" = 244;
+
   # --- Keyboard: WeirdTreeThing cros-keyboard-map (keyd) ---
   # Chromebook top-row scancodes are Vivaldi keys (back/refresh/zoom/...), not
   # F1–F10. Remapping only `fN` never reaches tuigreet. Use the layout from
@@ -20,6 +26,7 @@ in
   # function_row_physmap (delbin: EA E7 91 92 93 94 95 A0 AE B0):
   #   bare top row → ChromeOS actions; Search+top row → F1–F10.
   # tuigreet sessions (F3): hold Search + 3rd key (zoom / 全画面).
+  # Manual OOM: hold Alt + 最上段5つ目(SysRq) + f (kernel; works when UI frozen).
   services.keyd = {
     enable = true;
     keyboards = {

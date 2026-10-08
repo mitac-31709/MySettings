@@ -150,7 +150,6 @@ let
     │ flake-update       入力一括＋Cursor/SendAnywhere/UniClip │
     │ nix flake update   入力のみ（UniClipboard の版は動かない）│
     │ rebuild            sudo後・適用（ビルド中のみ nom ETA）  │
-    │ nix-eval-low …     nice+ionice で nix eval（options木は避ける）│
     │ generations        世代一覧（list-generations）          │
     │ 更新で壊れたとき   sudo nixos-rebuild --rollback switch  │
     │                    または git checkout <良いコミット> --  │
@@ -232,6 +231,8 @@ let
     │ 単体               Back/Refresh/全画面/輝度/音量 など    │
     │ Search+最上段      F1–F10                                │
     │ Search+3つ目       tuigreet セッション一覧（F3）         │
+    │ Alt+最上段5つ目+f  手動 OOM killer（画面固まり時用）     │
+    │                    （5つ目=SysRq/スクショ相当。カーネル） │
     │ 電源 短押し        suspend                               │
     │ 電源 長押し(~2.5s) poweroff                              │
     │ 電源+Back          強制ログアウト                        │
@@ -270,6 +271,14 @@ let
     │ iperf3 -s          帯域測定サーバ（TCP/UDP 5201）        │
     │ iperf3 -c HOST     クライアント（サーバ側 IP を指定）    │
     │ iperf3 -c HOST -R  下り方向も測る（reverse）             │
+    └──────────────────────────────────────────────────────────┘
+
+    ┌─ メモリ / OOM ───────────────────────────────────────────┐
+    │ Alt+最上段5つ目+f  手動で OOM killer（UI 固まり時）      │
+    │ free -h / swapon --show   RAM・zram 使用量              │
+    │ journalctl -k -b | rg -i 'Out of memory|oom-kill'       │
+    │ journalctl -u systemd-oomd -b   userspace OOM の有無     │
+    │ waybar cpu/mem クリック → btop                          │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ Bluetooth（bluetoothctl） ──────────────────────────────┐
