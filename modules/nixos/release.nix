@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "sway-cheatsheet-color" ];
+  system.nixos.tags = [ "drop-librechat" ];
 }
