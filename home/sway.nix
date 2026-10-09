@@ -529,9 +529,11 @@ in
           mod = "Mod4";
         in
         lib.mkOptionDefault {
-          # Super+D → rofi (via menu). Alt+Space also opens the launcher.
-          # Super+F fullscreen, Super+R resize. Super+Space stays IME.
-          "Mod1+space" = "exec ${rofiLauncher}";
+          # Super+D / Alt+Space → rofi. Super+F fullscreen, Super+R resize.
+          # Super+Space stays IME. --inhibited: work inside Cursor/Electron.
+          "${mod}+d" = null;
+          "--inhibited ${mod}+d" = "exec ${rofiLauncher}";
+          "--inhibited Mod1+space" = "exec ${rofiLauncher}";
           "Ctrl+Alt+t" = "exec ${ghosttyBin}";
           "${mod}+Return" = "exec ${ghosttyBin}";
           "${mod}+l" = "exec ${lockCmd}";

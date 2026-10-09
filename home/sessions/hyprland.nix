@@ -17,7 +17,7 @@ let
   qmlImportPath = "/run/current-system/sw/lib/qt-6/qml";
 
   # Shared classic-.conf preamble (Caelestia + end4 primary).
-  # Super+Space stays free for Fcitx5/Mozc; launchers use Super+R.
+  # Super+Space stays free for Fcitx5/Mozc; launchers use Super+R / Alt+Space.
   # Keep this path PulseAudio-native — II lua's wpctl/easyeffects break here.
   sharedPreamble = ''
     monitor=,preferred,auto,1
@@ -93,6 +93,7 @@ let
     ${sharedPreamble}
     exec-once = caelestia shell -d
     bind = SUPER, R, exec, caelestia shell drawers toggle launcher
+    bind = ALT, SPACE, exec, caelestia shell drawers toggle launcher
   '';
 
   # Primary end4-pC path (hyprland-startup prefers this over II lua).
@@ -103,6 +104,7 @@ let
     exec-once = qs -c end4-pC
     bind = SUPER, Escape, global, quickshell:settingsToggle
     bind = SUPER, R, global, quickshell:searchToggle
+    bind = ALT, SPACE, global, quickshell:searchToggle
   '';
 
   # Patch end4-pC so color/wallpaper scripts target this qs config name, not "ii".
