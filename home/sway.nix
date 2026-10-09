@@ -65,14 +65,14 @@ let
   cheatsheetText = pkgs.writeText "sway-cheatsheet.txt" ''
     Sway チートシート
 
-    q / Esc で閉じる・ドラッグで選択コピー / Super+/ または waybar ? で再閉
+    q / Esc で閉じる・選択コピー / Super+/ や ? で再閉
 
     ┌─ 起動・終了 ─────────────────────────────────────────────┐
     │ Super+Return       Ghostty を起動                        │
     │ Ctrl+Alt+T         Ghostty を起動                        │
     │ Super+D / Alt+Space  rofi（選択時WSに起動・drun）        │
     │ Super+q            フォーカス中のウィンドウを閉じる      │
-    │ Super+Shift+q      同上（ELECOMだと Win+Shift が欠けること有）│
+    │ Super+Shift+q      ELECOMだと Win+Shift が欠けること有   │
     │ Super+L            画面ロック（swaylock）                │
     │ Super+Shift+c      Sway 設定を再読み込み                 │
     │ Super+Shift+e      Sway を終了                           │
@@ -88,7 +88,7 @@ let
     │ Super+b / Super+v  水平 / 垂直分割                       │
     │ Super+s/w          スタック / タブ（分割は Super+b/v）   │
     └──────────────────────────────────────────────────────────┘
-    注: Super+L はロック、Super+e は Yazi のため、右フォーカスは Super+Right。
+    注: Super+L=ロック、Super+e=Yazi。右は Super+Right。
     注: 既定の Super+e（分割レイアウト）は Yazi に上書き。
 
     ┌─ ワークスペース ─────────────────────────────────────────┐
@@ -100,15 +100,13 @@ let
     ┌─ 自作バインド ───────────────────────────────────────────┐
     │ Super+e            Yazi（Ghostty 内ファイラー）          │
     │ Super+V            履歴選択→貼り付け（cliphist+rofi）    │
-
-
     │ Print              全画面スクショ → クリップボード       │
     │ Super+Shift+s      範囲スクショ（slurp）→ クリップボード │
     │ 音量キー           上げ / 下げ / ミュート                │
     │ MicMute            マイクミュート                        │
     │ 輝度キー           画面輝度 ±5%                          │
     │ Super+/            このチートシートを開閉（Shiftなし）   │
-    │ Super+Shift+/      同上（ELECOMだと同時押しが欠けること有）│
+    │ Super+Shift+/      同上（ELECOMは同時押し欠け有）        │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ 入力 ───────────────────────────────────────────────────┐
@@ -162,7 +160,7 @@ let
     │ DeepSeek Harness   アプリ窓（初回は npm、:3080）         │
     │ LibreChat          アプリ窓（:3081、systemd）            │
     │ sudoedit /var/lib/librechat/credentials.env              │
-    │                    OPENAI_API_KEY / DEEPSEEK_API_KEY を追加│
+    │                    OPENAI_API_KEY 等を追加               │
     │ sudo systemctl restart librechat   鍵変更後              │
     └──────────────────────────────────────────────────────────┘
 
@@ -173,31 +171,31 @@ let
     │ Space l            Lazy プラグイン UI                    │
     │ Space cf           フォーマット                          │
     │ gd / gr / K        定義へ / 参照 / ホバー                │
-    │ :Lazy sync         プラグイン更新（初回もここでインストール）│
+    │ :Lazy sync         プラグイン更新（初回インストールも）  │
     └──────────────────────────────────────────────────────────┘
-    初回はネットワーク必須。LSP は Mason ではなく nix extraPackages。
+    初回はネット必須。LSP は Mason ではなく nix extraPackages。
 
     ┌─ NixOS 適用 ─────────────────────────────────────────────┐
     │ flake-update       入力一括＋Cursor/SendAnywhere/UniClip │
-    │ nix flake update   入力のみ（UniClipboard の版は動かない）│
+    │ nix flake update   入力のみ（UniClip の版は動かない）    │
     │ rebuild            sudo後・適用（ビルド中のみ nom ETA）  │
     │ generations        世代一覧（list-generations）          │
     │ 更新で壊れたとき   sudo nixos-rebuild --rollback switch  │
-    │                    または git checkout <良いコミット> --  │
+    │                    または git checkout <良コミット> --   │
     │                    flake.lock → rebuild                  │
     │ nix-collect-garbage  未参照ストアのみ削除（世代は残る）  │
-    │ sudo nix-collect-garbage -d  全世代削除＋GC（ロールバック不可）│
+    │ sudo nix-collect-garbage -d  全世代削除+GC（危険）       │
     │ sudo nix-collect-garbage --delete-older-than 30d         │
     │                    30日より古い世代だけ削除してから GC   │
     │ nix store optimise 重複パスをハードリンクして容量節約    │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ リモートビルド（galleria-mitac WSL :2222） ─────────────┐
-    │ 鍵                 ~/.ssh/id_wsl_builder（パスフレーズ無し）│
+    │ 鍵                 ~/.ssh/id_wsl_builder（パス無し）     │
     │ 疎通（ユーザー）   ssh wsl-builder nix --version         │
     │ 疎通（daemon）     sudo ssh wsl-builder nix --version    │
     │ 強制リモート       --max-jobs 0（ローカルを使わない）    │
-    │ リモート無効       --builders ''''（空文字）              │
+    │ リモート無効       --builders ''''（空文字）             │
     │ 向こうでビルド→持込  nix copy --from ssh://wsl-builder … │
     └──────────────────────────────────────────────────────────┘
 
@@ -239,17 +237,17 @@ let
     │ daemon 状態        systemctl --user status uniclipd      │
     │ daemon 再起動      systemctl --user restart uniclipd     │
     │ ログ               journalctl --user -u uniclipd -f     │
-    │ 詳細ログ           ~/.local/state/app.uniclipboard.desktop/logs │
+    │ 詳細ログ           ~/.local/state/.../uniclipboard/logs  │
     │ 鍵環ロック時       seahorse（Default Keyring を解錠）    │
     │ ピア拒否           Devices→相手→「この端末と同期」ON    │
     │                    （tray Device Sync のチェックでも可） │
     └──────────────────────────────────────────────────────────┘
     必ず --user。daemon 再起動後は GUI も落として開き直す
     （旧ポートに張り付いて接続できなくなる）。
-    起動失敗（engine 1223）は鍵環未解錠が典型。再ログインか seahorse。
-    「ピア拒否」は受信オフ時の正常動作。ファイル種別も both/receive に。
-    アプリ内 Update は触らない（deb を入れようとして daemon を止め、
-    失敗したまま同期が止まる）。版上げは flake の pkgs.uniclipboard。
+    起動失敗(engine 1223)は鍵環未解錠が典型。seahorse で解錠。
+    「ピア拒否」は受信オフ時の正常動作。both/receive に設定。
+    アプリ内 Update は触らない（deb 導入で daemon が止まる）。
+    版上げは flake の pkgs.uniclipboard で行う。
 
     ┌─ Cloudflare WARP ────────────────────────────────────────┐
     │ warp-cli status    接続状態                              │
@@ -279,12 +277,12 @@ let
     │ cat /sys/class/typec/port*/power_role  (sink=受電)      │
     └──────────────────────────────────────────────────────────┘
 
-    ┌─ バッテリー節約（都度） ──────────────────────────────────┐
+    ┌─ バッテリー節約（都度） ─────────────────────────────────┐
     │ 輝度キー / brightnessctl set 40%   画面が最大の消費源   │
     │ warp-cli disconnect          不要なら WARP 切断         │
     │ bluetoothctl power off       未使用時 BT オフ           │
     │ 電源短押し / systemctl suspend   離席時は suspend       │
-    │ ※idle は 10分ロック / 15分画面オフのみ（自動 suspend なし）│
+    │ ※idle は 10分ロック / 15分画面オフのみ（自動 suspend 無）│
     └──────────────────────────────────────────────────────────┘
 
     ┌─ ESP32 / Arduino CLI ────────────────────────────────────┐
@@ -295,7 +293,7 @@ let
     │ arduino-cli core update-index                          │
     │ arduino-cli core install esp32:esp32                   │
     │ arduino-cli compile -b esp32:esp32:esp32 .             │
-    │ arduino-cli upload -p /dev/ttyUSB0 -b esp32:esp32:esp32 . │
+    │ arduino-cli upload -p /dev/ttyUSB0 -b esp32:esp32:esp32. │
     │ ※シリアルは dialout 必須（rebuild 後に再ログイン）       │
     └──────────────────────────────────────────────────────────┘
 
@@ -319,7 +317,7 @@ let
     └──────────────────────────────────────────────────────────┘
 
     ┌─ メモリ / OOM ───────────────────────────────────────────┐
-    │ Ctrl+Alt+Del       手動 OOM killer（内蔵は C-A-Backspace）│
+    │ Ctrl+Alt+Del       手動 OOM（内蔵は C-A-Backspace）      │
     │ free -h / swapon --show   RAM・zram 使用量              │
     │ journalctl -k -b | rg -i 'Out of memory|oom-kill'       │
     │ journalctl -u systemd-oomd -b   userspace OOM の有無     │
@@ -375,8 +373,13 @@ let
     # Options use --key=value (no -o); needed so single-instance Ghostty doesn't swallow this.
     # bat + less (no --mouse): terminal owns click-drag select / copy.
     export LESS='-R'
+    # CJK monospace fallback keeps box columns aligned with ASCII.
     exec ghostty --class=com.mitac.SwayCheatsheet \
       --gtk-single-instance=false \
+      --font-family="JetBrainsMono Nerd Font" \
+      --font-family="Noto Sans Mono CJK JP" \
+      --window-padding-x=8 \
+      --window-padding-y=8 \
       -e bat --style=plain --paging=always --theme=Coldark-Cold \
       --wrap=never \
       --pager="less -R --lesskey-src=${cheatsheetLesskey}" \
@@ -539,8 +542,8 @@ in
       # showmethekey floating overlay
       for_window [app_id="showmethekey-gtk"] floating enable, sticky enable, border none
       for_window [app_id="one.alynx.showmethekey"] floating enable, sticky enable, border none
-      # Sway cheatsheet (Ghostty + bat; selectable text)
-      for_window [app_id="com.mitac.SwayCheatsheet"] floating enable, sticky enable, resize set 760 1080
+      # Sway cheatsheet (Ghostty + bat; selectable text). Height <1080 so title is not clipped.
+      for_window [app_id="com.mitac.SwayCheatsheet"] floating enable, sticky enable, resize set 780 920, move position center
       # Layout-independent cheatsheet toggles (same as waybar ?)
       # --inhibited: work even when Cursor/Electron inhibit compositor shortcuts.
       bindsym --inhibited --to-code Mod4+slash exec ${showCheatsheet}
