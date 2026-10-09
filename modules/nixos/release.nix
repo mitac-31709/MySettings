@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "qtscrcpy" ];
+  system.nixos.tags = [ "sway-cheatsheet-nvim" ];
 }
