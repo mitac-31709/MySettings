@@ -279,6 +279,14 @@ let
     │ cat /sys/class/typec/port*/power_role  (sink=受電)      │
     └──────────────────────────────────────────────────────────┘
 
+    ┌─ バッテリー節約（都度） ──────────────────────────────────┐
+    │ 輝度キー / brightnessctl set 40%   画面が最大の消費源   │
+    │ warp-cli disconnect          不要なら WARP 切断         │
+    │ bluetoothctl power off       未使用時 BT オフ           │
+    │ 電源短押し / systemctl suspend   離席時は suspend       │
+    │ ※idle は 10分ロック / 15分画面オフのみ（自動 suspend なし）│
+    └──────────────────────────────────────────────────────────┘
+
     ┌─ ESP32 / Arduino CLI ────────────────────────────────────┐
     │ ポート: /dev/ttyUSB0（CH340）。安定名:                   │
     │   /dev/serial/by-id/usb-1a86_USB_Serial-if00-port0     │
