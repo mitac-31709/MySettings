@@ -332,5 +332,9 @@ in
     arduino-cli
     # Espressif ROM / flash probe (chip-id, flash-id, …).
     esptool
+    # Android screen mirror / control (GUI; wraps adb + scrcpy-server).
+    qtscrcpy
+    # Standalone adb / fastboot CLI (QtScrcpy also embeds adb).
+    android-tools
   ];
 }
