@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "sway-cheatsheet-title" ];
+  system.nixos.tags = [ "sway-cheatsheet-bat" ];
 }
