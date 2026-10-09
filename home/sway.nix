@@ -61,7 +61,7 @@ let
   openNmtui = "${ghosttyBin} -e ${nmtuiBin}";
   openYazi = "${ghosttyBin} -e ${yaziBin}";
 
-  # Boxed reference opened floating via Ghostty + bat (selectable / copyable).
+  # Boxed reference opened floating via Ghostty + colored nvim (-u NONE).
   cheatsheetText = pkgs.writeText "sway-cheatsheet.txt" ''
     Sway チートシート
 
@@ -341,10 +341,40 @@ let
     音声デバイスは接続後、Pulse 側で出力シンクを選ぶことあり。
   '';
 
-  # Esc → quit (q still works). Lone Esc after less's timeout; arrows stay intact.
-  cheatsheetLesskey = pkgs.writeText "sway-cheatsheet.lesskey" ''
-    #command
-    \e quit
+  # Minimal nvim UI + dark/cyan syntax so keys / sections / notes stand out.
+  cheatsheetVim = pkgs.writeText "sway-cheatsheet.vim" ''
+    set laststatus=0 noruler nonumber norelativenumber noshowcmd nolist
+    set nocursorline noshowmode
+    set mouse=
+    set termguicolors
+    set background=dark
+    syntax enable
+    highlight clear
+    syntax clear
+
+    syntax match CheatTitle /^Sway チートシート$/
+    syntax match CheatHint /^q \/ Esc で閉じる.*$/
+    syntax match CheatNote /^注:.*$/
+    syntax match CheatAside /^\(注:\|q \/ Esc\)\@![^┌└│].*$/
+    syntax match CheatSection /^┌─.*┐$/
+    syntax match CheatBorder /^[└│].*$/ contains=CheatKey,CheatDesc,CheatPipe
+    syntax match CheatPipe /│/ contained
+    syntax match CheatKey /\%(^│\)\@<= *\S.\{-}\ze \{2,}/ contained
+    syntax match CheatDesc / \{2,}.\{-}\ze│$/ contained
+
+    highlight Normal guifg=#9fe7e7 guibg=#0b0f14 ctermfg=14 ctermbg=NONE
+    highlight CheatTitle guifg=#9fe7e7 guibg=#0b0f14 gui=bold ctermfg=14
+    highlight CheatSection guifg=#33c5c5 guibg=#0b0f14 gui=bold ctermfg=51
+    highlight CheatPipe guifg=#1f4a4c guibg=#0b0f14 ctermfg=23
+    highlight CheatBorder guifg=#1f4a4c guibg=#0b0f14 ctermfg=23
+    highlight CheatKey guifg=#e5c07b guibg=#0b0f14 gui=bold ctermfg=221
+    highlight CheatDesc guifg=#e6edf3 guibg=#0b0f14 ctermfg=255
+    highlight CheatNote guifg=#e06c75 guibg=#0b0f14 gui=bold ctermfg=203
+    highlight CheatHint guifg=#6b7785 guibg=#0b0f14 ctermfg=245
+    highlight CheatAside guifg=#9aa7b5 guibg=#0b0f14 ctermfg=247
+
+    nnoremap q :qa!<CR>
+    nnoremap <Esc> :qa!<CR>
   '';
 
   showCheatsheet = pkgs.writeShellScript "sway-cheatsheet" ''
@@ -353,11 +383,10 @@ let
       lib.makeBinPath [
         pkgs.coreutils
         pkgs.jq
-        pkgs.less
         pkgs.procps
         pkgs.sway
         pkgs.ghostty
-        pkgs.bat
+        pkgs.neovim
       ]
     }:$PATH"
     # Toggle: second ? / Super+/ closes an existing sheet.
@@ -373,13 +402,11 @@ let
     fi
     # Ghostty requires a valid GTK app-id (reverse-DNS); hyphens-only ids are ignored.
     # Options use --key=value (no -o); needed so single-instance Ghostty doesn't swallow this.
-    # bat + less (no --mouse): terminal owns click-drag select / copy.
-    export LESS='-R'
+    # mouse= off so Ghostty owns click-drag select / copy.
     exec ghostty --class=com.mitac.SwayCheatsheet \
       --gtk-single-instance=false \
-      -e bat --style=plain --paging=always --theme=Coldark-Cold \
-      --wrap=never \
-      --pager="less -R --lesskey-src=${cheatsheetLesskey}" \
+      -e nvim -u NONE -R \
+      -S ${cheatsheetVim} \
       ${cheatsheetText}
   '';
 in
@@ -505,7 +532,7 @@ in
           "${mod}+Shift+q" = null;
           "--inhibited ${mod}+q" = "kill";
           "--inhibited ${mod}+Shift+q" = "kill";
-          # Floating bat cheatsheet (also waybar ?).
+          # Floating nvim cheatsheet (also waybar ?).
           # Prefer Super+/ (no Shift): same ELECOM Win+Shift ghosting issue.
           "--inhibited ${mod}+slash" = "exec ${showCheatsheet}";
           # JP emits keysym "question" for Shift+/ when Super is still held.
@@ -539,7 +566,7 @@ in
       # showmethekey floating overlay
       for_window [app_id="showmethekey-gtk"] floating enable, sticky enable, border none
       for_window [app_id="one.alynx.showmethekey"] floating enable, sticky enable, border none
-      # Sway cheatsheet (Ghostty + bat; selectable text)
+      # Sway cheatsheet (Ghostty + colored nvim -R; mouse off → selectable)
       for_window [app_id="com.mitac.SwayCheatsheet"] floating enable, sticky enable, resize set 760 1080
       # Layout-independent cheatsheet toggles (same as waybar ?)
       # --inhibited: work even when Cursor/Electron inhibit compositor shortcuts.
