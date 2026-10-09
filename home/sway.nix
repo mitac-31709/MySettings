@@ -352,10 +352,11 @@ let
     highlight clear
     syntax clear
 
+    " Aside is broad; Title/Hint/Note must be defined after it so they win on overlap.
+    syntax match CheatAside /^\(注:\|q \/ Esc\)\@![^┌└│].*$/
     syntax match CheatTitle /^Sway チートシート$/
     syntax match CheatHint /^q \/ Esc で閉じる.*$/
     syntax match CheatNote /^注:.*$/
-    syntax match CheatAside /^\(注:\|q \/ Esc\)\@![^┌└│].*$/
     syntax match CheatSection /^┌─.*┐$/
     syntax match CheatBorder /^[└│].*$/ contains=CheatKey,CheatDesc,CheatPipe
     syntax match CheatPipe /│/ contained
