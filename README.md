@@ -135,7 +135,6 @@ passwd mitac
 - **Cursor** — `code-cursor`（GUI）／`cursor-cli`（ターミナル Agent: `cursor-agent` / `agent`）
 - **ChatGPT** — 公式 Linux デスクトップ（Codex 含む、`pkgs/chatgpt`、`.deb`）。アプリメニュー / `chatgpt`
 - **DeepSeek Harness** — GUI（`deepseek-harness`、Chromium アプリ窓）。裏で `dsh web`（:3080）。初回は npm → `~/.local/share/deepseek-harness`。ランタイムは公式 Node（`pkgs/nodejs-official`；nixpkgs Node だと native addon が落ちる）
-- **LibreChat** — GUI（`librechat`、Chromium アプリ窓 → :3081）。MongoDB 同梱。API 鍵は `/var/lib/librechat/credentials.env`
 - **Parsec** — `parsec-bin`（Intel VA-API / `intel-media-driver` でハードウェアエンコード）
 - **Steam** — `programs.steam.enable`
 - **libvirt / QEMU/KVM** — `modules/nixos/virtualisation.nix`（`virt-manager` GUI、`virt-viewer`、Spice USB、`virtiofsd`）。初回は `virsh net-start default` / `net-autostart default`
@@ -294,13 +293,6 @@ sudo cp -a /tmp/restore/run/restic-backups-home/system/tailscale/. \
   /var/lib/tailscale/
 sudo chown -R root:root /var/lib/tailscale
 sudo systemctl restart tailscaled
-
-# LibreChat credentials / uploads（会話 DB は MongoDB 側で別途）
-sudo mkdir -p /var/lib/librechat
-sudo cp -a /tmp/restore/run/restic-backups-home/system/librechat/. \
-  /var/lib/librechat/
-sudo chown -R librechat:librechat /var/lib/librechat
-sudo systemctl restart librechat
 ```
 
 If Drive restore is still rate-limited, copy the repo locally first, then restore from disk:
@@ -321,11 +313,10 @@ restic restore latest \
   vault is locked when the timer fires, the password command imports your session
   D-Bus / Wayland (or X11) so `pinentry-qt` can prompt; with no session, unlock first
   (`rbw unlock`) and start the unit manually.
-- Root-only trees (Wi-Fi, Bluetooth, Cloudflare WARP, Tailscale, LibreChat
-  `/var/lib/librechat`) are staged by a root `ExecStartPre` into
-  `/run/restic-backups-home/system/…`, then cleared on stop. MongoDB chat data is
-  not staged.
-  `/etc/shadow` (login password) and `~/MySettings` (git) are **not** backed up.
+- Root-only trees (Wi-Fi, Bluetooth, Cloudflare WARP, Tailscale) are staged by a
+  root `ExecStartPre` into `/run/restic-backups-home/system/…`, then cleared on
+  stop. `/etc/shadow` (login password) and `~/MySettings` (git) are **not**
+  backed up.
 - Excluded regenerable bulk includes Steam client/runtime + game installs (saves in
   `userdata` / `compatdata` stay), Cursor agent-worker binaries and caches, Vivaldi
   caches / extensions / WebStorage, and Firefox `storage`.

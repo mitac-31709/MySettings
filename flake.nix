@@ -118,7 +118,6 @@
                   };
                   nodejs-official = final.callPackage ./pkgs/nodejs-official { };
                   deepseek-harness = final.callPackage ./pkgs/deepseek-harness { };
-                  librechat-app = final.callPackage ./pkgs/librechat-app { };
                 }
               )
             ];

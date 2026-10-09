@@ -292,8 +292,6 @@ in
     chatgpt
     # DeepSeek Harness GUI (Chromium app window; first run installs npm under ~/.local/share).
     deepseek-harness
-    # LibreChat GUI launcher (Chromium app window → local service :3081).
-    librechat-app
     # Pin 1.8.4 (nixpkgs currently ships 1.8.5). Same upstream zip layout.
     (jquake.overrideAttrs (_old: {
       version = "1.8.4";

@@ -158,10 +158,6 @@ let
     ┌─ AI（GUI・rofi から起動） ───────────────────────────────┐
     │ ChatGPT            公式デスクトップ（Codex 含む）        │
     │ DeepSeek Harness   アプリ窓（初回は npm、:3080）         │
-    │ LibreChat          アプリ窓（:3081、systemd）            │
-    │ sudoedit /var/lib/librechat/credentials.env              │
-    │                    OPENAI_API_KEY 等を追加               │
-    │ sudo systemctl restart librechat   鍵変更後              │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ Neovim（LazyVim） ──────────────────────────────────────┐
