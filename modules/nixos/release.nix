@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "sway-scr-on-no-lock" ];
+  system.nixos.tags = [ "qtscrcpy" ];
 }
