@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "drop-librechat" ];
+  system.nixos.tags = [ "alt-space-launcher" ];
 }
