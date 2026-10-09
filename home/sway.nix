@@ -65,7 +65,7 @@ let
   cheatsheetText = pkgs.writeText "sway-cheatsheet.txt" ''
     Sway チートシート
 
-    q / Esc で閉じる・選択コピー / Super+/ や ? で再閉
+    q / Esc で閉じる・ホイールで移動 / Shift+ドラッグで選択
 
     ┌─ 起動・終了 ─────────────────────────────────────────────┐
     │ Super+Return       Ghostty を起動                        │
@@ -342,7 +342,67 @@ let
   # Esc → quit (q still works). Lone Esc after less's timeout; arrows stay intact.
   cheatsheetLesskey = pkgs.writeText "sway-cheatsheet.lesskey" ''
     #command
+    q quit
+    Q quit
     \e quit
+  '';
+
+  # Custom syntax so keys / section headers are colored (plain .txt has none).
+  cheatsheetSyntax = pkgs.writeText "SwayCheatsheet.sublime-syntax" ''
+    %YAML 1.2
+    ---
+    name: SwayCheatsheet
+    file_extensions: [swaycheat]
+    scope: text.swaycheatsheet
+    contexts:
+      main:
+        - match: '^Sway .+$'
+          scope: markup.heading.1
+        - match: '^q / Esc.+$'
+          scope: comment.line
+        - match: '^注:.+$'
+          scope: markup.italic
+        - match: '^┌─.+┐$'
+          scope: markup.heading.2
+        - match: '^└─.+┘$'
+          scope: punctuation.section
+        - match: '^(※|必ず|起動失敗|「|アプリ内|版上げ|グループ|GUI |音声|展開先|初回は).*$'
+          scope: comment.line
+        - match: '^│'
+          push:
+            - match: '│$'
+              scope: punctuation.section
+              pop: true
+            - match: '[│]'
+              scope: punctuation.section
+            - match: '  +\S.*(?=│$)'
+              scope: string.unquoted
+            - match: '\S+'
+              scope: entity.name.function
+  '';
+
+  # Prebuilt bat cache (syntaxes.bin) so runtime needs no writable ~/.cache.
+  cheatsheetBatHome = pkgs.runCommand "sway-cheatsheet-bat-home" { nativeBuildInputs = [ pkgs.bat ]; } ''
+    mkdir -p $out/config/syntaxes $out/cache
+    cp ${cheatsheetSyntax} $out/config/syntaxes/SwayCheatsheet.sublime-syntax
+    export BAT_CONFIG_DIR=$out/config
+    export XDG_CACHE_HOME=$out/cache
+    bat cache --build
+  '';
+
+  # Single argv for ghostty -e (multi-arg -e is easy to break; breaks keys/pager).
+  cheatsheetViewer = pkgs.writeShellScript "sway-cheatsheet-view" ''
+    set -eu
+    export PATH="${lib.makeBinPath [ pkgs.bat pkgs.less pkgs.coreutils ]}:$PATH"
+    export BAT_CONFIG_DIR="${cheatsheetBatHome}/config"
+    export XDG_CACHE_HOME="${cheatsheetBatHome}/cache"
+    export LESS='-R'
+    # Coldark-Cold is a light theme (fg≈234 → invisible on dark Ghostty).
+    # Pipe to less ourselves: --mouse for wheel scroll; Shift+drag still selects in Ghostty.
+    bat --style=plain --paging=never --color=always --wrap=never \
+      --theme=OneHalfDark -l SwayCheatsheet \
+      ${cheatsheetText} \
+      | exec less -R --mouse --wheel-lines=3 --lesskey-src=${cheatsheetLesskey}
   '';
 
   showCheatsheet = pkgs.writeShellScript "sway-cheatsheet" ''
@@ -351,11 +411,9 @@ let
       lib.makeBinPath [
         pkgs.coreutils
         pkgs.jq
-        pkgs.less
         pkgs.procps
         pkgs.sway
         pkgs.ghostty
-        pkgs.bat
       ]
     }:$PATH"
     # Toggle: second ? / Super+/ closes an existing sheet.
@@ -371,8 +429,6 @@ let
     fi
     # Ghostty requires a valid GTK app-id (reverse-DNS); hyphens-only ids are ignored.
     # Options use --key=value (no -o); needed so single-instance Ghostty doesn't swallow this.
-    # bat + less (no --mouse): terminal owns click-drag select / copy.
-    export LESS='-R'
     # CJK monospace fallback keeps box columns aligned with ASCII.
     exec ghostty --class=com.mitac.SwayCheatsheet \
       --gtk-single-instance=false \
@@ -380,10 +436,7 @@ let
       --font-family="Noto Sans Mono CJK JP" \
       --window-padding-x=8 \
       --window-padding-y=8 \
-      -e bat --style=plain --paging=always --theme=Coldark-Cold \
-      --wrap=never \
-      --pager="less -R --lesskey-src=${cheatsheetLesskey}" \
-      ${cheatsheetText}
+      -e ${cheatsheetViewer}
   '';
 in
 {
