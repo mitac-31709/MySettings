@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "sway-cheatsheet-width" ];
+  system.nixos.tags = [ "sway-cheatsheet-color" ];
 }
