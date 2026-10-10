@@ -17,6 +17,7 @@
       mako
       grim
       slurp
+      wlrctl
       brightnessctl
       cliphist
       rofi
