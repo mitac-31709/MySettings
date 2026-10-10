@@ -111,9 +111,10 @@ let
 
     ┌─ 画面操作 CLI（エージェント／自動化） ───────────────────┐
     │ grim /tmp/s.png           全画面スクショ → ファイル      │
-    │ wlrctl pointer move X Y   ポインタ移動（論理座標）       │
+    │ wlrctl pointer move dx dy 相対移動（絶対座標ではない）   │
     │ wlrctl pointer click left 左クリック                     │
-    │ wlrctl keyboard type …    キー入力（英数・記号）         │
+    │ wlrctl keyboard type …    キー入力（ASCII）              │
+    │ wlrctl toplevel list      ウィンドウ一覧                 │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ 入力 ───────────────────────────────────────────────────┐
