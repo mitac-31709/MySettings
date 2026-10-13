@@ -233,12 +233,17 @@ session is logged in, **Sway waybar** shows live progress (`バックアップ N
       (`invalid_grant` / `rclone config reconnect gdrive:`). Publishing does **not**
       require Google verification for personal single-user use (you'll see an
       "unverified app" warning once at reconnect; that is fine).
-      If **Publish** is greyed out, Google now wants Branding URLs first:
-      **Branding** → Application home page + privacy policy link → Authorized
-      domains → Save → return to Audience and Publish. Use this repo’s Pages:
-      - Home: https://mitac-31709.github.io/rclone-oauth-branding/
-      - Privacy: https://mitac-31709.github.io/rclone-oauth-branding/privacy.html
-      - Authorized domain: `mitac-31709.github.io`
+      If **Publish** is greyed out, Google wants Branding on a **domain you own**
+      (Search Console verified). `github.io` is often rejected — use:
+      - App name (exact): `restic Home Backup`
+      - Home: https://restic-oauth.mitac.f5.si/
+      - Privacy: https://restic-oauth.mitac.f5.si/privacy.html
+      - Authorized domain: `mitac.f5.si` (verify in
+        [Search Console](https://search.google.com/search-console) as a Domain
+        property with the same Google account as the GCP project)
+      After saving, wait up to 24h if ownership was just verified, then request
+      branding re-check with **「問題は修正した」** (the findings are real —
+      do not pick “issues are incorrect”). Then Audience → Publish.
       See [rclone: Making your own client_id](https://rclone.org/drive/#making-your-own-client-id).
 4. **Run the interactive setup** (rclone `gdrive` OAuth → Bitwarden key → first backup):
    ```bash
