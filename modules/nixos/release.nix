@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "startup-sound-all" ];
+  system.nixos.tags = [ "backup-cli" ];
 }
