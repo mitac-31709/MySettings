@@ -347,12 +347,13 @@ let
     音声デバイスは接続後、Pulse 側で出力シンクを選ぶことあり。
   '';
 
-  # Esc → quit (q still works). Lone Esc after less's timeout; arrows stay intact.
+  # q/Q quit only. Do NOT bind bare Esc here: with --mouse, click CSI sequences
+  # start with ESC and race the lone-\e binding, so the sheet vanishes on click.
+  # Esc→close is done via Ghostty --keybind=escape=text:q instead.
   cheatsheetLesskey = pkgs.writeText "sway-cheatsheet.lesskey" ''
     #command
     q quit
     Q quit
-    \e quit
   '';
 
   # Custom syntax so keys / section headers are colored (plain .txt has none).
@@ -446,12 +447,14 @@ let
     # Ghostty requires a valid GTK app-id (reverse-DNS); hyphens-only ids are ignored.
     # Options use --key=value (no -o); needed so single-instance Ghostty doesn't swallow this.
     # CJK monospace fallback keeps box columns aligned with ASCII.
+    # escape=text:q: Esc closes without lesskey \e (which breaks --mouse clicks).
     exec ghostty --class=com.mitac.SwayCheatsheet \
       --gtk-single-instance=false \
       --font-family="JetBrainsMono Nerd Font" \
       --font-family="Noto Sans Mono CJK JP" \
       --window-padding-x=8 \
       --window-padding-y=8 \
+      --keybind=escape=text:q \
       -e ${cheatsheetViewer}
   '';
 in
