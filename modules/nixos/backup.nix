@@ -355,8 +355,11 @@ let
         say "CRITICAL: Google Cloud OAuth consent must be Published (not Testing)."
         say "  Testing mode → refresh tokens expire about every 7 days → invalid_grant."
         say "  Console: https://console.cloud.google.com/auth/audience"
-        say "  If Publish is greyed out: Branding → homepage + privacy policy URLs"
-        say "  (GitHub Pages is fine), Save, then Audience → Publish app."
+        say "  Branding URLs (GitHub Pages):"
+        say "    home:    https://mitac-31709.github.io/rclone-oauth-branding/"
+        say "    privacy: https://mitac-31709.github.io/rclone-oauth-branding/privacy.html"
+        say "    domain:  mitac-31709.github.io"
+        say "  Save Branding, then Audience → Publish app."
         say "  After publishing, reconnect so you get a long-lived refresh token."
         say "  Docs: https://rclone.org/drive/#making-your-own-client-id"
       }
