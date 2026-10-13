@@ -82,7 +82,7 @@ in
       --key "show clipboard items at mouse position" "Meta+V,none,クリップボードの履歴を表示する"
   '';
 
-  # Scoped to KDE so Hyprland sessions do not play it.
+  # Plays on every graphical session (Sway / Plasma / GNOME / Hyprland / …).
   systemd.user.services.windows-xp-startup-sound = {
     Unit = {
       Description = "Windows XP startup sound";
@@ -91,7 +91,6 @@ in
         "graphical-session.target"
       ];
       Requires = [ "pulseaudio.service" ];
-      ConditionEnvironment = "XDG_CURRENT_DESKTOP=KDE";
     };
     Service = {
       Type = "oneshot";

@@ -445,7 +445,7 @@ modules/nixos/release.nix         # system.nixos.tags（世代ラベルのスラ
 home/mitac.nix                    # HM エントリ（identity + imports）
 home/shell.nix                    # bash エイリアス / runbtop
 home/programs.nix                 # git / rbw / neovim / 共通パッケージ
-home/plasma.nix                   # Plasma 設定・Konsole・起動音
+home/plasma.nix                   # Plasma 設定・Konsole・全セッション起動音
 home/gnome.nix                    # GNOME ショートカット／タッチパッド
 home/xfce.nix                     # Xfce ショートカット（見た目は既定）
 home/sway.nix                     # Sway 第一環境（waybar/mako/swayidle・rofi・jp）
