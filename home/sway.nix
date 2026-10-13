@@ -223,9 +223,12 @@ let
     │ backup restore …   復元（必ず --target を付ける）        │
     │   例: backup restore latest --target /tmp/restore        │
     │ 初回セットアップ   restic-home-setup                     │
+    │ OAuth再接続        rclone config reconnect gdrive:       │
+    │   → rclone about gdrive: で確認                          │
     └──────────────────────────────────────────────────────────┘
     注: --target なしは /home/mitac を直接上書きするので危険。
     展開先は /tmp/restore/home/mitac/... になる。
+    invalid_grant 毎週失効 → GCP Audience で Publish（Testing禁止）後に再接続。
 
     ┌─ Lan Mouse（Windows のマウス／KB を受信） ───────────────┐
     │ lan-mouse          GUI（Authorize / 設定）               │
@@ -386,18 +389,26 @@ let
   '';
 
   # Prebuilt bat cache (syntaxes.bin) so runtime needs no writable ~/.cache.
-  cheatsheetBatHome = pkgs.runCommand "sway-cheatsheet-bat-home" { nativeBuildInputs = [ pkgs.bat ]; } ''
-    mkdir -p $out/config/syntaxes $out/cache
-    cp ${cheatsheetSyntax} $out/config/syntaxes/SwayCheatsheet.sublime-syntax
-    export BAT_CONFIG_DIR=$out/config
-    export XDG_CACHE_HOME=$out/cache
-    bat cache --build
-  '';
+  cheatsheetBatHome =
+    pkgs.runCommand "sway-cheatsheet-bat-home" { nativeBuildInputs = [ pkgs.bat ]; }
+      ''
+        mkdir -p $out/config/syntaxes $out/cache
+        cp ${cheatsheetSyntax} $out/config/syntaxes/SwayCheatsheet.sublime-syntax
+        export BAT_CONFIG_DIR=$out/config
+        export XDG_CACHE_HOME=$out/cache
+        bat cache --build
+      '';
 
   # Single argv for ghostty -e (multi-arg -e is easy to break; breaks keys/pager).
   cheatsheetViewer = pkgs.writeShellScript "sway-cheatsheet-view" ''
     set -eu
-    export PATH="${lib.makeBinPath [ pkgs.bat pkgs.less pkgs.coreutils ]}:$PATH"
+    export PATH="${
+      lib.makeBinPath [
+        pkgs.bat
+        pkgs.less
+        pkgs.coreutils
+      ]
+    }:$PATH"
     export BAT_CONFIG_DIR="${cheatsheetBatHome}/config"
     export XDG_CACHE_HOME="${cheatsheetBatHome}/cache"
     export LESS='-R'

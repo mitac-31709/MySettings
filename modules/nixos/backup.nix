@@ -349,6 +349,33 @@ let
         esac
       }
 
+      # Google OAuth apps left in "Testing" issue refresh tokens that die ~weekly
+      # (invalid_grant). Publishing (unverified is fine for personal use) fixes it.
+      warn_oauth_publish() {
+        say "CRITICAL: Google Cloud OAuth consent must be Published (not Testing)."
+        say "  Testing mode → refresh tokens expire about every 7 days → invalid_grant."
+        say "  Console: https://console.cloud.google.com/auth/audience"
+        say "  If Publish is greyed out: Branding → homepage + privacy policy URLs"
+        say "  (GitHub Pages is fine), Save, then Audience → Publish app."
+        say "  After publishing, reconnect so you get a long-lived refresh token."
+        say "  Docs: https://rclone.org/drive/#making-your-own-client-id"
+      }
+
+      probe_gdrive() {
+        # 0 = OK, 1 = auth/token failure, 2 = other failure
+        # (command substitution alone would mask rclone's exit status)
+        local err rc=0
+        err="$(rclone about "''${remote_name}:" 2>&1)" || rc=$?
+        if [ "$rc" -eq 0 ]; then
+          return 0
+        fi
+        printf '%s\n' "$err" >&2
+        case "$err" in
+          *invalid_grant*|*token\ expired*|*couldn?t\ fetch\ token*) return 1 ;;
+          *) return 2 ;;
+        esac
+      }
+
       say "restic home backup — first-time setup"
       say "repo: $repo"
       say "rclone config: $rclone_conf"
@@ -366,13 +393,28 @@ let
 
       if [ "$has_remote" -eq 1 ]; then
         say "Remote ''${remote_name}: already configured."
-        if confirm "Reconfigure OAuth (own Google client_id / refresh token)?"; then
-          say "Prefer your own Desktop OAuth client_id (shared rclone ID is rate-limited / retiring 2026)."
-          say "Docs: https://rclone.org/drive/#making-your-own-client-id"
-          rclone config
+        probe_rc=0
+        probe_gdrive || probe_rc=$?
+        if [ "$probe_rc" -eq 0 ]; then
+          say "Google Drive auth OK (rclone about ''${remote_name}:)."
+          if confirm "Reconfigure OAuth anyway (own client_id / refresh token)?"; then
+            warn_oauth_publish
+            say "Prefer your own Desktop OAuth client_id (shared rclone ID is rate-limited / retiring 2026)."
+            rclone config reconnect "''${remote_name}:" || rclone config
+          fi
+        else
+          say "Google Drive auth FAILED (probe exit $probe_rc)."
+          warn_oauth_publish
+          if ! confirm "Confirm the OAuth app is Published, then reconnect now?"; then
+            die "Aborted. Publish the app, then: rclone config reconnect ''${remote_name}:"
+          fi
+          rclone config reconnect "''${remote_name}:" || rclone config
+          probe_gdrive || die "Still cannot reach ''${remote_name}: after reconnect. Check Publish + client_id."
+          say "Google Drive auth OK after reconnect."
         fi
       else
         say "Remote ''${remote_name}: missing. Launching interactive rclone config."
+        warn_oauth_publish
         say "Create a remote named exactly ''${remote_name} (storage: Google Drive / drive)."
         say "IMPORTANT: paste your own Google Cloud OAuth client_id and client_secret"
         say "(Desktop app). Do not leave them blank — shared rclone client_id is slow and"
@@ -385,6 +427,7 @@ let
         if ! rclone listremotes 2>/dev/null | grep -qx "''${remote_name}:"; then
           die "Remote ''${remote_name}: still missing after rclone config."
         fi
+        probe_gdrive || die "Remote ''${remote_name}: configured but auth probe failed."
         say "Remote ''${remote_name}: OK."
       fi
 
@@ -588,10 +631,16 @@ in
         ${resticNotify} normal "バックアップ完了" \
           "''${summary:-/home/${user} + システム → Google Drive}" || true
       else
-        ${resticPanel} set "バックアップ失敗" \
-          "結果: ''${SERVICE_RESULT:-unknown}" failed || true
-        ${resticNotify} critical "バックアップ失敗" \
-          "結果: ''${SERVICE_RESULT:-unknown}（journalctl -u ${backupUnit}）" || true
+        fail_hint="結果: ''${SERVICE_RESULT:-unknown}（journalctl -u ${backupUnit}）"
+        if journalctl -u ${backupUnit} -n 40 -o cat --no-pager 2>/dev/null \
+          | grep -Eqi 'invalid_grant|token expired|couldn.t fetch token'; then
+          fail_hint="GDrive OAuth失効。ConsoleでPublish後: rclone config reconnect gdrive:"
+        elif journalctl -u ${backupUnit} -n 40 -o cat --no-pager 2>/dev/null \
+          | grep -Eqi 'pinentry cancelled|Resolving password failed'; then
+          fail_hint="rbw がロック。先に: rbw unlock"
+        fi
+        ${resticPanel} set "バックアップ失敗" "$fail_hint" failed || true
+        ${resticNotify} critical "バックアップ失敗" "$fail_hint" || true
       fi
       # Leave the final panel label briefly; progress unit EXIT trap also clears.
       sleep 8

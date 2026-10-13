@@ -228,7 +228,15 @@ session is logged in, **Sway waybar** shows live progress (`バックアップ N
    5. **Audience** → **+ Add users** → add your Google account as a test user.
    6. **Clients → Create OAuth client** → Application type **Desktop app** → Create.
       Note the **Client ID** and **Client secret** (keep them private; never commit).
-   7. **Audience → Publish app** (move out of Testing). Leaving it in Testing makes refresh tokens expire about weekly.
+   7. **Audience → Publish app** (move out of Testing). **Required for unattended
+      backups** — Testing issues refresh tokens that die about every **7 days**
+      (`invalid_grant` / `rclone config reconnect gdrive:`). Publishing does **not**
+      require Google verification for personal single-user use (you'll see an
+      "unverified app" warning once at reconnect; that is fine).
+      If **Publish** is greyed out, Google now wants Branding URLs first:
+      **Branding** → Application home page + privacy policy link (a free GitHub
+      Pages site is enough) → Authorized domains → Save → return to Audience and
+      Publish. See [rclone: Making your own client_id](https://rclone.org/drive/#making-your-own-client-id).
 4. **Run the interactive setup** (rclone `gdrive` OAuth → Bitwarden key → first backup):
    ```bash
    restic-home-setup
@@ -242,6 +250,10 @@ session is logged in, **Sway waybar** shows live progress (`バックアップ N
    # client_id>   <your Client ID>
    # client_secret> <your Client secret>
    # scope> 1 (full drive) → browser OAuth
+
+   # Token dead / weekly invalid_grant (after Publishing the OAuth app):
+   rclone config reconnect gdrive:
+   rclone about gdrive:   # smoke check
 
    # Existing remote that still uses the shared client_id:
    rclone config reconnect gdrive:
