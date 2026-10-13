@@ -216,6 +216,7 @@ let
 
     ┌─ バックアップ（restic → Google Drive） ──────────────────┐
     │ 事前               rbw unlock（鍵が必要）                │
+    │ backup             使い方（引数なし）                    │
     │ 手動実行           sudo systemctl start                  │
     │                    restic-backups-home.service           │
     │ 進捗ログ           journalctl -u restic-backups-home -f  │

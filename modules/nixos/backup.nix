@@ -292,7 +292,38 @@ let
 
   # Interactive CLI with the same env as the systemd unit (repo, rclone, Bitwarden).
   # NixOS names its auto-wrapper `restic-<name>`; we disable that and ship `backup`.
+  # Bare `backup` / `backup -h` prints wrapper usage (not raw restic help).
   resticBackupCmd = pkgs.writeShellScriptBin "backup" ''
+    if [ "$#" -eq 0 ] || [ "''${1:-}" = "-h" ] || [ "''${1:-}" = "--help" ]; then
+      cat <<'EOF'
+backup — restic wrapper (repo / rclone / Bitwarden 鍵込み)
+
+Usage:
+  backup <restic-command> [args…]
+  backup -h | --help
+
+Common:
+  backup snapshots
+  backup restore latest --target /tmp/restore
+  backup ls latest
+  backup find NAME
+  backup unlock
+
+Full backup (systemd unit, not this CLI):
+  sudo systemctl start restic-backups-home.service
+  journalctl -u restic-backups-home -f
+
+First-time setup:
+  restic-home-setup
+
+Notes:
+  - restore は必ず --target を付ける（省略すると /home/mitac を上書き）
+  - 鍵が必要なら先に rbw unlock
+  - restic 本体のヘルプ: backup <command> --help
+EOF
+      exit 0
+    fi
+
     set -a
     # shellcheck disable=SC1091
     source ${resticEnvFile}

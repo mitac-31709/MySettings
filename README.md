@@ -282,6 +282,7 @@ and Bitwarden password command (and `restic-home-setup` for first-time setup):
 
 ```bash
 restic-home-setup
+backup                 # wrapper usage
 backup snapshots
 backup restore latest --target /tmp/restore
 ```
