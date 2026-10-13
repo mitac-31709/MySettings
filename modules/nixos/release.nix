@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "backup-cli" ];
+  system.nixos.tags = [ "cheatsheet-click" ];
 }
