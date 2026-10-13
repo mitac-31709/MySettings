@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "alt-space-launcher" ];
+  system.nixos.tags = [ "backup-cli-help" ];
 }
