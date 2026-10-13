@@ -290,55 +290,116 @@ let
     # Final label + clear are handled by backupCleanupCommand (avoids racing partOf stop).
   '';
 
-  # Interactive CLI with the same env as the systemd unit (repo, rclone, Bitwarden).
+  # Single entrypoint for home backup ops (systemd / rclone / rbw / restic).
   # NixOS names its auto-wrapper `restic-<name>`; we disable that and ship `backup`.
-  # Bare `backup` / `backup -h` prints wrapper usage (not raw restic help).
+  # Meta subcommands are handled here; everything else is passed to restic.
   resticBackupCmd = pkgs.writeShellScriptBin "backup" ''
-    if [ "$#" -eq 0 ] || [ "''${1:-}" = "-h" ] || [ "''${1:-}" = "--help" ]; then
-      cat <<'EOF'
-backup — restic wrapper (repo / rclone / Bitwarden 鍵込み)
+    set -euo pipefail
 
-Usage:
-  backup <restic-command> [args…]
-  backup -h | --help
+    unit="${backupUnit}"
+    timer="restic-backups-home.timer"
+    remote_name="gdrive"
+    rclone_conf="${rcloneConfigFile}"
 
-Common:
-  backup snapshots
-  backup restore latest --target /tmp/restore
-  backup ls latest
-  backup find NAME
-  backup unlock
-
-Full backup (systemd unit, not this CLI):
-  sudo systemctl start restic-backups-home.service
-  journalctl -u restic-backups-home -f
-
-First-time setup:
-  restic-home-setup
-
-Notes:
-  - restore は必ず --target を付ける（省略すると /home/mitac を上書き）
-  - 鍵が必要なら先に rbw unlock
-  - restic 本体のヘルプ: backup <command> --help
-EOF
-      exit 0
-    fi
-
-    set -a
-    # shellcheck disable=SC1091
-    source ${resticEnvFile}
-    export RESTIC_CACHE_DIR="/var/cache/restic-backups-home"
-    export RESTIC_REPOSITORY="${repository}"
-    export RCLONE_CONFIG="${rcloneConfigFile}"
-    export RESTIC_PROGRESS_FPS="0.2"
+    # setuid sudo + packaged CLIs (restic-home-setup lives on the system profile).
     PATH="${
       lib.makeBinPath [
         pkgs.rbw
         pkgs.rclone
         pkgs.openssh
+        pkgs.systemd
+        pkgs.coreutils
       ]
-    }:$PATH"
-    exec ${lib.getExe pkgs.restic} "$@"
+    }:/run/wrappers/bin:/run/current-system/sw/bin:$PATH"
+
+    usage() {
+      cat <<'EOF'
+backup — home backup CLI (restic / rclone / Bitwarden / systemd)
+
+Usage:
+  backup <command> [args…]
+  backup -h | --help | help
+
+Workflow:
+  backup unlock-key              rbw unlock（restic 鍵）
+  backup setup                   初回セットアップ（restic-home-setup）
+  backup reconnect               rclone OAuth 再接続 (gdrive:)
+  backup about                   Google Drive 疎通確認
+  backup run                     フルバックアップ開始 (systemd)
+  backup log                     進捗を journal で追う
+  backup status                  unit / timer の状態
+
+Inspect / restore (restic, 環境変数込み):
+  backup snapshots
+  backup ls latest
+  backup find NAME
+  backup restore latest --target /tmp/restore
+  backup unlock                  restic のリポジトリロック解除
+
+Notes:
+  - restore は必ず --target を付ける（省略すると /home/mitac を上書き）
+  - restic サブコマンドのヘルプ: backup <command> --help
+  - 未定義の第1引数は restic にそのまま渡す
+EOF
+    }
+
+    cmd="''${1:-}"
+    case "$cmd" in
+      ""|-h|--help|help)
+        usage
+        exit 0
+        ;;
+      run|start)
+        shift
+        if systemctl --quiet is-active "$unit" 2>/dev/null; then
+          printf '%s is already running.\n' "$unit"
+        elif systemctl start "$unit" 2>/dev/null; then
+          printf 'Started %s.\n' "$unit"
+        else
+          sudo systemctl start "$unit"
+          printf 'Started %s (via sudo).\n' "$unit"
+        fi
+        printf 'Follow logs: backup log\n'
+        ;;
+      log|logs)
+        shift
+        exec journalctl -u "$unit" -f "$@"
+        ;;
+      status)
+        shift
+        systemctl status "$unit" --no-pager "$@" || true
+        printf '\n'
+        systemctl status "$timer" --no-pager || true
+        ;;
+      setup)
+        shift
+        exec restic-home-setup "$@"
+        ;;
+      reconnect)
+        shift
+        export RCLONE_CONFIG="$rclone_conf"
+        exec rclone config reconnect "''${remote_name}:" "$@"
+        ;;
+      about)
+        shift
+        export RCLONE_CONFIG="$rclone_conf"
+        exec rclone about "''${remote_name}:" "$@"
+        ;;
+      unlock-key)
+        shift
+        exec rbw unlock "$@"
+        ;;
+      *)
+        set -a
+        # shellcheck disable=SC1091
+        source ${resticEnvFile}
+        export RESTIC_CACHE_DIR="/var/cache/restic-backups-home"
+        export RESTIC_REPOSITORY="${repository}"
+        export RCLONE_CONFIG="${rcloneConfigFile}"
+        export RESTIC_PROGRESS_FPS="0.2"
+        exec ${lib.getExe pkgs.restic} "$@"
+        ;;
+    esac
   '';
 
   # Interactive first-time setup: rclone gdrive remote, Bitwarden key, first backup.
@@ -456,7 +517,7 @@ EOF
         say "being retired in 2026. See: https://rclone.org/drive/#making-your-own-client-id"
         say "Then complete browser OAuth and quit the rclone menu."
         if ! confirm "Start rclone config now?"; then
-          die "Aborted. Re-run restic-home-setup after configuring rclone."
+          die "Aborted. Re-run: backup setup  (after configuring rclone)."
         fi
         rclone config
         if ! rclone listremotes 2>/dev/null | grep -qx "''${remote_name}:"; then
@@ -520,11 +581,11 @@ EOF
           say "Started $unit (via sudo)."
         fi
         say "Follow logs with:"
-        say "  journalctl -u $unit -f"
+        say "  backup log"
       else
         say "Skipped. Start later with:"
-        say "  sudo systemctl start $unit"
-        say "  journalctl -u $unit -f"
+        say "  backup run"
+        say "  backup log"
       fi
 
       say ""
@@ -669,10 +730,10 @@ in
         fail_hint="結果: ''${SERVICE_RESULT:-unknown}（journalctl -u ${backupUnit}）"
         if journalctl -u ${backupUnit} -n 40 -o cat --no-pager 2>/dev/null \
           | grep -Eqi 'invalid_grant|token expired|couldn.t fetch token'; then
-          fail_hint="GDrive OAuth失効。ConsoleでPublish後: rclone config reconnect gdrive:"
+          fail_hint="GDrive OAuth失効。ConsoleでPublish後: backup reconnect"
         elif journalctl -u ${backupUnit} -n 40 -o cat --no-pager 2>/dev/null \
           | grep -Eqi 'pinentry cancelled|Resolving password failed'; then
-          fail_hint="rbw がロック。先に: rbw unlock"
+          fail_hint="rbw がロック。先に: backup unlock-key"
         fi
         ${resticPanel} set "バックアップ失敗" "$fail_hint" failed || true
         ${resticNotify} critical "バックアップ失敗" "$fail_hint" || true
@@ -682,8 +743,8 @@ in
       ${resticPanel} clear || true
     '';
 
-    # CLI: `backup` (see resticBackupCmd) — same env as this unit, e.g.:
-    #   restic-home-setup
+    # CLI: `backup` (see resticBackupCmd) — e.g.:
+    #   backup setup | unlock-key | run | log | about | reconnect
     #   backup snapshots
     #   backup restore latest --target /tmp/restore
   };

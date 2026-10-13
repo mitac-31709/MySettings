@@ -247,7 +247,7 @@ session is logged in, **Sway waybar** shows live progress (`バックアップ N
       See [rclone: Making your own client_id](https://rclone.org/drive/#making-your-own-client-id).
 4. **Run the interactive setup** (rclone `gdrive` OAuth → Bitwarden key → first backup):
    ```bash
-   restic-home-setup
+   backup setup          # same as restic-home-setup
    ```
    When rclone asks for `client_id` / `client_secret`, paste the values from step 3
    (do **not** leave them blank). Or configure / reconnect manually:
@@ -260,29 +260,31 @@ session is logged in, **Sway waybar** shows live progress (`バックアップ N
    # scope> 1 (full drive) → browser OAuth
 
    # Token dead / weekly invalid_grant (after Publishing the OAuth app):
-   rclone config reconnect gdrive:
-   rclone about gdrive:   # smoke check
+   backup reconnect
+   backup about          # smoke check
 
    # Existing remote that still uses the shared client_id:
-   rclone config reconnect gdrive:
+   backup reconnect
    # or: rclone config → e (edit) → gdrive → set client_id/secret → replace token (Y)
    ```
    Then Bitwarden + first backup:
    ```bash
-   rbw login && rbw unlock
+   rbw login && backup unlock-key
    rbw generate 40 restic-home   # password field = restic encryption key
-   sudo systemctl start restic-backups-home.service
-   journalctl -u restic-backups-home -f
+   backup run
+   backup log
    ```
 
 ### Restore / inspect
 
-The module installs a `backup` wrapper preloaded with the repository, rclone config
-and Bitwarden password command (and `restic-home-setup` for first-time setup):
+The module installs a `backup` CLI for setup, the systemd unit, rclone checks, and
+restic (repo / Bitwarden password command preloaded). `restic-home-setup` remains as
+an alias of `backup setup`:
 
 ```bash
-restic-home-setup
-backup                 # wrapper usage
+backup                 # usage
+backup setup
+backup run && backup log
 backup snapshots
 backup restore latest --target /tmp/restore
 ```
@@ -333,7 +335,7 @@ restic restore latest \
   succeed. Prefer keeping an unlocked `rbw-agent` in your graphical session. If the
   vault is locked when the timer fires, the password command imports your session
   D-Bus / Wayland (or X11) so `pinentry-qt` can prompt; with no session, unlock first
-  (`rbw unlock`) and start the unit manually.
+  (`backup unlock-key`) and start with `backup run`.
 - Root-only trees (Wi-Fi, Bluetooth, Cloudflare WARP, Tailscale) are staged by a
   root `ExecStartPre` into `/run/restic-backups-home/system/…`, then cleared on
   stop. `/etc/shadow` (login password) and `~/MySettings` (git) are **not**

@@ -215,17 +215,17 @@ let
     グループ変更後は一度ログアウト／再ログイン。
 
     ┌─ バックアップ（restic → Google Drive） ──────────────────┐
-    │ 事前               rbw unlock（鍵が必要）                │
     │ backup             使い方（引数なし）                    │
-    │ 手動実行           sudo systemctl start                  │
-    │                    restic-backups-home.service           │
-    │ 進捗ログ           journalctl -u restic-backups-home -f  │
+    │ backup unlock-key  rbw unlock（鍵）                      │
+    │ backup setup       初回セットアップ                      │
+    │ backup run         フルバックアップ開始                  │
+    │ backup log         進捗ログを追う                        │
+    │ backup status      unit / timer 状態                     │
     │ backup snapshots   スナップショット一覧                  │
     │ backup restore …   復元（必ず --target を付ける）        │
     │   例: backup restore latest --target /tmp/restore        │
-    │ 初回セットアップ   restic-home-setup                     │
-    │ OAuth再接続        rclone config reconnect gdrive:       │
-    │   → rclone about gdrive: で確認                          │
+    │ backup reconnect   OAuth 再接続 (gdrive)                 │
+    │ backup about       Drive 疎通確認                        │
     └──────────────────────────────────────────────────────────┘
     注: --target なしは /home/mitac を直接上書きするので危険。
     展開先は /tmp/restore/home/mitac/... になる。
