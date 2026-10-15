@@ -20,19 +20,15 @@
   };
   services.printing.enable = true;
 
-  # Desktop-specific portals: Plasma=KDE, Sway=wlr (from programs.sway) + gtk.
-  # Without a split config, stacks fight under every session (duplicate D-Bus names).
+  # Desktop-specific portals. Sway's config (gtk default + wlr ScreenCast/
+  # Screenshot) comes from nixpkgs programs.sway — do not redefine
+  # xdg.portal.config.sway.default here (conflicts at equal priority).
+  # Without a Plasma split, stacks fight under every session (duplicate D-Bus names).
   xdg.portal = {
     enable = true;
     extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
     config = {
       common.default = [ "gtk" ];
-      sway = {
-        default = [
-          "wlr"
-          "gtk"
-        ];
-      };
       kde = {
         default = [
           "kde"
