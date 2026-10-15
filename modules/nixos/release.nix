@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "chatgpt-plugin-cache" ];
+  system.nixos.tags = [ "chatgpt-sigill-fix" ];
 }
