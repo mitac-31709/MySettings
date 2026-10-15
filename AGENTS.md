@@ -40,7 +40,7 @@ the daemon is not running — do step 1.
   `nix build .#nixosConfigurations.mitac.config.system.build.toplevel`
 - Lint / format (this repo follows nixfmt RFC style):
   `nix run nixpkgs#nixfmt -- --check flake.nix hosts/mitac/*.nix modules/nixos/*.nix modules/nixos/chromebook/*.nix home/*.nix`
-  (includes `modules/nixos/release.nix` for generation labels / git-tag workflow)
+  (includes `modules/nixos/release.nix` for optional generation labels)
   (drop `--check` to reformat in place).
 
 ### Known gotchas (durable)

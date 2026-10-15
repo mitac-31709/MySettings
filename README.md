@@ -38,55 +38,16 @@ Plasma では Konsole / Dolphin / Kate / Ark / Spectacle / Okular / Gwenview / E
 
 共通: Polkit / Fcitx5 / cliphist（systemd user）を起動時に起動。音量・輝度は PulseAudio / brightnessctl 経由。Sway は mako で通知、waybar でステータスバー。
 
-## 世代と Git タグ
+## 世代とコミットの対応
 
-NixOS の世代番号はマシン固有です。コミットとの対応は **Git タグ**（`gen/NN-<slug>`）と、ビルド時の **`system.nixos.tags` / `system.configurationRevision`** で追います。
+NixOS の世代番号はマシン固有です。コミットとの対応はビルド時の **`system.nixos.tags` / `system.configurationRevision`** で追います（`gen/NN-*` の Git タグ運用は廃止済み。既存タグは履歴として残っていてよい）。
 
 | 場所 | 何がわかるか |
 |------|----------------|
-| ブートメニュー / `nixos-rebuild list-generations` | `system.nixos.label`（`tags` + NixOS バージョン）。例: `plasma-gnome-prefs-26.11....` |
+| ブートメニュー / `nixos-rebuild list-generations` | `system.nixos.label`（`tags` + NixOS バージョン）。例: `rofi-cheatsheet-26.11....` |
 | `nixos-version --json` の `configurationRevision` | その世代をビルドした git コミット（フル SHA） |
-| GitHub タグ `gen/NN-<slug>` | 「世代 NN 相当」のマイルストーンコミットと注釈（特徴の説明） |
 
-スラッグの定義は `modules/nixos/release.nix` です。特徴が変わったらスラッグを更新してから rebuild してください。
-
-### 新しいマイルストーンを残す手順
-
-```bash
-# 1. 機能変更をコミットしたあと、release.nix の tags を更新してコミット
-# 2. 適用（ラベル付きの新世代ができる）
-sudo nixos-rebuild switch --flake .#mitac
-
-# 3. いまの世代番号を確認してタグを打つ
-nixos-rebuild list-generations   # または generations
-git tag -a "gen/NN-<slug>" -m "世代 NN: 短い特徴の説明"
-git push origin "gen/NN-<slug>"
-```
-
-### このマシン上の対応表（履歴・更新しない）
-
-世代番号↔タグの対応表は **今後更新しない**。参照が必要なら `git tag -l 'gen/*'` や `nixos-rebuild list-generations` を使う。以下は過去スナップショット。
-
-ラベル導入前の世代は `Configuration Revision` が Unknown です。近いコミットをタグで示します。
-
-| 世代 | Git タグ | コミット | 特徴 |
-|------|----------|----------|------|
-| 1–2 | （タグなし） | インストーラ初期 | ホスト名 `nixos`、GNOME、NixOS 26.05 |
-| 3 | `gen/03-flake-gnome` | `c268ec9` | 初回 flake 適用（ホスト `mitac`）、GNOME、delbin HW |
-| 4 | `gen/04-alsa-boot` | `1728296` | Chromebook ALSA UCM コピー修正、初回起動まわり |
-| 5 | `gen/05-steam` | `e59b411` | Steam / Vivaldi、flake.lock |
-| 6 | `gen/06-backup` | `fab332b` | restic + rclone + rbw による暗号化 /home バックアップ（Console ショートカット含む） |
-| 7 | `gen/07-btop` | `34300df` | `btop` |
-| 8 | `gen/08-hm-backup` | `11cf80a` | HM 衝突ファイルの `.backup`、git user 設定 |
-| 9 | （タグなし） | ≈ `11cf80a` | 8 相当の再適用（この間にユニークなコミットなし） |
-| 10 | `gen/10-gpaste` | `6389334` | GPaste（GNOME クリップボード） |
-| 11 | `gen/11-plasma` | `3d85378` | GNOME → KDE Plasma 6（この世代は Bluetooth 無効） |
-| 12 | `gen/12-bluetooth` | `f2a271c` | Bluetooth + A2DP（PipeWire） |
-| 13 | `gen/13-rbw-eu` | `879c43c` | rbw を Bitwarden EU エンドポイントへ |
-| 14 | `gen/14-plasma-numlock` | `f72575e` | 初のラベル付き世代。NumLock 既定オン（ログイン＋Plasma）。`configurationRevision` 付き |
-| 15 | `gen/15-plasma-gnome-prefs` | `32034aa` | 旧 GNOME dconf 相当を Plasma へ（タッチパッド／Konsole フォント／Ctrl+Alt+T） |
-
-タグ一覧: `git tag -l 'gen/*'` または GitHub の Tags ページ。
+任意でブートメニュー用スラッグを変えるときは `modules/nixos/release.nix` の `system.nixos.tags` を更新してから rebuild してください。
 
 ## 前提条件
 
