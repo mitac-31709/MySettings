@@ -122,6 +122,11 @@ stdenv.mkDerivation {
     cp -a usr/lib/chatgpt $out/lib/
     cp -a usr/share/. $out/share/
 
+    # Deb ships many files mode 0444. Codex copies bundled plugins into
+    # ~/.codex/.tmp/... preserving mode; read-only copies then cause EACCES
+    # on write/cleanup and leave multi-GB staging trees that crash the app.
+    chmod -R u+w $out/lib/chatgpt $out/share
+
     makeWrapper $out/lib/chatgpt/ChatGPT $out/bin/chatgpt \
       --prefix LD_LIBRARY_PATH : "$out/lib/chatgpt" \
       --add-flags "\''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --enable-wayland-ime=true}}"
