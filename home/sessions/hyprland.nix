@@ -43,7 +43,9 @@ let
       follow_mouse = 1
       touchpad {
         natural_scroll = false
+        # Chromebook / Plasma parity: 1/2/3 finger press = L/R/M.
         tap-to-click = true
+        clickfinger_behavior = true
         disable_while_typing = false
       }
     }

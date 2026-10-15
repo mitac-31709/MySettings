@@ -100,6 +100,7 @@ let
     │ Super+Space                 IME 切替（Meltype / Mozc）   │
     │ 半角/全角                   Meltype 内: 英数 ⇔ 日本語    │
     │ 学習データ                  ~/.local/share/Meltype       │
+    │ 2本指タップ・押下           右クリック（Chromebook）     │
     │ Search+最上段               F1–F10（3つ目=セッション）   │
     │ Ctrl+Alt+Del                手動 OOM（内蔵=C-A-Bksp）    │
     │ 電源 短/長押し              suspend / poweroff           │
@@ -378,7 +379,10 @@ in
         };
         "type:touchpad" = {
           natural_scroll = "disabled";
+          # Chromebook / Plasma parity: 1/2/3 finger press = L/R/M;
+          # tap (lrm default) already maps 2-finger tap to right click.
           tap = "enabled";
+          click_method = "clickfinger";
           dwt = "disabled";
         };
       };
