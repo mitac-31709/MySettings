@@ -9,6 +9,7 @@
     ../../modules/nixos/backup.nix
     ../../modules/nixos/virtualisation.nix
     ../../modules/nixos/remote-builder.nix
+    ../../modules/nixos/nix-ld.nix
     ../../modules/nixos/release.nix
   ];
 

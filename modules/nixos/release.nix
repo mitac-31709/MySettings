@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "cheatsheet-click" ];
+  system.nixos.tags = [ "grok-bot" ];
 }
