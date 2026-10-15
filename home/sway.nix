@@ -61,208 +61,562 @@ let
   openNmtui = "${ghosttyBin} -e ${nmtuiBin}";
   openYazi = "${ghosttyBin} -e ${yaziBin}";
 
-  # Boxed reference opened floating via Ghostty + bat (selectable / copyable).
-  cheatsheetText = pkgs.writeText "sway-cheatsheet.txt" ''
-    Sway チートシート
+  # Searchable / clickable cheatsheet (rofi -dmenu).
+  # - keys only → notify-send (no key injection)
+  # - run + mode=term → Ghostty interactive shell
+  # - run + mode=exec → swaymsg exec (one-shot)
+  # - run + mode=show → Ghostty shows command; does not run (dangerous)
+  cheatsheetEntries = [
+    # 起動・終了
+    {
+      section = "起動・終了";
+      label = "Ghostty";
+      keys = "Super+Return / Ctrl+Alt+T";
+    }
+    {
+      section = "起動・終了";
+      label = "rofi（選択中 WS に起動）";
+      keys = "Super+D / Alt+Space";
+    }
+    {
+      section = "起動・終了";
+      label = "ウィンドウを閉じる";
+      keys = "Super+q";
+    }
+    {
+      section = "起動・終了";
+      label = "画面ロック";
+      keys = "Super+L";
+    }
+    {
+      section = "起動・終了";
+      label = "設定再読込 / Sway 終了";
+      keys = "Super+Shift+c / e";
+    }
+    {
+      section = "起動・終了";
+      label = "このシート（waybar ?）";
+      keys = "Super+/";
+    }
+    {
+      section = "起動・終了";
+      label = "注: ELECOM は Win+Shift 同時押しが欠けること有 → Super+q 等";
+    }
+    # ウィンドウ・WS
+    {
+      section = "ウィンドウ・WS";
+      label = "フォーカス（右は Right）";
+      keys = "Super+hjkl / 矢印";
+    }
+    {
+      section = "ウィンドウ・WS";
+      label = "ウィンドウ移動";
+      keys = "Super+Shift+hjkl";
+    }
+    {
+      section = "ウィンドウ・WS";
+      label = "フルスクリーン / リサイズ";
+      keys = "Super+f / r";
+    }
+    {
+      section = "ウィンドウ・WS";
+      label = "フローティング切替";
+      keys = "Super+Shift+Space";
+    }
+    {
+      section = "ウィンドウ・WS";
+      label = "水平 / 垂直分割";
+      keys = "Super+b / v";
+    }
+    {
+      section = "ウィンドウ・WS";
+      label = "スタック / タブ";
+      keys = "Super+s / w";
+    }
+    {
+      section = "ウィンドウ・WS";
+      label = "WS 切替 / ウィンドウを移動";
+      keys = "Super+1…9 / Shift+1…9";
+    }
+    {
+      section = "ウィンドウ・WS";
+      label = "WS1 Cursor+GPT / WS2 Vivaldi";
+      keys = "起動時";
+    }
+    {
+      section = "ウィンドウ・WS";
+      label = "注: Super+e は既定の分割ではなく Yazi";
+    }
+    # スクショ・音量・輝度・履歴
+    {
+      section = "スクショ・音量・輝度";
+      label = "全画面 → クリップボード";
+      keys = "Print";
+    }
+    {
+      section = "スクショ・音量・輝度";
+      label = "範囲選択 → クリップボード";
+      keys = "Super+Shift+s";
+    }
+    {
+      section = "スクショ・音量・輝度";
+      label = "クリップボード履歴（rofi）";
+      keys = "Super+V";
+    }
+    {
+      section = "スクショ・音量・輝度";
+      label = "± / ミュート / 輝度 ±5%";
+      keys = "音量 / MicMute / 輝度キー";
+    }
+    # 入力・Chromebook
+    {
+      section = "入力・Chromebook";
+      label = "IME 切替（Meltype / Mozc）";
+      keys = "Super+Space";
+    }
+    {
+      section = "入力・Chromebook";
+      label = "Meltype 内: 英数 ⇔ 日本語";
+      keys = "半角/全角";
+    }
+    {
+      section = "入力・Chromebook";
+      label = "~/.local/share/Meltype";
+      keys = "学習データ";
+    }
+    {
+      section = "入力・Chromebook";
+      label = "右クリック（Chromebook）";
+      keys = "2本指タップ・押下";
+    }
+    {
+      section = "入力・Chromebook";
+      label = "F1–F10（3つ目=セッション）";
+      keys = "Search+最上段";
+    }
+    {
+      section = "入力・Chromebook";
+      label = "手動 OOM（内蔵=C-A-Bksp）";
+      keys = "Ctrl+Alt+Del";
+    }
+    {
+      section = "入力・Chromebook";
+      label = "suspend / poweroff";
+      keys = "電源 短/長押し";
+    }
+    {
+      section = "入力・Chromebook";
+      label = "強制ログアウト / 再起動";
+      keys = "電源+Back / +Refresh";
+    }
+    {
+      section = "入力・Chromebook";
+      label = "Windows / Mac モード";
+      keys = "ELECOM Fn+Q / Fn+W";
+    }
+    {
+      section = "入力・Chromebook";
+      label = "内蔵 KB は自動無効";
+      keys = "外付け KB 接続時";
+    }
+    {
+      section = "入力・Chromebook";
+      label = "注: ELECOM を Mac のままにすると Ctrl↔Win が入れ替わる";
+    }
+    # Yazi / Neovim
+    {
+      section = "Yazi / Neovim";
+      label = "Yazi（Ghostty 内）";
+      keys = "Super+e";
+      run = yaziBin;
+      mode = "term";
+    }
+    {
+      section = "Yazi / Neovim";
+      label = "隠し表示 / spot / 開く";
+      keys = ". / Tab / Enter";
+    }
+    {
+      section = "Yazi / Neovim";
+      label = "シェル / フィルタ / zoxide";
+      keys = "; / : / f / z";
+    }
+    {
+      section = "Yazi / Neovim";
+      label = "終了後その dir へ cd";
+      keys = "y（bash）";
+    }
+    {
+      section = "Yazi / Neovim";
+      label = "nvim リーダー";
+      keys = "Space";
+    }
+    {
+      section = "Yazi / Neovim";
+      label = "ツリー / ファイル / 全文検索";
+      keys = "Space e / ff / sg";
+    }
+    {
+      section = "Yazi / Neovim";
+      label = "定義 / 参照 / ホバー";
+      keys = "gd / gr / K";
+    }
+    # Waybar・日常
+    {
+      section = "Waybar・日常";
+      label = "チートシート / 常時オン切替";
+      keys = "? / scr";
+    }
+    {
+      section = "Waybar・日常";
+      label = "btop";
+      keys = "cpu·mem クリック";
+      run = btopBin;
+      mode = "term";
+    }
+    {
+      section = "Waybar・日常";
+      label = "nmtui";
+      keys = "net クリック";
+      run = nmtuiBin;
+      mode = "term";
+    }
+    {
+      section = "Waybar・日常";
+      label = "バックアップ進捗";
+      keys = "[restic]（WS の右）";
+    }
+    {
+      section = "Waybar・日常";
+      label = "10分ロック / 15分画面オフ";
+      keys = "無操作";
+    }
+    {
+      section = "Waybar・日常";
+      label = "LAN 送受信 / キー表示（rofi）";
+      keys = "LocalSend / showmethekey";
+    }
+    {
+      section = "Waybar・日常";
+      label = "AI（rofi から）";
+      keys = "ChatGPT / Grok / DeepSeek";
+    }
+    {
+      section = "Waybar・日常";
+      label = "ChatGPT Computer Use 操作中";
+      keys = "青枠＋バナー";
+    }
+    # Plasma
+    {
+      section = "Plasma";
+      label = "Ghostty / Yazi";
+      keys = "Ctrl+Alt+T / Meta+E";
+    }
+    {
+      section = "Plasma";
+      label = "rofi";
+      keys = "Meta+R / Alt+Space";
+    }
+    {
+      section = "Plasma";
+      label = "履歴 / 全画面 / 範囲スクショ";
+      keys = "Meta+V / Print / Meta+Shift+S";
+    }
+    {
+      section = "Plasma";
+      label = "KRunner（設定検索用）";
+      keys = "Alt+F2";
+    }
+    # NixOS
+    {
+      section = "NixOS";
+      label = "入力＋Cursor/ChatGPT 等更新";
+      run = "flake-update";
+      mode = "term";
+    }
+    {
+      section = "NixOS";
+      label = "適用（sudo 後・nom ETA）";
+      run = "rebuild";
+      mode = "term";
+    }
+    {
+      section = "NixOS";
+      label = "世代一覧";
+      run = "generations";
+      mode = "term";
+    }
+    {
+      section = "NixOS";
+      label = "壊れたとき → --rollback switch";
+      run = "sudo nixos-rebuild --rollback switch";
+      mode = "show";
+    }
+    # ディスク容量
+    {
+      section = "ディスク容量";
+      label = "df / lsblk";
+      run = "df -hT /; lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINTS";
+      mode = "term";
+    }
+    {
+      section = "ディスク容量";
+      label = "du home top";
+      run = "du -xh --max-depth=1 ~ | sort -hr | head";
+      mode = "term";
+    }
+    {
+      section = "ディスク容量";
+      label = "旧世代削除＋GC（危険）";
+      run = "sudo nix-collect-garbage -d";
+      mode = "show";
+    }
+    {
+      section = "ディスク容量";
+      label = "ログ使用量（上限1G）";
+      run = "journalctl --disk-usage";
+      mode = "term";
+    }
+    {
+      section = "ディスク容量";
+      label = "注: ChromeOS残骸(p1/p3/p5)は root の前。拡大は LiveUSB";
+    }
+    # ネット・BT・WARP
+    {
+      section = "ネット・BT・WARP";
+      label = "Wi-Fi 設定（nmtui）";
+      run = nmtuiBin;
+      mode = "term";
+    }
+    {
+      section = "ネット・BT・WARP";
+      label = "全 IF の IP";
+      run = "ip -br addr";
+      mode = "term";
+    }
+    {
+      section = "ネット・BT・WARP";
+      label = "warp-cli connect";
+      run = "warp-cli connect";
+      mode = "exec";
+    }
+    {
+      section = "ネット・BT・WARP";
+      label = "warp-cli disconnect";
+      run = "warp-cli disconnect";
+      mode = "exec";
+    }
+    {
+      section = "ネット・BT・WARP";
+      label = "warp-cli status";
+      run = "warp-cli status";
+      mode = "term";
+    }
+    {
+      section = "ネット・BT・WARP";
+      label = "bluetoothctl";
+      run = "bluetoothctl";
+      mode = "term";
+    }
+    {
+      section = "ネット・BT・WARP";
+      label = "注: BT 音声は接続後 Pulse で出力シンクを選ぶことあり";
+    }
+    # Windows 連携
+    {
+      section = "Windows 連携";
+      label = "lan-mouse GUI（先に stop daemon）";
+      run = "lan-mouse";
+      mode = "exec";
+    }
+    {
+      section = "Windows 連携";
+      label = "stop lan-mouse";
+      run = "systemctl --user stop lan-mouse";
+      mode = "exec";
+    }
+    {
+      section = "Windows 連携";
+      label = "start lan-mouse";
+      run = "systemctl --user start lan-mouse";
+      mode = "exec";
+    }
+    {
+      section = "Windows 連携";
+      label = "uniclipboard GUI";
+      run = "uniclipboard";
+      mode = "exec";
+    }
+    {
+      section = "Windows 連携";
+      label = "restart uniclipd";
+      run = "systemctl --user restart uniclipd";
+      mode = "exec";
+    }
+    {
+      section = "Windows 連携";
+      label = "注: uniclip は --user。再起動後は GUI も開き直す";
+    }
+    {
+      section = "Windows 連携";
+      label = "注: 起動失敗(1223)→ seahorse で鍵環解錠。版上げは flake";
+    }
+    # バックアップ
+    {
+      section = "バックアップ";
+      label = "backup（使い方）";
+      run = "backup";
+      mode = "term";
+    }
+    {
+      section = "バックアップ";
+      label = "backup unlock-key";
+      run = "backup unlock-key";
+      mode = "term";
+    }
+    {
+      section = "バックアップ";
+      label = "backup run";
+      run = "backup run";
+      mode = "term";
+    }
+    {
+      section = "バックアップ";
+      label = "backup log";
+      run = "backup log";
+      mode = "term";
+    }
+    {
+      section = "バックアップ";
+      label = "backup status";
+      run = "backup status";
+      mode = "term";
+    }
+    {
+      section = "バックアップ";
+      label = "backup snapshots";
+      run = "backup snapshots";
+      mode = "term";
+    }
+    {
+      section = "バックアップ";
+      label = "backup restore … --target /tmp/restore（必須・危険）";
+      run = "backup restore … --target /tmp/restore";
+      mode = "show";
+    }
+    {
+      section = "バックアップ";
+      label = "backup reconnect";
+      run = "backup reconnect";
+      mode = "term";
+    }
+    {
+      section = "バックアップ";
+      label = "backup about";
+      run = "backup about";
+      mode = "term";
+    }
+    {
+      section = "バックアップ";
+      label = "注: --target なしは /home/mitac を上書き（危険）";
+    }
+    # 電源・Type-C
+    {
+      section = "電源・Type-C";
+      label = "輝度 40%（消費の主因を下げる）";
+      run = "${brightnessctl} set 40%";
+      mode = "exec";
+    }
+    {
+      section = "電源・Type-C";
+      label = "warp disconnect";
+      run = "warp-cli disconnect";
+      mode = "exec";
+    }
+    {
+      section = "電源・Type-C";
+      label = "bt power off";
+      run = "bluetoothctl power off";
+      mode = "exec";
+    }
+    {
+      section = "電源・Type-C";
+      label = "受電優先を再適用";
+      run = "sudo chromebook-typec-prefer-sink";
+      mode = "show";
+    }
+    {
+      section = "電源・Type-C";
+      label = "充電不可時: 抜く→mask→FORCE_SINK→挿す";
+    }
+    # 周辺
+    {
+      section = "周辺";
+      label = "virt-manager";
+      run = "virt-manager";
+      mode = "exec";
+    }
+    {
+      section = "周辺";
+      label = "virsh list --all";
+      run = "virsh list --all";
+      mode = "term";
+    }
+    {
+      section = "周辺";
+      label = "QtScrcpy";
+      run = "QtScrcpy";
+      mode = "exec";
+    }
+    {
+      section = "周辺";
+      label = "adb devices";
+      run = "adb devices";
+      mode = "term";
+    }
+    {
+      section = "周辺";
+      label = "ESP32 /dev/ttyUSB0（CH340・dialout 要）";
+      keys = "/dev/ttyUSB0";
+    }
+    {
+      section = "周辺";
+      label = "arduino-cli compile|upload";
+      run = "arduino-cli compile -b esp32:esp32:esp32";
+      mode = "show";
+    }
+  ];
 
-    q / Esc で閉じる・ホイールで移動 / Shift+ドラッグで選択
+  cheatsheetDisplay =
+    e:
+    let
+      body = if e ? keys then "${e.keys}  →  ${e.label}" else e.label;
+      suffix = if e ? run then if (e.mode or "") == "show" then "  [確認]" else "  [実行]" else "";
+    in
+    "${e.section} │ ${body}${suffix}";
 
-    ┌─ 起動・終了 ─────────────────────────────────────────────┐
-    │ Super+Return / Ctrl+Alt+T   Ghostty                      │
-    │ Super+D / Alt+Space         rofi（選択中 WS に起動）     │
-    │ Super+q                     ウィンドウを閉じる           │
-    │ Super+L                     画面ロック                   │
-    │ Super+Shift+c / e           設定再読込 / Sway 終了       │
-    │ Super+/                     このシート開閉（waybar ?）   │
-    └──────────────────────────────────────────────────────────┘
-    注: ELECOM は Win+Shift 同時押しが欠けること有 → Super+q 等。
+  cheatsheetJson = pkgs.writeText "sway-cheatsheet.json" (
+    builtins.toJSON (
+      map (e: {
+        display = cheatsheetDisplay e;
+        run = e.run or null;
+        mode = e.mode or null;
+        keys = e.keys or null;
+        label = e.label;
+      }) cheatsheetEntries
+    )
+  );
 
-    ┌─ ウィンドウ・WS ─────────────────────────────────────────┐
-    │ Super+hjkl / 矢印           フォーカス（右は Right）     │
-    │ Super+Shift+hjkl            ウィンドウ移動               │
-    │ Super+f / r                 フルスクリーン / リサイズ    │
-    │ Super+Shift+Space           フローティング切替           │
-    │ Super+b / v                 水平 / 垂直分割              │
-    │ Super+s / w                 スタック / タブ              │
-    │ Super+1…9 / Shift+1…9       WS 切替 / ウィンドウを移動   │
-    │ 起動時                      WS1 Cursor+GPT / WS2 Vivaldi │
-    └──────────────────────────────────────────────────────────┘
-    注: Super+e は既定の分割ではなく Yazi。
-
-    ┌─ スクショ・音量・輝度・履歴 ─────────────────────────────┐
-    │ Print                       全画面 → クリップボード      │
-    │ Super+Shift+s               範囲選択 → クリップボード    │
-    │ Super+V                     クリップボード履歴（rofi）   │
-    │ 音量 / MicMute / 輝度キー   ± / ミュート / 輝度 ±5%      │
-    └──────────────────────────────────────────────────────────┘
-
-    ┌─ 入力・Chromebook キー ──────────────────────────────────┐
-    │ Super+Space                 IME 切替（Meltype / Mozc）   │
-    │ 半角/全角                   Meltype 内: 英数 ⇔ 日本語    │
-    │ 学習データ                  ~/.local/share/Meltype       │
-    │ 2本指タップ・押下           右クリック（Chromebook）     │
-    │ Search+最上段               F1–F10（3つ目=セッション）   │
-    │ Ctrl+Alt+Del                手動 OOM（内蔵=C-A-Bksp）    │
-    │ 電源 短/長押し              suspend / poweroff           │
-    │ 電源+Back / +Refresh        強制ログアウト / 再起動      │
-    │ ELECOM Fn+Q / Fn+W          Windows / Mac モード         │
-    │ 外付け KB 接続時            内蔵 KB は自動無効           │
-    └──────────────────────────────────────────────────────────┘
-    注: ELECOM を Mac のままにすると Ctrl↔Win が入れ替わる。
-
-    ┌─ Yazi / Neovim ──────────────────────────────────────────┐
-    │ Super+e                     Yazi（Ghostty 内）           │
-    │ . / Tab / Enter             隠し表示 / spot / 開く       │
-    │ ; / : / f / z               シェル / フィルタ / zoxide   │
-    │ y（bash）                   終了後その dir へ cd         │
-    │ Space                       nvim リーダー                │
-    │ Space e / ff / sg           ツリー / ファイル / 全文検索 │
-    │ gd / gr / K                 定義 / 参照 / ホバー         │
-    └──────────────────────────────────────────────────────────┘
-
-    ┌─ Waybar・日常 ───────────────────────────────────────────┐
-    │ ? / scr                     チートシート / 常時オン切替  │
-    │ cpu·mem / net / bri         クリック→btop / nmtui / 輝度 │
-    │ [restic]（WS の右）         バックアップ進捗             │
-    │ 無操作                      10分ロック / 15分画面オフ    │
-    │ LocalSend / showmethekey    LAN 送受信 / キー表示（rofi）│
-    │ ChatGPT / Grok / DeepSeek   AI（rofi から）              │
-    │ 青枠＋バナー                ChatGPT Computer Use 操作中  │
-    └──────────────────────────────────────────────────────────┘
-
-    ┌─ Plasma（共通アプリ） ───────────────────────────────────┐
-    │ Ctrl+Alt+T / Meta+E         Ghostty / Yazi               │
-    │ Meta+R / Alt+Space          rofi                         │
-    │ Meta+V / Print / Meta+Shift+S  履歴 / 全画面 / 範囲スクショ │
-    │ Alt+F2                      KRunner（設定検索用）        │
-    └──────────────────────────────────────────────────────────┘
-
-    ┌─ NixOS ──────────────────────────────────────────────────┐
-    │ flake-update                入力＋Cursor/ChatGPT 等更新  │
-    │ rebuild                     適用（sudo 後・nom ETA）     │
-    │ generations                 世代一覧                     │
-    │ 壊れたとき                  --rollback switch            │
-    └──────────────────────────────────────────────────────────┘
-
-    ┌─ ディスク容量 ───────────────────────────────────────────┐
-    │ df -hT / ; lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINTS         │
-    │ du -xh --max-depth=1 ~ | sort -hr | head                 │
-    │ sudo nix-collect-garbage -d   旧世代削除＋GC             │
-    │ journalctl --disk-usage       ログ使用量（上限1G）       │
-    │ 注: ChromeOS残骸(p1/p3/p5)は root の前。拡大は LiveUSB  │
-    └──────────────────────────────────────────────────────────┘
-
-    ┌─ ネット・BT・WARP ───────────────────────────────────────┐
-    │ nmtui / ip -br addr         Wi-Fi 設定 / 全 IF の IP     │
-    │ warp-cli connect|disconnect|status                       │
-    │ bluetoothctl                power/scan/pair/connect      │
-    └──────────────────────────────────────────────────────────┘
-    注: BT 音声は接続後 Pulse で出力シンクを選ぶことあり。
-
-    ┌─ Windows 連携 ───────────────────────────────────────────┐
-    │ lan-mouse                   GUI（先に stop daemon）      │
-    │ systemctl --user stop|start lan-mouse                    │
-    │ uniclipboard / restart uniclipd   GUI / daemon 再起動    │
-    └──────────────────────────────────────────────────────────┘
-    注: uniclip は --user。再起動後は GUI も開き直す。
-    注: 起動失敗(1223)→ seahorse で鍵環解錠。版上げは flake。
-
-    ┌─ バックアップ（restic → Drive） ─────────────────────────┐
-    │ backup / unlock-key / run   使い方 / 鍵 / 実行           │
-    │ backup log / status / snapshots                          │
-    │ backup restore … --target /tmp/restore   ※必須           │
-    │ backup reconnect / about    OAuth 再接続 / 疎通          │
-    └──────────────────────────────────────────────────────────┘
-    注: --target なしは /home/mitac を上書き（危険）。
-
-    ┌─ 電源・Type-C ───────────────────────────────────────────┐
-    │ brightnessctl set 40%       輝度下げ（消費の主因）       │
-    │ warp disconnect / bt power off   不要なら切る            │
-    │ sudo chromebook-typec-prefer-sink   受電優先を再適用     │
-    │ 充電不可時                  抜く→mask→FORCE_SINK→挿す    │
-    └──────────────────────────────────────────────────────────┘
-
-    ┌─ 周辺（VM / Android / ESP32） ───────────────────────────┐
-    │ virt-manager / virsh list --all                          │
-    │ QtScrcpy / adb devices      ミラー（USB デバッグ ON）    │
-    │ /dev/ttyUSB0                ESP32（CH340・dialout 要）   │
-    │ arduino-cli compile|upload -b esp32:esp32:esp32          │
-    └──────────────────────────────────────────────────────────┘
-  '';
-
-  # q/Q quit only. Do NOT bind bare Esc here: with --mouse, click CSI sequences
-  # start with ESC and race the lone-\e binding, so the sheet vanishes on click.
-  # Esc→close is done via Ghostty --keybind=escape=text:q instead.
-  cheatsheetLesskey = pkgs.writeText "sway-cheatsheet.lesskey" ''
-    #command
-    q quit
-    Q quit
-  '';
-
-  # Custom syntax so keys / section headers are colored (plain .txt has none).
-  cheatsheetSyntax = pkgs.writeText "SwayCheatsheet.sublime-syntax" ''
-    %YAML 1.2
-    ---
-    name: SwayCheatsheet
-    file_extensions: [swaycheat]
-    scope: text.swaycheatsheet
-    contexts:
-      main:
-        - match: '^Sway .+$'
-          scope: markup.heading.1
-        - match: '^q / Esc.+$'
-          scope: comment.line
-        - match: '^注:.+$'
-          scope: markup.italic
-        - match: '^┌─.+┐$'
-          scope: markup.heading.2
-        - match: '^└─.+┘$'
-          scope: punctuation.section
-        - match: '^(※|注:).*$'
-          scope: comment.line
-        - match: '^│'
-          push:
-            - match: '│$'
-              scope: punctuation.section
-              pop: true
-            - match: '[│]'
-              scope: punctuation.section
-            - match: '  +\S.*(?=│$)'
-              scope: string.unquoted
-            - match: '\S+'
-              scope: entity.name.function
-  '';
-
-  # Prebuilt bat cache (syntaxes.bin) so runtime needs no writable ~/.cache.
-  cheatsheetBatHome =
-    pkgs.runCommand "sway-cheatsheet-bat-home" { nativeBuildInputs = [ pkgs.bat ]; }
-      ''
-        mkdir -p $out/config/syntaxes $out/cache
-        cp ${cheatsheetSyntax} $out/config/syntaxes/SwayCheatsheet.sublime-syntax
-        export BAT_CONFIG_DIR=$out/config
-        export XDG_CACHE_HOME=$out/cache
-        bat cache --build
-      '';
-
-  # Single argv for ghostty -e (multi-arg -e is easy to break; breaks keys/pager).
-  cheatsheetViewer = pkgs.writeShellScript "sway-cheatsheet-view" ''
+  # ghostty -e takes a single argv; command text arrives via CHEAT_RUN.
+  cheatsheetTerm = pkgs.writeShellScript "sway-cheatsheet-term" ''
     set -eu
-    export PATH="${
-      lib.makeBinPath [
-        pkgs.bat
-        pkgs.less
-        pkgs.coreutils
-      ]
-    }:$PATH"
-    export BAT_CONFIG_DIR="${cheatsheetBatHome}/config"
-    export XDG_CACHE_HOME="${cheatsheetBatHome}/cache"
-    export LESS='-R'
-    # Coldark-Cold is a light theme (fg≈234 → invisible on dark Ghostty).
-    # Pipe to less ourselves: --mouse for wheel scroll; Shift+drag still selects in Ghostty.
-    bat --style=plain --paging=never --color=always --wrap=never \
-      --theme=OneHalfDark -l SwayCheatsheet \
-      ${cheatsheetText} \
-      | exec less -R --mouse --wheel-lines=3 --lesskey-src=${cheatsheetLesskey}
+    exec ${pkgs.bash}/bin/bash -ic \
+      "$CHEAT_RUN; printf '\n[Enter で閉じる] '; read -r _"
+  '';
+  cheatsheetShow = pkgs.writeShellScript "sway-cheatsheet-show" ''
+    set -eu
+    exec ${pkgs.bash}/bin/bash -ic \
+      "printf '実行しません（手で入力してください）:\n  %s\n\n' \"$CHEAT_RUN\"; read -r _"
   '';
 
   showCheatsheet = pkgs.writeShellScript "sway-cheatsheet" ''
@@ -271,34 +625,50 @@ let
       lib.makeBinPath [
         pkgs.coreutils
         pkgs.jq
-        pkgs.procps
+        pkgs.libnotify
+        pkgs.rofi
         pkgs.sway
         pkgs.ghostty
+        pkgs.bash
       ]
     }:$PATH"
-    # Toggle: second ? / Super+/ closes an existing sheet.
-    # swaymsg kill is a no-op for this Ghostty+-e window; terminate its PID instead.
-    mapfile -t pids < <(
-      swaymsg -t get_tree \
-        | jq -r '.. | objects | select(.app_id? == "com.mitac.SwayCheatsheet") | .pid' \
-        | sort -u
-    )
-    if ((''${#pids[@]} > 0)); then
-      kill "''${pids[@]}" 2>/dev/null || true
+    data="${cheatsheetJson}"
+    choice=$(
+      jq -r '.[].display' "$data" \
+        | ${rofiBin} -dmenu -i -p '?' -no-custom
+    ) || exit 0
+    [ -n "$choice" ] || exit 0
+
+    entry=$(jq -c --arg c "$choice" '.[] | select(.display == $c)' "$data")
+    [ -n "$entry" ] || exit 0
+
+    run=$(jq -r '.run // empty' <<<"$entry")
+    mode=$(jq -r '.mode // empty' <<<"$entry")
+    keys=$(jq -r '.keys // empty' <<<"$entry")
+    label=$(jq -r '.label' <<<"$entry")
+
+    if [ -z "$run" ]; then
+      if [ -n "$keys" ]; then
+        notify-send -a cheatsheet "$keys" "$label"
+      else
+        notify-send -a cheatsheet "チートシート" "$label"
+      fi
       exit 0
     fi
-    # Ghostty requires a valid GTK app-id (reverse-DNS); hyphens-only ids are ignored.
-    # Options use --key=value (no -o); needed so single-instance Ghostty doesn't swallow this.
-    # CJK monospace fallback keeps box columns aligned with ASCII.
-    # escape=text:q: Esc closes without lesskey \e (which breaks --mouse clicks).
-    exec ghostty --class=com.mitac.SwayCheatsheet \
-      --gtk-single-instance=false \
-      --font-family="JetBrainsMono Nerd Font" \
-      --font-family="Noto Sans Mono CJK JP" \
-      --window-padding-x=8 \
-      --window-padding-y=8 \
-      --keybind=escape=text:q \
-      -e ${cheatsheetViewer}
+
+    case "$mode" in
+      exec)
+        exec swaymsg exec -- ${pkgs.bash}/bin/bash -c "$run"
+        ;;
+      show)
+        export CHEAT_RUN="$run"
+        exec ${ghosttyBin} -e ${cheatsheetShow}
+        ;;
+      term|*)
+        export CHEAT_RUN="$run"
+        exec ${ghosttyBin} -e ${cheatsheetTerm}
+        ;;
+    esac
   '';
 in
 {
@@ -463,9 +833,7 @@ in
       # showmethekey floating overlay
       for_window [app_id="showmethekey-gtk"] floating enable, sticky enable, border none
       for_window [app_id="one.alynx.showmethekey"] floating enable, sticky enable, border none
-      # Sway cheatsheet (Ghostty + bat; selectable text). Height <1080 so title is not clipped.
-      for_window [app_id="com.mitac.SwayCheatsheet"] floating enable, sticky enable, resize set 720 780, move position center
-      # Layout-independent cheatsheet toggles (same as waybar ?)
+      # Layout-independent cheatsheet (rofi; same as waybar ?)
       # --inhibited: work even when Cursor/Electron inhibit compositor shortcuts.
       bindsym --inhibited --to-code Mod4+slash exec ${showCheatsheet}
       bindsym --inhibited --to-code Mod4+Shift+slash exec ${showCheatsheet}
