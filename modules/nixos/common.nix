@@ -48,7 +48,7 @@
     LC_TIME = "ja_JP.UTF-8";
   };
 
-  # Fcitx5 + Meltype (default) / Mozc fallback — Sway / Hyprland / Plasma Wayland
+  # Fcitx5 + Meltype (default) / Mozc fallback — Sway / Plasma Wayland
   i18n.inputMethod = {
     enable = true;
     type = "fcitx5";

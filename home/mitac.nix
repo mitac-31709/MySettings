@@ -11,7 +11,6 @@
     ./uniclipboard.nix
     ./plasma.nix
     ./sway.nix
-    ./sessions/hyprland.nix
   ];
 
   home.username = "mitac";

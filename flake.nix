@@ -1,5 +1,5 @@
 {
-  description = "NixOS configuration for mitac (multi-session: Sway/Plasma/Hyprland, Chromebook delbin)";
+  description = "NixOS configuration for mitac (multi-session: Sway/Plasma, Chromebook delbin)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -12,29 +12,8 @@
       url = "github:WeirdTreeThing/alsa-ucm-conf-cros/standalone";
       flake = false;
     };
-    # Caelestia shell with animated/video wallpaper support
-    caelestia-cli-aw = {
-      url = "github:AdiAmbassador/caelestia-cli-aw";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    caelestia-shell-aw = {
-      url = "github:AdiAmbassador/caelestia-shell-aw";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.caelestia-cli.follows = "caelestia-cli-aw";
-    };
-    # end-4 Quickshell fork (illogical-impulse inspired)
-    end4-pc = {
-      url = "github:pctrade/end4-pC";
-      flake = false;
-    };
-    # Illogical Impulse Hyprland configs (required by end4-pC for startup/keybinds)
-    dots-hyprland = {
-      url = "github:end-4/dots-hyprland/aed4d1ec63f584905c28d2a678db5845579fdafc";
-      flake = false;
-    };
     # Affinity Photo/Designer/Publisher (Wine; Canva Affinity v3)
-    affinity-nix.url = "github:mrshmllow/affinity-nix";
-    # Fresher nixpkgs solely for Cursor packages (avoid bumping the whole system).
+    affinity-nix.url = "github:mrshmllow/affinity-nix"; # Fresher nixpkgs solely for Cursor packages (avoid bumping the whole system).
     nixpkgs-cursor.url = "github:NixOS/nixpkgs/nixos-unstable";
     # Vendor .debs (flake update re-fetches; see scripts/flake-update.sh).
     sendanywhere-deb = {
