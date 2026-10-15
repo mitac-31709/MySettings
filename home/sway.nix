@@ -122,7 +122,7 @@ let
     ┌─ Waybar・日常 ───────────────────────────────────────────┐
     │ ? / scr                     チートシート / 常時オン切替  │
     │ cpu·mem / net / bri         クリック→btop / nmtui / 輝度 │
-    │ [restic]                    バックアップ進捗             │
+    │ [restic]（WS の右）         バックアップ進捗             │
     │ 無操作                      10分ロック / 15分画面オフ    │
     │ LocalSend / showmethekey    LAN 送受信 / キー表示（rofi）│
     │ ChatGPT / Grok / DeepSeek   AI（rofi から）              │
@@ -483,11 +483,12 @@ in
         modules-left = [
           "custom/cheatsheet"
           "sway/workspaces"
+          # Backup progress next to WS (not far-right with system modules).
+          "custom/restic"
           "sway/mode"
         ];
         modules-center = [ "sway/window" ];
         modules-right = [
-          "custom/restic"
           "cpu"
           "memory"
           "custom/keep-screen-on"
