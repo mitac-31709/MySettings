@@ -97,7 +97,9 @@ let
     └──────────────────────────────────────────────────────────┘
 
     ┌─ 入力・Chromebook キー ──────────────────────────────────┐
-    │ Super+Space                 IME 切替（Fcitx5 / Mozc）    │
+    │ Super+Space                 IME 切替（Meltype / Mozc）   │
+    │ 半角/全角                   Meltype 内: 英数 ⇔ 日本語    │
+    │ 学習データ                  ~/.local/share/Meltype       │
     │ Search+最上段               F1–F10（3つ目=セッション）   │
     │ Ctrl+Alt+Del                手動 OOM（内蔵=C-A-Bksp）    │
     │ 電源 短/長押し              suspend / poweroff           │
@@ -619,8 +621,6 @@ in
       #custom-cheatsheet, #cpu, #memory, #custom-keep-screen-on, #battery, #network, #backlight, #pulseaudio, #clock, #tray {
         padding: 0 8px;
         color: #9fe7e7;
-        /* Override waybar/default + GTK: stock #battery is white (#fff). */
-        background: transparent;
       }
       #custom-cheatsheet {
         color: #33c5c5;
@@ -650,16 +650,6 @@ in
       #custom-restic.failed {
         color: #e06c75;
         background: #3a1a1e;
-      }
-      /* Stock style.css uses white batt bg + critical blink-to-white; pin dark. */
-      #battery.charging,
-      #battery.plugged,
-      #battery.full,
-      #battery.discharging,
-      #battery.warning,
-      #battery.critical {
-        background: transparent;
-        animation: none;
       }
       #battery.warning { color: #e5c07b; }
       #battery.critical { color: #e06c75; }
