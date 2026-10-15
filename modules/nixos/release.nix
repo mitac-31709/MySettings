@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "nix-ld-codex" ];
+  system.nixos.tags = [ "chatgpt-plugin-perms" ];
 }
