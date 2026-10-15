@@ -129,6 +129,13 @@ let
     │ ChatGPT / Grok / DeepSeek   AI（rofi から）              │
     └──────────────────────────────────────────────────────────┘
 
+    ┌─ Plasma（共通アプリ） ───────────────────────────────────┐
+    │ Ctrl+Alt+T / Meta+E         Ghostty / Yazi               │
+    │ Meta+R / Alt+Space          rofi                         │
+    │ Meta+V / Print / Meta+Shift+S  履歴 / 全画面 / 範囲スクショ │
+    │ Alt+F2                      KRunner（設定検索用）        │
+    └──────────────────────────────────────────────────────────┘
+
     ┌─ NixOS ──────────────────────────────────────────────────┐
     │ flake-update                入力＋Cursor/ChatGPT 等更新  │
     │ rebuild                     適用（sudo 後・nom ETA）     │
@@ -432,8 +439,7 @@ in
       startup = [
         { command = polkitAgent; }
         { command = "fcitx5 -d --replace"; }
-        { command = "wl-paste --type text --watch cliphist store"; }
-        { command = "wl-paste --type image --watch cliphist store"; }
+        # cliphist store: home/clipboard.nix systemd user units
         # Fixed session apps (assigns: WS1 cursor/ChatGPT, WS2 vivaldi).
         { command = "cursor"; }
         { command = "vivaldi"; }

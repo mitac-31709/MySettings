@@ -226,7 +226,7 @@ in
     ];
   };
 
-  # Default terminal across Plasma / GNOME / Xfce / Sway / Hyprland.
+  # Default terminal across Sway / Plasma.
   programs.ghostty = {
     enable = true;
     settings = {

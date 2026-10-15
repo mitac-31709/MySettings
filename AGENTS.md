@@ -3,9 +3,9 @@
 ## Cursor Cloud specific instructions
 
 This repo is a **NixOS system-configuration flake** (host/user `mitac`, multi-session
-greetd desktop — Sway (primary) / Plasma / GNOME / Xfce / Hyprland — with ASUS CX5500FE
-"delbin" Chromebook support on `main`). It is **not** a long-running app/server: "running" it
-means evaluating and building the system configuration with Nix. Applying it for real
+greetd desktop — Sway (primary) / Plasma — with ASUS CX5500FE "delbin" Chromebook
+support on `main`). It is **not** a long-running app/server: "running" it means
+evaluating and building the system configuration with Nix. Applying it for real
 (`sudo nixos-rebuild switch --flake .#mitac`) only works on the actual target NixOS
 machine — see `README.md`.
 
@@ -39,7 +39,7 @@ the daemon is not running — do step 1.
   `nix flake check`
   `nix build .#nixosConfigurations.mitac.config.system.build.toplevel`
 - Lint / format (this repo follows nixfmt RFC style):
-  `nix run nixpkgs#nixfmt -- --check flake.nix hosts/mitac/*.nix modules/nixos/*.nix modules/nixos/chromebook/*.nix modules/nixos/greetd/*.nix home/*.nix home/sessions/*.nix`
+  `nix run nixpkgs#nixfmt -- --check flake.nix hosts/mitac/*.nix modules/nixos/*.nix modules/nixos/chromebook/*.nix home/*.nix`
   (includes `modules/nixos/release.nix` for generation labels / git-tag workflow)
   (drop `--check` to reformat in place).
 

@@ -1,5 +1,6 @@
-# Clipboard history picker (cliphist + rofi). Sway / Hyprland bind Super+V.
+# Clipboard history picker (cliphist + rofi). Sway / Plasma bind Super+V.
 # Selecting an entry copies it and pastes into the previously focused window.
+# Store watchers run as user systemd units under every graphical session.
 { pkgs, lib, ... }:
 
 let
@@ -23,7 +24,30 @@ let
     sleep 0.05
     wtype -M ctrl v -m ctrl
   '';
+
+  mkCliphistWatcher = name: pasteArgs: {
+    Unit = {
+      Description = "cliphist store (${name})";
+      PartOf = [ "graphical-session.target" ];
+      After = [ "graphical-session.target" ];
+    };
+    Service = {
+      ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste ${pasteArgs} --watch ${pkgs.cliphist}/bin/cliphist store";
+      Restart = "on-failure";
+      RestartSec = 1;
+    };
+    Install = {
+      WantedBy = [ "graphical-session.target" ];
+    };
+  };
 in
 {
-  home.packages = [ clipboardHistory ];
+  home.packages = [
+    clipboardHistory
+    pkgs.cliphist
+    pkgs.wtype
+  ];
+
+  systemd.user.services.cliphist-text = mkCliphistWatcher "text" "--type text";
+  systemd.user.services.cliphist-image = mkCliphistWatcher "image" "--type image";
 }

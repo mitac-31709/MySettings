@@ -15,41 +15,28 @@
 
 | セッション | 内容 |
 |------------|------|
-| **Sway** | キーボード中心のタイル WM（第一環境）。waybar / mako / swayidle。ランチャーは **rofi**（Super+D）。キーボード配列は **jp** |
-| **Plasma** | KDE Plasma 6（Wayland のみ。X11 セッションは置かない） |
-| **GNOME** | GNOME Shell（Wayland）。greetd から選択 |
-| **Xfce** | Xfce Session（Wayland / labwc）。greetd から選択 |
-| **Caelestia-AW** | Hyprland（`start-hyprland`）+ Caelestia shell（動画壁紙対応フォーク） |
-| **end4-pC** | Hyprland + Quickshell の end4-pC（Illogical Impulse の `hyprland.lua` / `hyprland-startup`） |
+| **Sway** | キーボード中心のタイル WM（第一環境）。waybar / mako / swayidle。ランチャーは **rofi**（Super+D / Alt+Space）。キーボード配列は **jp** |
+| **Plasma** | KDE Plasma 6（Wayland のみ。X11 セッションは置かない）。既定アプリは Sway スタックに寄せている |
 
-### 共通操作感（見た目は各環境のまま）
+### 共通操作感（見た目は各シェルのまま）
 
-GUI セッションでは次を揃えています（テーマ・パネル・シェルの見た目は変更しません。**Super+Space** は Meltype / Mozc 切替のまま）。
+GUI セッションでは次を揃えています（テーマ・パネルの見た目は変更しません。**Super+Space** は Meltype / Mozc 切替のまま）。
 
 | 操作 | キー | 動作 |
 |------|------|------|
-| 検索 | **Super+R**（Sway は **Super+D**） | 各環境ネイティブの検索／ランチャー（Sway は rofi） |
-| 端末 | **Ctrl+Alt+T** | Ghostty（Hyprland / Sway は Super+Return も可） |
-| ロック | **Super+L** | 画面ロック（Plasma / GNOME / Xfce 既定系、Sway は swaylock、Hyprland は hyprlock） |
-| クリップボード履歴 | **Super+V** | Sway / Hyprland は cliphist+rofi、Plasma は Klipper、GNOME は GPaste |
+| 検索／ランチャー | **Super+D**（Sway）/ **Super+R**・**Alt+Space**（両環境） | **rofi**（Plasma の Alt+F2 だけ KRunner 残し） |
+| 端末 | **Ctrl+Alt+T**（Sway は Super+Return も可） | **Ghostty** |
+| ファイルマネージャ | **Super+E** | **Yazi**（Ghostty 内） |
+| ロック | **Super+L** | Plasma 既定ロック / Sway は swaylock |
+| クリップボード履歴 | **Super+V** | **cliphist** + rofi（両環境） |
+| スクショ | **Print** / **Super+Shift+S** | **grim**（全画面）/ grim+**slurp**（範囲）→ クリップボード |
 | タッチパッド | — | 自然スクロール off・タップクリック on・入力中もポインタ有効 |
 
-| セッション | 検索／ランチャー |
-|------------|------------------|
-| **Sway** | **Super+D** → rofi（`-show drun`）。Super+F は fullscreen、Super+R は resize。キーボードは `xkb_layout=jp` |
-| **Plasma** | Super+R → KRunner（既定の Alt+Space 等も残す） |
-| **GNOME** | Super+R → Overview の検索欄（Super 単体も従来どおり） |
-| **Xfce** | Super+R → App Finder（`xfce4-appfinder`） |
-| **Caelestia-AW** | Super+R → Caelestia launcher |
-| **end4-pC** | Super+R → Quickshell 検索（Super タップも従来どおり） |
+Plasma では Konsole / Dolphin / Kate / Ark / Spectacle / Okular / Gwenview / Elisa などを `environment.plasma6.excludePackages` で外し、上記スタックを既定にしています。
 
 電源ボタン（全セッション共通・`chromebook-power-chords`）: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+Back=強制ログアウト** / **電源+Refresh=再起動**。
 
-共通（Sway / Hyprland 系）: Polkit / Fcitx5 / cliphist を起動時に起動。音量・輝度は PulseAudio / brightnessctl 経由。Sway は mako で通知、waybar でステータスバー。
-
-Caelestia の動画壁紙は `~/Pictures/Wallpapers/Animated/` に配置（`.mp4` / `.webm` / `.mkv` / `.gif`）。
-
-end4-pC は初回の matugen／壁紙自動適用をスキップして起動を安定化しています（外観はシェル既定色）。設定パネル（**Super+Escape**）から後で変更できます。
+共通: Polkit / Fcitx5 / cliphist（systemd user）を起動時に起動。音量・輝度は PulseAudio / brightnessctl 経由。Sway は mako で通知、waybar でステータスバー。
 
 ## 世代と Git タグ
 
@@ -155,16 +142,13 @@ passwd mitac
 - **Meltype** — Fcitx5 エンジン（日本語／英語の自動打ち分け。Linux プレビュー）。フォールバックに Mozc
 - **フォント** — JetBrainsMono Nerd Font（ターミナル／等幅の既定）
 - **暗号化バックアップ** — `restic` + `rclone` で `/home` を Google Drive へ。鍵は Bitwarden（`rbw`）。詳細は下記。
-- **マルチセッション** — greetd + tuigreet（Sway 第一 / Plasma / GNOME / Xfce / Caelestia-AW / end4-pC）
+- **マルチセッション** — greetd + tuigreet（Sway 第一 / Plasma）
 - **gui** — ディスプレイ無し時は `cage` で単一 GUI アプリを起動（`gui firefox` など）。引数なしは `apps` を起動
-- **apps** — `fzf` アプリ一覧（`gui` 経由起動）。TTY やシェルから利用可。Sway の Super+D は dmenu 既定
-
-- **Caelestia-AW** — Hyprland シェル（動画壁紙）。flake: `caelestia-shell-aw` / `caelestia-cli-aw`
-- **end4-pC** — Quickshell 設定（`~/.config/quickshell/end4-pC`）+ Illogical Impulse の Hyprland 設定（`hyprland-startup` → `start-hyprland`）
+- **apps** — `fzf` アプリ一覧（`gui` 経由起動）。TTY やシェルから利用可。Sway の Super+D は rofi
 
 ## 日本語入力（Meltype / Fcitx5）
 
-[Meltype](https://github.com/yksr-melt/Meltype)（Linux プレビュー）を **Fcitx5** アドオンとして入れています（Sway / Hyprland / Plasma の Wayland セッション向け）。半角/全角なしでローマ字の日本語と英語を打ち分けます。Mozc はフォールバックとして同じグループに残しています。
+[Meltype](https://github.com/yksr-melt/Meltype)（Linux プレビュー）を **Fcitx5** アドオンとして入れています（Sway / Plasma の Wayland セッション向け）。半角/全角なしでローマ字の日本語と英語を打ち分けます。Mozc はフォールバックとして同じグループに残しています。
 
 - 切替: パネルの入力インジケータ、または **Super+Space**（Fcitx5）
 - Meltype 内の英数 ⇔ 日本語: **半角/全角**
@@ -175,12 +159,12 @@ passwd mitac
 
 - システムの比例フォント既定: sans `Hiragino Kaku Gothic ProN` / serif `Hiragino Mincho ProN`（ローカル `~/Documents/hiragino-otf` → flake input `hiragino-fonts-src`）
 - 等幅フォント既定: `JetBrainsMono Nerd Font`（日本語フォールバックにヒラギノ角ゴ ProN）
-- Ghostty も JetBrainsMono（12pt）。Konsole を開いた場合のプロファイルも同フォント（`home/plasma.nix`）
+- Ghostty も JetBrainsMono（12pt）
 - Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行し、ログアウトして再ログイン
 
 ## ターミナル
 
-既定は **Ghostty**（`programs.ghostty`）。**Ctrl+Alt+T** で開きます（Plasma / GNOME / Xfce / Sway / Hyprland）。
+既定は **Ghostty**（`programs.ghostty`）。**Ctrl+Alt+T** で開きます（Sway / Plasma）。
 `TERMINAL=ghostty` も Home Manager で設定しています。
 
 ## タッチパッド
@@ -189,11 +173,7 @@ passwd mitac
 
 ## クリップボード履歴
 
-| セッション | 仕組み | 呼び出し |
-|------------|--------|----------|
-| **Sway / Hyprland** | `cliphist`（起動時に `wl-paste --watch`）+ `clipboard-history`（rofi → 選択で貼り付け） | **Super+V** |
-| **Plasma** | Klipper（履歴保持を有効化） | **Super+V**（トレイからも可） |
-| **GNOME** | GPaste（`programs.gpaste` + Shell 拡張） | **Super+V** |
+両セッションとも `cliphist`（systemd user の `wl-paste --watch`）+ `clipboard-history`（rofi → 選択で貼り付け）。呼び出しは **Super+V**。
 
 ## Encrypted /home backup
 
@@ -435,14 +415,10 @@ systemctl start chromebook-internal-kb-guard   # 手動再評価
 flake.nix
 hosts/mitac/
 modules/nixos/common.nix          # locale、ユーザー、mozc、フォント
-modules/nixos/desktop.nix         # plasma + gnome + xfce + sway + greetd + console-gui + hyprland + 共有 XKB/印刷
-modules/nixos/plasma.nix          # Plasma DE のみ
-modules/nixos/gnome.nix
-modules/nixos/xfce.nix            # Xfce Wayland（labwc）
+modules/nixos/desktop.nix         # plasma + sway + greetd + console-gui + portals + 共有 XKB/印刷
+modules/nixos/plasma.nix          # Plasma DE + 既定アプリ除外
 modules/nixos/sway.nix            # Sway（第一環境・waybar/mako 等）
-modules/nixos/greetd.nix          # tuigreet + セッション選別（Sway 先頭）
-modules/nixos/greetd/sessions.nix # Caelestia / end4 ラッパー
-modules/nixos/hyprland.nix        # portals / Hyprland 共通パッケージ / QML
+modules/nixos/greetd.nix          # tuigreet + セッション選別（Sway / Plasma）
 modules/nixos/console-gui.nix     # gui / apps（Sway ランチャー等）
 modules/nixos/chromebook.nix      # delbin 集約（./chromebook/*）
 modules/nixos/chromebook/         # audio / power / graphics / input
@@ -451,10 +427,8 @@ modules/nixos/release.nix         # system.nixos.tags（世代ラベルのスラ
 home/mitac.nix                    # HM エントリ（identity + imports）
 home/shell.nix                    # bash エイリアス / runbtop
 home/programs.nix                 # git / rbw / neovim / 共通パッケージ
-home/plasma.nix                   # Plasma 設定・Konsole・全セッション起動音
-home/gnome.nix                    # GNOME ショートカット／タッチパッド
-home/xfce.nix                     # Xfce ショートカット（見た目は既定）
+home/plasma.nix                   # Plasma 既定アプリ／ショートカット・起動音
+home/clipboard.nix                # cliphist + clipboard-history（両セッション）
 home/sway.nix                     # Sway 第一環境（waybar/mako/swayidle・rofi・jp）
-home/sessions/hyprland.nix        # Caelestia-AW / end4-pC（II hypr tree）
 home/nvim/
 ```

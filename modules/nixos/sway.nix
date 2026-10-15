@@ -21,6 +21,8 @@
       brightnessctl
       cliphist
       rofi
+      # Plasma session also uses these (shortcuts / mime); keep on PATH system-wide.
+      jq
     ];
   };
 
