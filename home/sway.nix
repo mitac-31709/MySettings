@@ -127,6 +127,7 @@ let
     │ 無操作                      10分ロック / 15分画面オフ    │
     │ LocalSend / showmethekey    LAN 送受信 / キー表示（rofi）│
     │ ChatGPT / Grok / DeepSeek   AI（rofi から）              │
+    │ 青枠＋バナー                ChatGPT Computer Use 操作中  │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ Plasma（共通アプリ） ───────────────────────────────────┐

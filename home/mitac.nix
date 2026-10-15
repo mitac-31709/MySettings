@@ -9,6 +9,7 @@
     ./lan-mouse.nix
     ./taildrop.nix
     ./uniclipboard.nix
+    ./chatgpt-cua-indicator.nix
     ./plasma.nix
     ./sway.nix
   ];

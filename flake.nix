@@ -104,6 +104,8 @@
                     src = inputs.chatgpt-deb;
                     version = chatgptVersion;
                   };
+                  # Sway overlay while ChatGPT Computer Use is driving the desktop.
+                  chatgpt-cua-indicator = final.callPackage ./pkgs/chatgpt-cua-indicator { };
                   # Official Grok Bot Linux desktop (Cursor / x.ai).
                   grok-bot = final.callPackage ./pkgs/grok-bot {
                     src = inputs.grok-bot-deb;
