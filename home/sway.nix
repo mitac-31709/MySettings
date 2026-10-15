@@ -306,6 +306,27 @@ let
       label = "ChatGPT Computer Use 操作中";
       keys = "青枠＋バナー";
     }
+    # Cursor 進捗（他アプリ使用中）
+    {
+      section = "Cursor 進捗";
+      label = "完了・入力待ち → mako";
+      keys = "Settings の通知";
+    }
+    {
+      section = "Cursor 進捗";
+      label = "Agents Window";
+      keys = "パレット: Open Agents Window";
+    }
+    {
+      section = "Cursor 進捗";
+      label = "ブラウザ / スマホ PWA";
+      keys = "cursor.com/agents";
+    }
+    {
+      section = "Cursor 進捗";
+      label = "実行中一覧（Slack）";
+      keys = "@Cursor list my agents";
+    }
     # Plasma
     {
       section = "Plasma";
