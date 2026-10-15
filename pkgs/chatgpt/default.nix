@@ -6,6 +6,7 @@
   dpkg,
   autoPatchelfHook,
   makeWrapper,
+  python3,
   alsa-lib,
   at-spi2-atk,
   at-spi2-core,
@@ -49,6 +50,7 @@ stdenv.mkDerivation {
     dpkg
     autoPatchelfHook
     makeWrapper
+    python3
   ];
 
   buildInputs = [
@@ -115,16 +117,41 @@ stdenv.mkDerivation {
     runHook postUnpack
   '';
 
-  # Codex copies bundled plugins into ~/.codex/.tmp preserving mode. Nix store
-  # paths are finalized non-writable, so those copies stay 0444 → EACCES and
-  # undeletable multi-GB staging that crashes the app. Mirror plugins into a
-  # user-writable cache and set CODEX_ELECTRON_BUNDLED_PLUGINS_RESOURCES_PATH.
+  # Two Nix-specific ChatGPT/Codex crashes on Linux:
+  #
+  # 1) SIGILL in node::GetNodeReport (thread "git"): autoPatchelf relocates
+  #    PT_INTERP far past detect-libc's ~2KiB ELF scan, so familySync() falls
+  #    back to process.report.getReport(), which hits Electron's CFI trap
+  #    (openai/codex#38123, NixOS/nixpkgs#551713). Force glibc + skip report.
+  # 2) EACCES / multi-GB undeletable plugin staging: store copies are 0444;
+  #    mirror plugins to a writable cache via CODEX_ELECTRON_BUNDLED_PLUGINS_RESOURCES_PATH.
   installPhase = ''
     runHook preInstall
 
     mkdir -p $out/lib $out/bin $out/share
     cp -a usr/lib/chatgpt $out/lib/
     cp -a usr/share/. $out/share/
+
+    # Length-preserving asar edits (asar header offsets must stay valid).
+    asar="$out/lib/chatgpt/resources/app.asar"
+    python3 - "$asar" <<'PY'
+    import sys
+    from pathlib import Path
+    path = Path(sys.argv[1])
+    data = path.read_bytes()
+    replacements = [
+        (b"const family = familySync();", b"const family = 'glibc' ;/**/"),
+        (b"isLinux() && process.report", b"false /* nix:skip report */"),
+    ]
+    for old, new in replacements:
+        if len(old) != len(new):
+            raise SystemExit(f"length mismatch: {old!r} vs {new!r}")
+        count = data.count(old)
+        if count != 1:
+            raise SystemExit(f"expected 1 occurrence of {old!r}, found {count}")
+        data = data.replace(old, new, 1)
+    path.write_bytes(data)
+    PY
 
     pluginsSrc="$out/lib/chatgpt/resources/plugins"
     cat > $out/lib/chatgpt/prepare-bundled-plugins <<'PREPARE_EOF'
