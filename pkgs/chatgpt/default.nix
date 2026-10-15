@@ -115,6 +115,10 @@ stdenv.mkDerivation {
     runHook postUnpack
   '';
 
+  # Codex copies bundled plugins into ~/.codex/.tmp preserving mode. Nix store
+  # paths are finalized non-writable, so those copies stay 0444 → EACCES and
+  # undeletable multi-GB staging that crashes the app. Mirror plugins into a
+  # user-writable cache and set CODEX_ELECTRON_BUNDLED_PLUGINS_RESOURCES_PATH.
   installPhase = ''
     runHook preInstall
 
@@ -122,13 +126,34 @@ stdenv.mkDerivation {
     cp -a usr/lib/chatgpt $out/lib/
     cp -a usr/share/. $out/share/
 
-    # Deb ships many files mode 0444. Codex copies bundled plugins into
-    # ~/.codex/.tmp/... preserving mode; read-only copies then cause EACCES
-    # on write/cleanup and leave multi-GB staging trees that crash the app.
-    chmod -R u+w $out/lib/chatgpt $out/share
+    pluginsSrc="$out/lib/chatgpt/resources/plugins"
+    cat > $out/lib/chatgpt/prepare-bundled-plugins <<'PREPARE_EOF'
+    #!/bin/bash
+    set -euo pipefail
+    pluginsSrc='@pluginsSrc@'
+    res_cache="''${XDG_CACHE_HOME:-$HOME/.cache}/chatgpt-bundled-resources/@version@"
+    if [[ ! -f "$res_cache/.sync-ok" ]]; then
+      rm -rf "$res_cache"
+      mkdir -p "$res_cache"
+      cp -a --no-preserve=mode "$pluginsSrc" "$res_cache/plugins"
+      chmod -R u+w "$res_cache"
+      : >"$res_cache/.sync-ok"
+    fi
+    staging="''${CODEX_HOME:-$HOME/.codex}/.tmp/bundled-marketplaces"
+    if [[ -d "$staging" ]]; then
+      chmod -R u+w "$staging" 2>/dev/null || true
+    fi
+    export CODEX_ELECTRON_BUNDLED_PLUGINS_RESOURCES_PATH="$res_cache"
+    PREPARE_EOF
+    sed -i 's/^    //' $out/lib/chatgpt/prepare-bundled-plugins
+    substituteInPlace $out/lib/chatgpt/prepare-bundled-plugins \
+      --replace-fail '@pluginsSrc@' "$pluginsSrc" \
+      --replace-fail '@version@' ${lib.escapeShellArg version}
+    chmod +x $out/lib/chatgpt/prepare-bundled-plugins
 
     makeWrapper $out/lib/chatgpt/ChatGPT $out/bin/chatgpt \
       --prefix LD_LIBRARY_PATH : "$out/lib/chatgpt" \
+      --run "source '$out/lib/chatgpt/prepare-bundled-plugins'" \
       --add-flags "\''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --enable-wayland-ime=true}}"
 
     substituteInPlace $out/share/applications/chatgpt.desktop \

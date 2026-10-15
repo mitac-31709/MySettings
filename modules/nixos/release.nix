@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "chatgpt-plugin-perms" ];
+  system.nixos.tags = [ "chatgpt-plugin-cache" ];
 }
