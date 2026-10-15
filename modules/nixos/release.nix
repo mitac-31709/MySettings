@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "meltype-fcitx5" ];
+  system.nixos.tags = [ "touchpad-clickfinger" ];
 }
