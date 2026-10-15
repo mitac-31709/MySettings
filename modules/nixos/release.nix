@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "grok-bot" ];
+  system.nixos.tags = [ "nix-ld-codex" ];
 }
