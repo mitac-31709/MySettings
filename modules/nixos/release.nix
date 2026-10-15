@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "touchpad-clickfinger" ];
+  system.nixos.tags = [ "sway-plasma-only" ];
 }
