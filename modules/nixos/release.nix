@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "sway-plasma-only" ];
+  system.nixos.tags = [ "chatgpt-cua-indicator" ];
 }
