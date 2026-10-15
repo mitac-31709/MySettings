@@ -178,10 +178,13 @@ stdenv.mkDerivation {
       --replace-fail '@version@' ${lib.escapeShellArg version}
     chmod +x $out/lib/chatgpt/prepare-bundled-plugins
 
+    # ChatGPT's Electron defaults to X11 even with ozone-platform-hint=auto
+    # (NIXOS_OZONE_WL). On Sway that means XWayland + XIM, where Mozc
+    # composition is flaky. Force Wayland + text-input-v3 like Cursor.
     makeWrapper $out/lib/chatgpt/ChatGPT $out/bin/chatgpt \
       --prefix LD_LIBRARY_PATH : "$out/lib/chatgpt" \
       --run "source '$out/lib/chatgpt/prepare-bundled-plugins'" \
-      --add-flags "\''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --enable-wayland-ime=true}}"
+      --add-flags "\''${WAYLAND_DISPLAY:+--ozone-platform=wayland --enable-features=WaylandWindowDecorations --enable-wayland-ime=true --wayland-text-input-version=3}"
 
     substituteInPlace $out/share/applications/chatgpt.desktop \
       --replace-fail 'Exec=chatgpt %U' 'Exec=chatgpt %U'

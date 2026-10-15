@@ -470,10 +470,12 @@ in
       terminal = ghosttyBin;
       menu = rofiLauncher;
 
-      # Fixed autostart apps: place by criteria (ChatGPT is XWayland).
+      # Fixed autostart apps: place by criteria (ChatGPT is native Wayland).
       assigns = {
         "1" = [
           { app_id = "cursor"; }
+          { app_id = "chatgpt"; }
+          # Pre-Wayland launches (ozone x11 / XWayland).
           { class = "ChatGPT"; }
         ];
         "2" = [
