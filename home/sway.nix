@@ -85,7 +85,7 @@ let
     │ Super+b / v                 水平 / 垂直分割              │
     │ Super+s / w                 スタック / タブ              │
     │ Super+1…9 / Shift+1…9       WS 切替 / ウィンドウを移動   │
-    │ 起動時                      WS1 Cursor+ChatGPT / WS2 Web │
+    │ 起動時                      WS1 Cursor+GPT / WS2 Vivaldi │
     └──────────────────────────────────────────────────────────┘
     注: Super+e は既定の分割ではなく Yazi。
 
@@ -160,7 +160,7 @@ let
     │ brightnessctl set 40%       輝度下げ（消費の主因）       │
     │ warp disconnect / bt power off   不要なら切る            │
     │ sudo chromebook-typec-prefer-sink   受電優先を再適用     │
-    │ 充電不可時                  抜く → mask → FORCE_SINK → 挿す │
+    │ 充電不可時                  抜く→mask→FORCE_SINK→挿す    │
     └──────────────────────────────────────────────────────────┘
 
     ┌─ 周辺（VM / Android / ESP32） ───────────────────────────┐
@@ -619,6 +619,8 @@ in
       #custom-cheatsheet, #cpu, #memory, #custom-keep-screen-on, #battery, #network, #backlight, #pulseaudio, #clock, #tray {
         padding: 0 8px;
         color: #9fe7e7;
+        /* Override waybar/default + GTK: stock #battery is white (#fff). */
+        background: transparent;
       }
       #custom-cheatsheet {
         color: #33c5c5;
@@ -648,6 +650,16 @@ in
       #custom-restic.failed {
         color: #e06c75;
         background: #3a1a1e;
+      }
+      /* Stock style.css uses white batt bg + critical blink-to-white; pin dark. */
+      #battery.charging,
+      #battery.plugged,
+      #battery.full,
+      #battery.discharging,
+      #battery.warning,
+      #battery.critical {
+        background: transparent;
+        animation: none;
       }
       #battery.warning { color: #e5c07b; }
       #battery.critical { color: #e06c75; }
