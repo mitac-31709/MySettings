@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "chatgpt-sigill-fix" ];
+  system.nixos.tags = [ "chatgpt-wayland-ime" ];
 }
