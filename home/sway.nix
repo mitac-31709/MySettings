@@ -68,284 +68,107 @@ let
     q / Esc で閉じる・ホイールで移動 / Shift+ドラッグで選択
 
     ┌─ 起動・終了 ─────────────────────────────────────────────┐
-    │ Super+Return       Ghostty を起動                        │
-    │ Ctrl+Alt+T         Ghostty を起動                        │
-    │ Super+D / Alt+Space  rofi（選択時WSに起動・drun）        │
-    │ Super+q            フォーカス中のウィンドウを閉じる      │
-    │ Super+Shift+q      ELECOMだと Win+Shift が欠けること有   │
-    │ Super+L            画面ロック（swaylock）                │
-    │ Super+Shift+c      Sway 設定を再読み込み                 │
-    │ Super+Shift+e      Sway を終了                           │
+    │ Super+Return / Ctrl+Alt+T   Ghostty                      │
+    │ Super+D / Alt+Space         rofi（選択中 WS に起動）     │
+    │ Super+q                     ウィンドウを閉じる           │
+    │ Super+L                     画面ロック                   │
+    │ Super+Shift+c / e           設定再読込 / Sway 終了       │
+    │ Super+/                     このシート開閉（waybar ?）   │
+    └──────────────────────────────────────────────────────────┘
+    注: ELECOM は Win+Shift 同時押しが欠けること有 → Super+q 等。
+
+    ┌─ ウィンドウ・WS ─────────────────────────────────────────┐
+    │ Super+hjkl / 矢印           フォーカス（右は Right）     │
+    │ Super+Shift+hjkl            ウィンドウ移動               │
+    │ Super+f / r                 フルスクリーン / リサイズ    │
+    │ Super+Shift+Space           フローティング切替           │
+    │ Super+b / v                 水平 / 垂直分割              │
+    │ Super+s / w                 スタック / タブ              │
+    │ Super+1…9 / Shift+1…9       WS 切替 / ウィンドウを移動   │
+    │ 起動時                      WS1 Cursor+ChatGPT / WS2 Web │
+    └──────────────────────────────────────────────────────────┘
+    注: Super+e は既定の分割ではなく Yazi。
+
+    ┌─ スクショ・音量・輝度・履歴 ─────────────────────────────┐
+    │ Print                       全画面 → クリップボード      │
+    │ Super+Shift+s               範囲選択 → クリップボード    │
+    │ Super+V                     クリップボード履歴（rofi）   │
+    │ 音量 / MicMute / 輝度キー   ± / ミュート / 輝度 ±5%      │
     └──────────────────────────────────────────────────────────┘
 
-    ┌─ ウィンドウ ─────────────────────────────────────────────┐
-    │ Super+h/j/k        フォーカス（左/下/上）                │
-    │ Super+Left/…       フォーカス（矢印でも可。右は Right）  │
-    │ Super+Shift+hjk…   ウィンドウを移動                      │
-    │ Super+f            フルスクリーン                        │
-    │ Super+r            リサイズモード（hjkl / Esc で終了）   │
-    │ Super+Shift+Space  フローティング切替                    │
-    │ Super+b / Super+v  水平 / 垂直分割                       │
-    │ Super+s/w          スタック / タブ（分割は Super+b/v）   │
+    ┌─ 入力・Chromebook キー ──────────────────────────────────┐
+    │ Super+Space                 IME 切替（Fcitx5 / Mozc）    │
+    │ Search+最上段               F1–F10（3つ目=セッション）   │
+    │ Ctrl+Alt+Del                手動 OOM（内蔵=C-A-Bksp）    │
+    │ 電源 短/長押し              suspend / poweroff           │
+    │ 電源+Back / +Refresh        強制ログアウト / 再起動      │
+    │ ELECOM Fn+Q / Fn+W          Windows / Mac モード         │
+    │ 外付け KB 接続時            内蔵 KB は自動無効           │
     └──────────────────────────────────────────────────────────┘
-    注: Super+L=ロック、Super+e=Yazi。右は Super+Right。
-    注: 既定の Super+e（分割レイアウト）は Yazi に上書き。
+    注: ELECOM を Mac のままにすると Ctrl↔Win が入れ替わる。
 
-    ┌─ ワークスペース ─────────────────────────────────────────┐
-    │ Super+1 … 9        ワークスペースへ切替                  │
-    │ Super+Shift+1…9    ウィンドウを WS へ移動                │
-    │ 起動時             WS1 Cursor+ChatGPT / WS2 Vivaldi      │
-    └──────────────────────────────────────────────────────────┘
-
-    ┌─ 自作バインド ───────────────────────────────────────────┐
-    │ Super+e            Yazi（Ghostty 内ファイラー）          │
-    │ Super+V            履歴選択→貼り付け（cliphist+rofi）    │
-    │ Print              全画面スクショ → クリップボード       │
-    │ Super+Shift+s      範囲スクショ（slurp）→ クリップボード │
-    │ 音量キー           上げ / 下げ / ミュート                │
-    │ MicMute            マイクミュート                        │
-    │ 輝度キー           画面輝度 ±5%                          │
-    │ Super+/            このチートシートを開閉（Shiftなし）   │
-    │ Super+Shift+/      同上（ELECOMは同時押し欠け有）        │
+    ┌─ Yazi / Neovim ──────────────────────────────────────────┐
+    │ Super+e                     Yazi（Ghostty 内）           │
+    │ . / Tab / Enter             隠し表示 / spot / 開く       │
+    │ ; / : / f / z               シェル / フィルタ / zoxide   │
+    │ y（bash）                   終了後その dir へ cd         │
+    │ Space                       nvim リーダー                │
+    │ Space e / ff / sg           ツリー / ファイル / 全文検索 │
+    │ gd / gr / K                 定義 / 参照 / ホバー         │
     └──────────────────────────────────────────────────────────┘
 
-    ┌─ 画面操作 CLI（エージェント／自動化） ───────────────────┐
-    │ grim /tmp/s.png           全画面スクショ → ファイル      │
-    │ wlrctl pointer move dx dy 相対移動（絶対座標ではない）   │
-    │ wlrctl pointer click left 左クリック                     │
-    │ wlrctl keyboard type …    キー入力（ASCII）              │
-    │ wlrctl toplevel list      ウィンドウ一覧                 │
+    ┌─ Waybar・日常 ───────────────────────────────────────────┐
+    │ ? / scr                     チートシート / 常時オン切替  │
+    │ cpu·mem / net / bri         クリック→btop / nmtui / 輝度 │
+    │ [restic]                    バックアップ進捗             │
+    │ 無操作                      10分ロック / 15分画面オフ    │
+    │ LocalSend / showmethekey    LAN 送受信 / キー表示（rofi）│
+    │ ChatGPT / Grok / DeepSeek   AI（rofi から）              │
     └──────────────────────────────────────────────────────────┘
 
-    ┌─ 入力 ───────────────────────────────────────────────────┐
-    │ Super+Space        Fcitx5 / Mozc 切替（IME）             │
-    │ 配列               jp（xkb_layout）                      │
-    │ NumLock            起動時オン                            │
-    │ 外付けKB接続時     内蔵ATキーボードを自動無効            │
-    │ systemctl start chromebook-internal-kb-guard  手動再評価 │
-    │ cat /sys/class/input/input0/inhibited  0=有効 / 1=無効   │
-    │ ELECOM Fn+Q / Fn+W Windows / Mac モード（Scroll点滅1/2） │
-    │   Macのままだと Ctrl↔Win が入れ替わりショートカット死   │
-    │ ELECOM Win+Shift   同時押しが欠けること有 → Super+q 等  │
+    ┌─ NixOS ──────────────────────────────────────────────────┐
+    │ flake-update                入力＋Cursor/ChatGPT 等更新  │
+    │ rebuild                     適用（sudo 後・nom ETA）     │
+    │ generations                 世代一覧                     │
+    │ 壊れたとき                  --rollback switch            │
     └──────────────────────────────────────────────────────────┘
 
-    ┌─ Yazi（Super+e） ────────────────────────────────────────┐
-    │ .                  隠しファイル表示トグル                │
-    │ Tab                spot（MIME / メタ情報）               │
-    │ o / Enter          開く（既定エディタは nvim）           │
-    │ ; / :              シェルコマンド（非阻塞 / 阻塞）       │
-    │ m+p / m+o / m+m    行モード: 権限 / 所有者 / 更新時刻    │
-    │ f                  フィルタ / z → zoxide 等              │
-    │ y（bash）          起動→終了後そのディレクトリへ cd      │
+    ┌─ ネット・BT・WARP ───────────────────────────────────────┐
+    │ nmtui / ip -br addr         Wi-Fi 設定 / 全 IF の IP     │
+    │ warp-cli connect|disconnect|status                       │
+    │ bluetoothctl                power/scan/pair/connect      │
+    └──────────────────────────────────────────────────────────┘
+    注: BT 音声は接続後 Pulse で出力シンクを選ぶことあり。
+
+    ┌─ Windows 連携 ───────────────────────────────────────────┐
+    │ lan-mouse                   GUI（先に stop daemon）      │
+    │ systemctl --user stop|start lan-mouse                    │
+    │ uniclipboard / restart uniclipd   GUI / daemon 再起動    │
+    └──────────────────────────────────────────────────────────┘
+    注: uniclip は --user。再起動後は GUI も開き直す。
+    注: 起動失敗(1223)→ seahorse で鍵環解錠。版上げは flake。
+
+    ┌─ バックアップ（restic → Drive） ─────────────────────────┐
+    │ backup / unlock-key / run   使い方 / 鍵 / 実行           │
+    │ backup log / status / snapshots                          │
+    │ backup restore … --target /tmp/restore   ※必須           │
+    │ backup reconnect / about    OAuth 再接続 / 疎通          │
+    └──────────────────────────────────────────────────────────┘
+    注: --target なしは /home/mitac を上書き（危険）。
+
+    ┌─ 電源・Type-C ───────────────────────────────────────────┐
+    │ brightnessctl set 40%       輝度下げ（消費の主因）       │
+    │ warp disconnect / bt power off   不要なら切る            │
+    │ sudo chromebook-typec-prefer-sink   受電優先を再適用     │
+    │ 充電不可時                  抜く → mask → FORCE_SINK → 挿す │
     └──────────────────────────────────────────────────────────┘
 
-    ┌─ 便利ツール ─────────────────────────────────────────────┐
-    │ showmethekey       キー押下オーバーレイ（rofi から起動） │
-    │ LocalSend          LAN ファイル送受信（rofi から）       │
-    │ bcat               bat（シンタックスハイライト付き cat） │
-    │ waybar [restic]    バックアップ実行中の進捗表示          │
-    │ waybar ?           このチートシート（再押下で閉じる）    │
-    │ 無操作 10分→ロック / 15分→画面オフ（suspend しない）     │
-    │ waybar scr / scr ON  常時オン（自動ロック・消灯を抑制）  │
-    │ waybar net / bri   SSID（ホバーで↓↑速度） / 画面輝度     │
-    │ waybar cpu/mem クリックで btop / net で nmtui（Ghostty） │
-    │ gh auth login      GitHub 認証（初回・期限切れ時）       │
-    │ git push           HTTPS は gh 資格情報を自動使用        │
+    ┌─ 周辺（VM / Android / ESP32） ───────────────────────────┐
+    │ virt-manager / virsh list --all                          │
+    │ QtScrcpy / adb devices      ミラー（USB デバッグ ON）    │
+    │ /dev/ttyUSB0                ESP32（CH340・dialout 要）   │
+    │ arduino-cli compile|upload -b esp32:esp32:esp32          │
     └──────────────────────────────────────────────────────────┘
-
-    ┌─ Cursor CLI（agent） ────────────────────────────────────┐
-    │ agent              対話セッション開始                    │
-    │ agent "…"          プロンプト付きで開始                  │
-    │ agent login        認証（初回）                          │
-    │ /ask /plan         読取専用 / 計画モード（Shift+Tab）    │
-    │ agent ls / resume  過去セッション一覧 / 再開             │
-    │ agent -p "…"       非対話（スクリプト向け）              │
-    │ @ファイル          コンテキストに追加                    │
-    └──────────────────────────────────────────────────────────┘
-
-    ┌─ AI（GUI・rofi から起動） ───────────────────────────────┐
-    │ ChatGPT            公式デスクトップ（Codex 含む）        │
-    │ Grok Bot           公式デスクトップ（`grok-bot`）        │
-    │ DeepSeek Harness   アプリ窓（初回は npm、:3080）         │
-    └──────────────────────────────────────────────────────────┘
-
-    ┌─ Neovim（LazyVim） ──────────────────────────────────────┐
-    │ Space              リーダー（どのキーマップもここから）  │
-    │ Space e            エクスプローラー                      │
-    │ Space ff / Space sg  ファイル検索 / 全文検索（rg）       │
-    │ Space l            Lazy プラグイン UI                    │
-    │ Space cf           フォーマット                          │
-    │ gd / gr / K        定義へ / 参照 / ホバー                │
-    │ :Lazy sync         プラグイン更新（初回インストールも）  │
-    └──────────────────────────────────────────────────────────┘
-    初回はネット必須。LSP は Mason ではなく nix extraPackages。
-
-    ┌─ NixOS 適用 ─────────────────────────────────────────────┐
-    │ flake-update       入力一括＋Cursor/ChatGPT/GrokBot 等   │
-    │ nix flake update   入力のみ（UniClip の版は動かない）    │
-    │ rebuild            sudo後・適用（ビルド中のみ nom ETA）  │
-    │ generations        世代一覧（list-generations）          │
-    │ 更新で壊れたとき   sudo nixos-rebuild --rollback switch  │
-    │                    または git checkout <良コミット> --   │
-    │                    flake.lock → rebuild                  │
-    │ nix-collect-garbage  未参照ストアのみ削除（世代は残る）  │
-    │ sudo nix-collect-garbage -d  全世代削除+GC（危険）       │
-    │ sudo nix-collect-garbage --delete-older-than 30d         │
-    │                    30日より古い世代だけ削除してから GC   │
-    │ nix store optimise 重複パスをハードリンクして容量節約    │
-    └──────────────────────────────────────────────────────────┘
-
-    ┌─ リモートビルド（galleria-mitac WSL :2222） ─────────────┐
-    │ 鍵                 ~/.ssh/id_wsl_builder（パス無し）     │
-    │ 疎通（ユーザー）   ssh wsl-builder nix --version         │
-    │ 疎通（daemon）     sudo ssh wsl-builder nix --version    │
-    │ 強制リモート       --max-jobs 0（ローカルを使わない）    │
-    │ リモート無効       --builders ''''（空文字）             │
-    │ 向こうでビルド→持込  nix copy --from ssh://wsl-builder … │
-    └──────────────────────────────────────────────────────────┘
-
-    ┌─ VM（libvirt / QEMU/KVM） ───────────────────────────────┐
-    │ virt-manager       GUI（qemu:///system）                 │
-    │ virsh list --all   VM 一覧                               │
-    │ virsh net-list --all  仮想ネットワーク一覧               │
-    │ virsh net-start default  初回: NAT (virbr0) を起動       │
-    │ virsh net-autostart default  起動時に default を有効     │
-    │ virt-viewer NAME   ゲスト画面だけ開く                    │
-    │ ls /dev/kvm        あればハードウェア仮想化 OK           │
-    └──────────────────────────────────────────────────────────┘
-    グループ変更後は一度ログアウト／再ログイン。
-
-    ┌─ バックアップ（restic → Google Drive） ──────────────────┐
-    │ backup             使い方（引数なし）                    │
-    │ backup unlock-key  rbw unlock（鍵）                      │
-    │ backup setup       初回セットアップ                      │
-    │ backup run         フルバックアップ開始                  │
-    │ backup log         進捗ログを追う                        │
-    │ backup status      unit / timer 状態                     │
-    │ backup snapshots   スナップショット一覧                  │
-    │ backup restore …   復元（必ず --target を付ける）        │
-    │   例: backup restore latest --target /tmp/restore        │
-    │ backup reconnect   OAuth 再接続 (gdrive)                 │
-    │ backup about       Drive 疎通確認                        │
-    └──────────────────────────────────────────────────────────┘
-    注: --target なしは /home/mitac を直接上書きするので危険。
-    展開先は /tmp/restore/home/mitac/... になる。
-    invalid_grant 毎週失効 → GCP Audience で Publish（Testing禁止）後に再接続。
-
-    ┌─ Lan Mouse（Windows のマウス／KB を受信） ───────────────┐
-    │ lan-mouse          GUI（Authorize / 設定）               │
-    │ daemon 停止        systemctl --user stop lan-mouse       │
-    │ daemon 再開        systemctl --user start lan-mouse      │
-    │ Windows            winget install lan-mouse → GUI で Add │
-    │ ポート             UDP 4242（同一 LAN / Tailscale）      │
-    └──────────────────────────────────────────────────────────┘
-    GUI 前に daemon が占有しているときは一度 stop してから開く。
-
-    ┌─ UniClipboard（Windows と CB 同期） ─────────────────────┐
-    │ GUI                uniclipboard                          │
-    │ daemon 状態        systemctl --user status uniclipd      │
-    │ daemon 再起動      systemctl --user restart uniclipd     │
-    │ ログ               journalctl --user -u uniclipd -f     │
-    │ 詳細ログ           ~/.local/state/.../uniclipboard/logs  │
-    │ 鍵環ロック時       seahorse（Default Keyring を解錠）    │
-    │ ピア拒否           Devices→相手→「この端末と同期」ON    │
-    │                    （tray Device Sync のチェックでも可） │
-    └──────────────────────────────────────────────────────────┘
-    必ず --user。daemon 再起動後は GUI も落として開き直す
-    （旧ポートに張り付いて接続できなくなる）。
-    起動失敗(engine 1223)は鍵環未解錠が典型。seahorse で解錠。
-    「ピア拒否」は受信オフ時の正常動作。both/receive に設定。
-    アプリ内 Update は触らない（deb 導入で daemon が止まる）。
-    版上げは flake の pkgs.uniclipboard で行う。
-
-    ┌─ Cloudflare WARP ────────────────────────────────────────┐
-    │ warp-cli status    接続状態                              │
-    │ warp-cli connect   接続                                  │
-    │ warp-cli disconnect 切断                                 │
-    │ warp-taskbar       トレイ GUI                            │
-    └──────────────────────────────────────────────────────────┘
-
-    ┌─ Chromebook 最上段キー ──────────────────────────────────┐
-    │ 単体               Back/Refresh/全画面/輝度/音量 など    │
-    │ Search+最上段      F1–F10                                │
-    │ Search+3つ目       tuigreet セッション一覧（F3）         │
-    │ Ctrl+Alt+Del       手動 OOM killer（画面固まり時用）     │
-    │                    （内蔵KBは Ctrl+Alt+Backspace）       │
-    │ 電源 短押し        suspend                               │
-    │ 電源 長押し(~2.5s) poweroff                              │
-    │ 電源+Back          強制ログアウト                        │
-    │ 電源+Refresh       再起動                                │
-    └──────────────────────────────────────────────────────────┘
-
-    ┌─ USB-C 電力ロール ───────────────────────────────────────┐
-    │ 空きポートは受電優先 / スマホ検出時・AC時は他ポート給電 │
-    │ sudo chromebook-typec-prefer-sink   ポリシー再適用      │
-    │ 充電できない(緊急): 抜く → mask → FORCE_SINK → 挿す    │
-    │   sudo systemctl mask --runtime \                       │
-    │     chromebook-typec-prefer-sink.service                │
-    │ cat /sys/class/typec/port*/power_role  (sink=受電)      │
-    └──────────────────────────────────────────────────────────┘
-
-    ┌─ バッテリー節約（都度） ─────────────────────────────────┐
-    │ 輝度キー / brightnessctl set 40%   画面が最大の消費源   │
-    │ warp-cli disconnect          不要なら WARP 切断         │
-    │ bluetoothctl power off       未使用時 BT オフ           │
-    │ 電源短押し / systemctl suspend   離席時は suspend       │
-    │ ※idle は 10分ロック / 15分画面オフのみ（自動 suspend 無）│
-    └──────────────────────────────────────────────────────────┘
-
-    ┌─ ESP32 / Arduino CLI ────────────────────────────────────┐
-    │ ポート: /dev/ttyUSB0（CH340）。安定名:                   │
-    │   /dev/serial/by-id/usb-1a86_USB_Serial-if00-port0     │
-    │ esptool --port /dev/ttyUSB0 chip-id                    │
-    │ arduino-cli board list                                 │
-    │ arduino-cli core update-index                          │
-    │ arduino-cli core install esp32:esp32                   │
-    │ arduino-cli compile -b esp32:esp32:esp32 .             │
-    │ arduino-cli upload -p /dev/ttyUSB0 -b esp32:esp32:esp32. │
-    │ ※シリアルは dialout 必須（rebuild 後に再ログイン）       │
-    └──────────────────────────────────────────────────────────┘
-
-    ┌─ Android（QtScrcpy / adb） ──────────────────────────────┐
-    │ QtScrcpy           画面ミラー＋操作（アプリメニュー可） │
-    │ adb devices        USB/無線で認識中の端末               │
-    │ ※端末側で USB デバッグ ON。初回は許可ダイアログ承認     │
-    └──────────────────────────────────────────────────────────┘
-
-    ┌─ Network（IP 確認 / 自宅はルータ DHCP 予約） ────────────┐
-    │ nmtui              TUI で Wi-Fi/有線の接続設定           │
-    │                    （waybar の SSID クリックでも開く）   │
-    │ ip -br addr        全 IF の IP（LAN/Tailscale/WARP）     │
-    │ ip route           デフォルト GW（dhcp / static）        │
-    │ nmcli -f IP4 device show wlp0s20f3   Wi-Fi IP/GW/DNS   │
-    │ cat /sys/class/net/wlp0s20f3/address   Wi-Fi MAC        │
-    │ ※接続時 MAC は固定（cloned-mac=preserve）。予約に使う    │
-    │ iperf3 -s          帯域測定サーバ（TCP/UDP 5201）        │
-    │ iperf3 -c HOST     クライアント（サーバ側 IP を指定）    │
-    │ iperf3 -c HOST -R  下り方向も測る（reverse）             │
-    └──────────────────────────────────────────────────────────┘
-
-    ┌─ メモリ / OOM ───────────────────────────────────────────┐
-    │ Ctrl+Alt+Del       手動 OOM（内蔵は C-A-Backspace）      │
-    │ free -h / swapon --show   RAM・zram 使用量              │
-    │ journalctl -k -b | rg -i 'Out of memory|oom-kill'       │
-    │ journalctl -u systemd-oomd -b   userspace OOM の有無     │
-    │ waybar cpu/mem クリック → btop                          │
-    └──────────────────────────────────────────────────────────┘
-
-    ┌─ Bluetooth（bluetoothctl） ──────────────────────────────┐
-    │ bluetoothctl       対話モードを開始                      │
-    │   power on         電源オン                              │
-    │   agent on         エージェント有効                      │
-    │   default-agent    既定エージェント                      │
-    │   scan on          スキャン開始                          │
-    │   pair MAC         ペアリング                            │
-    │   trust MAC        信頼                                  │
-    │   connect MAC      接続                                  │
-    │   scan off / quit  終了                                  │
-    │ devices / info MAC 一覧・詳細                            │
-    └──────────────────────────────────────────────────────────┘
-    音声デバイスは接続後、Pulse 側で出力シンクを選ぶことあり。
   '';
 
   # q/Q quit only. Do NOT bind bare Esc here: with --mouse, click CSI sequences
@@ -376,7 +199,7 @@ let
           scope: markup.heading.2
         - match: '^└─.+┘$'
           scope: punctuation.section
-        - match: '^(※|必ず|起動失敗|「|アプリ内|版上げ|グループ|GUI |音声|展開先|初回は).*$'
+        - match: '^(※|注:).*$'
           scope: comment.line
         - match: '^│'
           push:
@@ -620,7 +443,7 @@ in
       for_window [app_id="showmethekey-gtk"] floating enable, sticky enable, border none
       for_window [app_id="one.alynx.showmethekey"] floating enable, sticky enable, border none
       # Sway cheatsheet (Ghostty + bat; selectable text). Height <1080 so title is not clipped.
-      for_window [app_id="com.mitac.SwayCheatsheet"] floating enable, sticky enable, resize set 780 920, move position center
+      for_window [app_id="com.mitac.SwayCheatsheet"] floating enable, sticky enable, resize set 720 780, move position center
       # Layout-independent cheatsheet toggles (same as waybar ?)
       # --inhibited: work even when Cursor/Electron inhibit compositor shortcuts.
       bindsym --inhibited --to-code Mod4+slash exec ${showCheatsheet}
