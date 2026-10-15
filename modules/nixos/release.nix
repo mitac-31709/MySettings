@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "chatgpt-wayland-ime" ];
+  system.nixos.tags = [ "meltype-fcitx5" ];
 }
