@@ -621,6 +621,8 @@ in
       #custom-cheatsheet, #cpu, #memory, #custom-keep-screen-on, #battery, #network, #backlight, #pulseaudio, #clock, #tray {
         padding: 0 8px;
         color: #9fe7e7;
+        /* Stock waybar style + Plasma light GTK use white module chrome. */
+        background: transparent;
       }
       #custom-cheatsheet {
         color: #33c5c5;
@@ -650,6 +652,16 @@ in
       #custom-restic.failed {
         color: #e06c75;
         background: #3a1a1e;
+      }
+      /* Stock #battery is white; critical blinks to white — pin transparent. */
+      #battery.charging,
+      #battery.plugged,
+      #battery.full,
+      #battery.discharging,
+      #battery.warning,
+      #battery.critical {
+        background: transparent;
+        animation: none;
       }
       #battery.warning { color: #e5c07b; }
       #battery.critical { color: #e06c75; }

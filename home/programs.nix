@@ -172,12 +172,26 @@ in
   };
 
   # virt-manager: default to system QEMU/KVM (see modules/nixos/virtualisation.nix).
+  # prefer-dark: Plasma sometimes leaves prefer-light + a light colors.css, which
+  # makes waybar discover appearance "light" and flash white on battery/etc.
   dconf.settings = {
     "org/virt-manager/virt-manager/connections" = {
       autoconnect = [ "qemu:///system" ];
       uris = [ "qemu:///system" ];
     };
+    "org/gnome/desktop/interface" = {
+      color-scheme = "prefer-dark";
+    };
   };
+
+  # Do not @import Plasma's light colors.css (theme_base #fff). Plasma may
+  # rewrite these on a Plasma login; next HM switch restores the stub.
+  xdg.configFile."gtk-3.0/gtk.css".text = ''
+    /* no Plasma colors.css — light sync breaks waybar module backgrounds */
+  '';
+  xdg.configFile."gtk-4.0/gtk.css".text = ''
+    /* no Plasma colors.css — light sync breaks waybar module backgrounds */
+  '';
 
   # Bitwarden client (rbw). Holds the restic backup encryption key; see
   # modules/nixos/backup.nix. Log in once with `rbw login` after first switch.
