@@ -135,6 +135,14 @@ let
     │ 壊れたとき                  --rollback switch            │
     └──────────────────────────────────────────────────────────┘
 
+    ┌─ ディスク容量 ───────────────────────────────────────────┐
+    │ df -hT / ; lsblk -o NAME,SIZE,FSTYPE,MOUNTPOINTS         │
+    │ du -xh --max-depth=1 ~ | sort -hr | head                 │
+    │ sudo nix-collect-garbage -d   旧世代削除＋GC             │
+    │ journalctl --disk-usage       ログ使用量（上限1G）       │
+    │ 注: ChromeOS残骸(p1/p3/p5)は root の前。拡大は LiveUSB  │
+    └──────────────────────────────────────────────────────────┘
+
     ┌─ ネット・BT・WARP ───────────────────────────────────────┐
     │ nmtui / ip -br addr         Wi-Fi 設定 / 全 IF の IP     │
     │ warp-cli connect|disconnect|status                       │

@@ -24,7 +24,7 @@
 
 ### 共通操作感（見た目は各環境のまま）
 
-GUI セッションでは次を揃えています（テーマ・パネル・シェルの見た目は変更しません。**Super+Space** は Mozc 切替のまま）。
+GUI セッションでは次を揃えています（テーマ・パネル・シェルの見た目は変更しません。**Super+Space** は Meltype / Mozc 切替のまま）。
 
 | 操作 | キー | 動作 |
 |------|------|------|
@@ -152,7 +152,7 @@ passwd mitac
 - **wol-pc** — Wake-on-LAN クライアント（`~/Projects/wol-pc`）。依存: `sshpass` / `zenity`（`home.packages`）。設定は同ディレクトリの `config.env`
 - **7-Zip** — `_7zip-zstd`（コマンド `7z` / `7zz`、Zstd ほか対応）+ GUI `peazip`（PeaZip）
 - **tmux** — `runbtop <cmd>` で上部に実行出力（約 10 行）、下部に `btop`
-- **Mozc** — Fcitx5 エンジン（日本語入力）
+- **Meltype** — Fcitx5 エンジン（日本語／英語の自動打ち分け。Linux プレビュー）。フォールバックに Mozc
 - **フォント** — JetBrainsMono Nerd Font（ターミナル／等幅の既定）
 - **暗号化バックアップ** — `restic` + `rclone` で `/home` を Google Drive へ。鍵は Bitwarden（`rbw`）。詳細は下記。
 - **マルチセッション** — greetd + tuigreet（Sway 第一 / Plasma / GNOME / Xfce / Caelestia-AW / end4-pC）
@@ -162,10 +162,14 @@ passwd mitac
 - **Caelestia-AW** — Hyprland シェル（動画壁紙）。flake: `caelestia-shell-aw` / `caelestia-cli-aw`
 - **end4-pC** — Quickshell 設定（`~/.config/quickshell/end4-pC`）+ Illogical Impulse の Hyprland 設定（`hyprland-startup` → `start-hyprland`）
 
-## 日本語入力（Mozc）
+## 日本語入力（Meltype / Fcitx5）
 
-Fcitx5 + Mozc を有効化しています。パネルの入力インジケータ、または **Super+Space**（Fcitx5 既定）で切り替えできます。
-設定は **Fcitx5 設定**（`fcitx5-configtool`）から変更可能です。
+[Meltype](https://github.com/yksr-melt/Meltype)（Linux プレビュー）を **Fcitx5** アドオンとして入れています（Sway / Hyprland / Plasma の Wayland セッション向け）。半角/全角なしでローマ字の日本語と英語を打ち分けます。Mozc はフォールバックとして同じグループに残しています。
+
+- 切替: パネルの入力インジケータ、または **Super+Space**（Fcitx5）
+- Meltype 内の英数 ⇔ 日本語: **半角/全角**
+- 学習・設定: `~/.local/share/Meltype`
+- 詳細設定: **Fcitx5 設定**（`fcitx5-configtool`）
 
 ## フォント
 

@@ -118,6 +118,8 @@
                   hiragino-fonts = final.callPackage ./pkgs/hiragino {
                     src = inputs.hiragino-fonts-src;
                   };
+                  # Meltype Linux preview as Fcitx5 addon (not in nixpkgs).
+                  meltype = final.callPackage ./pkgs/meltype { };
                   # Official ChatGPT Linux desktop (Codex included); overrides darwin-only nixpkgs attr.
                   chatgpt = final.callPackage ./pkgs/chatgpt {
                     src = inputs.chatgpt-deb;

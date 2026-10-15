@@ -48,12 +48,13 @@
     LC_TIME = "ja_JP.UTF-8";
   };
 
-  # Fcitx5 + Mozc (works well with Plasma Wayland)
+  # Fcitx5 + Meltype (default) / Mozc fallback — Sway / Hyprland / Plasma Wayland
   i18n.inputMethod = {
     enable = true;
     type = "fcitx5";
     fcitx5.waylandFrontend = true;
     fcitx5.addons = with pkgs; [
+      meltype
       fcitx5-mozc
       fcitx5-gtk
       kdePackages.fcitx5-qt
@@ -64,10 +65,11 @@
       "Groups/0" = {
         Name = "Default";
         "Default Layout" = "jp";
-        DefaultIM = "mozc";
+        DefaultIM = "meltype";
       };
       "Groups/0/Items/0".Name = "keyboard-jp";
-      "Groups/0/Items/1".Name = "mozc";
+      "Groups/0/Items/1".Name = "meltype";
+      "Groups/0/Items/2".Name = "mozc";
     };
     # Avoid Super+Shift / lone-Shift hotkeys that steal compositor chords
     # (Win+Shift+q, etc.) on the same seat as Sway.
