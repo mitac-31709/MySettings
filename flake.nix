@@ -51,6 +51,11 @@
       url = "https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.1002.52244_amd64.deb";
       flake = false;
     };
+    # Keep URL version in sync with grokBotVersion below (flake-update.sh).
+    grok-bot-deb = {
+      url = "https://downloads.cursor.com/grokbot/stable/52da656f56d317510ca65ad6af3d69a2cde461e0/linux/x64/grok-bot_0.70.2_amd64.deb";
+      flake = false;
+    };
     # Proprietary Hiragino OTFs (local; not committed). Prepare with:
     #   extract ~/Documents/ヒラギノ.zip → ~/Documents/hiragino-otf/*.otf (ASCII names)
     hiragino-fonts-src = {
@@ -73,6 +78,8 @@
       uniclipboardVersion = "1.0.1";
       # Must match inputs.chatgpt-deb URL (updated by scripts/flake-update.sh).
       chatgptVersion = "26.1002.52244";
+      # Must match inputs.grok-bot-deb URL (updated by scripts/flake-update.sh).
+      grokBotVersion = "0.70.2";
     in
     {
       nixosConfigurations.mitac = nixpkgs.lib.nixosSystem {
@@ -115,6 +122,11 @@
                   chatgpt = final.callPackage ./pkgs/chatgpt {
                     src = inputs.chatgpt-deb;
                     version = chatgptVersion;
+                  };
+                  # Official Grok Bot Linux desktop (Cursor / x.ai).
+                  grok-bot = final.callPackage ./pkgs/grok-bot {
+                    src = inputs.grok-bot-deb;
+                    version = grokBotVersion;
                   };
                   nodejs-official = final.callPackage ./pkgs/nodejs-official { };
                   deepseek-harness = final.callPackage ./pkgs/deepseek-harness { };

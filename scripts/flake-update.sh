@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Bump versioned .deb URLs then `nix flake update` so Cursor (nixpkgs-cursor),
-# Send Anywhere (rolling .deb), UniClipboard, and ChatGPT desktop all refresh.
+# Send Anywhere (rolling .deb), UniClipboard, ChatGPT, and Grok Bot desktop refresh.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -25,11 +25,26 @@ if [[ -z "$chatgpt_ver" ]]; then
 fi
 chatgpt_url="https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_${chatgpt_ver}_amd64.deb"
 
-python3 - "$root/flake.nix" "$uc_ver" "$uc_url" "$chatgpt_ver" "$chatgpt_url" <<'PY'
+grok_bot_url="$(
+  curl -fsSL https://cursor.com/download/bot |
+    sed -n 's/.*\(https:\/\/downloads\.cursor\.com\/grokbot\/stable\/[^"]*linux\/x64\/grok-bot_[^"]*_amd64\.deb\).*/\1/p' |
+    head -n1
+)"
+if [[ -z "$grok_bot_url" ]]; then
+  echo "flake-update: could not parse Grok Bot amd64 .deb URL" >&2
+  exit 1
+fi
+grok_bot_ver="$(printf '%s\n' "$grok_bot_url" | sed -n 's/.*grok-bot_\([^_]*\)_amd64\.deb/\1/p')"
+if [[ -z "$grok_bot_ver" ]]; then
+  echo "flake-update: could not parse Grok Bot version from URL" >&2
+  exit 1
+fi
+
+python3 - "$root/flake.nix" "$uc_ver" "$uc_url" "$chatgpt_ver" "$chatgpt_url" "$grok_bot_ver" "$grok_bot_url" <<'PY'
 import pathlib, re, sys
 
 path = pathlib.Path(sys.argv[1])
-uc_ver, uc_url, chatgpt_ver, chatgpt_url = sys.argv[2:6]
+uc_ver, uc_url, chatgpt_ver, chatgpt_url, grok_bot_ver, grok_bot_url = sys.argv[2:8]
 text = path.read_text()
 
 replacements = [
@@ -45,6 +60,12 @@ replacements = [
         chatgpt_url,
         "chatgpt-deb url",
     ),
+    (r'(grokBotVersion\s*=\s*")[^"]*(";)', grok_bot_ver, "grokBotVersion"),
+    (
+        r'(grok-bot-deb\s*=\s*\{[^}]*?url\s*=\s*")[^"]*(")',
+        grok_bot_url,
+        "grok-bot-deb url",
+    ),
 ]
 
 for pattern, value, label in replacements:
@@ -57,9 +78,11 @@ if text != old:
     path.write_text(text)
     print(f"UniClipboard → {uc_ver}")
     print(f"ChatGPT → {chatgpt_ver}")
+    print(f"Grok Bot → {grok_bot_ver}")
 else:
     print(f"UniClipboard already {uc_ver}")
     print(f"ChatGPT already {chatgpt_ver}")
+    print(f"Grok Bot already {grok_bot_ver}")
 PY
 
 nix flake update

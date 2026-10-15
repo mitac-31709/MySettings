@@ -165,6 +165,7 @@ let
 
     ┌─ AI（GUI・rofi から起動） ───────────────────────────────┐
     │ ChatGPT            公式デスクトップ（Codex 含む）        │
+    │ Grok Bot           公式デスクトップ（`grok-bot`）        │
     │ DeepSeek Harness   アプリ窓（初回は npm、:3080）         │
     └──────────────────────────────────────────────────────────┘
 
@@ -180,7 +181,7 @@ let
     初回はネット必須。LSP は Mason ではなく nix extraPackages。
 
     ┌─ NixOS 適用 ─────────────────────────────────────────────┐
-    │ flake-update       入力一括＋Cursor/SendAnywhere/UniClip │
+    │ flake-update       入力一括＋Cursor/ChatGPT/GrokBot 等   │
     │ nix flake update   入力のみ（UniClip の版は動かない）    │
     │ rebuild            sudo後・適用（ビルド中のみ nom ETA）  │
     │ generations        世代一覧（list-generations）          │

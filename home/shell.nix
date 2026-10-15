@@ -33,6 +33,7 @@ in
       # Official Cursor Agent CLI name (`cursor-cli` ships cursor-agent only).
       agent = "cursor-agent";
       chatgpt = "gui chatgpt";
+      grok-bot = "gui grok-bot";
       deepseek-harness = "gui deepseek-harness";
       onlyoffice-desktopeditors = "gui onlyoffice-desktopeditors";
       jquake = "gui jquake";
@@ -71,4 +72,3 @@ in
     '';
   };
 }
-

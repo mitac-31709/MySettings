@@ -290,6 +290,8 @@ in
     cursor-cli
     # ChatGPT desktop (Codex included). App menu: ChatGPT.
     chatgpt
+    # Grok Bot desktop agent. App menu: Grok Bot (`grok-bot`).
+    grok-bot
     # DeepSeek Harness GUI (Chromium app window; first run installs npm under ~/.local/share).
     deepseek-harness
     # Pin 1.8.4 (nixpkgs currently ships 1.8.5). Same upstream zip layout.

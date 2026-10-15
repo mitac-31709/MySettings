@@ -259,6 +259,18 @@
         "type": "github"
       }
     },
+    "grok-bot-deb": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-Vt4ARH4HxcJb41KYDgUopdLnH6Vu7JCbiTfn7rtHXkg=",
+        "type": "file",
+        "url": "https://downloads.cursor.com/grokbot/stable/52da656f56d317510ca65ad6af3d69a2cde461e0/linux/x64/grok-bot_0.70.2_amd64.deb"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://downloads.cursor.com/grokbot/stable/52da656f56d317510ca65ad6af3d69a2cde461e0/linux/x64/grok-bot_0.70.2_amd64.deb"
+      }
+    },
     "hiragino-fonts-src": {
       "flake": false,
       "locked": {
@@ -512,6 +524,7 @@
         "chatgpt-deb": "chatgpt-deb",
         "dots-hyprland": "dots-hyprland",
         "end4-pc": "end4-pc",
+        "grok-bot-deb": "grok-bot-deb",
         "hiragino-fonts-src": "hiragino-fonts-src",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs_4",
