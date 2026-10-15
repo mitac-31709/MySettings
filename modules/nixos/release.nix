@@ -13,5 +13,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "chatgpt-cua-indicator" ];
+  system.nixos.tags = [ "rofi-cheatsheet" ];
 }
