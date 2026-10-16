@@ -41,6 +41,35 @@ in
       pixman
       expat
       libxcrypt
+      # Playwright browsers from `pnpm exec playwright install` are upstream
+      # FHS builds. The nixpkgs `playwright` CLI uses its own patched browsers
+      # and does not need these; project pins that download Chromium do.
+      alsa-lib
+      at-spi2-core
+      cairo
+      cups
+      dbus
+      glib
+      gtk3
+      libdrm
+      libgbm
+      libxkbcommon
+      mesa
+      pango
+      pciutils
+      vulkan-loader
+      libx11
+      libxcomposite
+      libxcursor
+      libxdamage
+      libxext
+      libxfixes
+      libxi
+      libxrandr
+      libxrender
+      libxtst
+      libxcb
+      libxshmfence
     ];
   };
 }

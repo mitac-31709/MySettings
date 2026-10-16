@@ -394,6 +394,23 @@ let
       run = "sudo nixos-rebuild --rollback switch";
       mode = "show";
     }
+    # 開発
+    {
+      section = "開発";
+      label = "pnpm / node";
+      run = "pnpm --version; node --version";
+      mode = "term";
+    }
+    {
+      section = "開発";
+      label = "Playwright（同梱ブラウザ）";
+      run = "playwright --version";
+      mode = "term";
+    }
+    {
+      section = "開発";
+      label = "注: 別版は pnpm exec playwright install（PATH の playwright は Nix 版）";
+    }
     # ディスク容量
     {
       section = "ディスク容量";

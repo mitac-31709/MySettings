@@ -240,6 +240,11 @@ in
     TERMINAL = "ghostty";
     # Java AWT on Sway/i3: without this, frames often paint solid black.
     _JAVA_AWT_WM_NONREPARENTING = "1";
+    # Playwright's dependency check runs ldconfig, which does not see Nix libs.
+    # Leave PLAYWRIGHT_BROWSERS_PATH unset: the `playwright` CLI defaults to the
+    # Nix-patched browsers, and a project pin (often newer than nixpkgs) can
+    # still `pnpm exec playwright install` into ~/.cache/ms-playwright.
+    PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "1";
   };
 
   # Fcitx5 prefers ~/.config over /etc/xdg. Keep the declarative profile
@@ -357,5 +362,11 @@ in
     qtscrcpy
     # Standalone adb / fastboot CLI (QtScrcpy also embeds adb).
     android-tools
+    # Node.js (`node` / `npm`) and pnpm (standalone binary; uses `node` on PATH).
+    nodejs
+    pnpm
+    # Playwright test CLI (nixpkgs revision) with Nix-patched browsers.
+    # `playwright` sets PLAYWRIGHT_BROWSERS_PATH when it is unset.
+    playwright-test
   ];
 }

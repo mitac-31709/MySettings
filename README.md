@@ -83,6 +83,7 @@ passwd mitac
 - **Cursor** — `code-cursor`（GUI）／`cursor-cli`（ターミナル Agent: `cursor-agent` / `agent`）
 - **ChatGPT** — 公式 Linux デスクトップ（Codex 含む、`pkgs/chatgpt`、`.deb`）。アプリメニュー / `chatgpt`
 - **DeepSeek Harness** — GUI（`deepseek-harness`、Chromium アプリ窓）。裏で `dsh web`（:3080）。初回は npm → `~/.local/share/deepseek-harness`。ランタイムは公式 Node（`pkgs/nodejs-official`；nixpkgs Node だと native addon が落ちる）
+- **Node.js / pnpm / Playwright** — `node` / `npm` / `pnpm`、テスト CLI は `playwright`（nixpkgs 版。パッチ済みブラウザ同梱、`playwright install` 不要）。プロジェクトで別版を入れるときは `pnpm exec playwright install`（ブラウザは nix-ld 経由で実行）
 - **Parsec** — `parsec-bin`（Intel VA-API / `intel-media-driver` でハードウェアエンコード）
 - **Steam** — `programs.steam.enable`
 - **libvirt / QEMU/KVM** — `modules/nixos/virtualisation.nix`（`virt-manager` GUI、`virt-viewer`、Spice USB、`virtiofsd`）。初回は `virsh net-start default` / `net-autostart default`
