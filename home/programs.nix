@@ -1,5 +1,5 @@
 # Shared user programs and packages (all sessions).
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
 
 let
   email = "mitac31709@gmail.com";
@@ -237,6 +237,15 @@ in
   };
 
   home.sessionVariables.TERMINAL = "ghostty";
+
+  # Fcitx5 prefers ~/.config over /etc/xdg. Keep the declarative profile
+  # (Meltype default) from being overwritten by an older user copy.
+  home.activation.syncFcitx5Profile = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    mkdir -p "$HOME/.config/fcitx5"
+    if [ -f /etc/xdg/fcitx5/profile ]; then
+      cp -f /etc/xdg/fcitx5/profile "$HOME/.config/fcitx5/profile"
+    fi
+  '';
 
   # Keep XDG dirs in English even with ja_JP.UTF-8 locale.
   xdg.userDirs = {

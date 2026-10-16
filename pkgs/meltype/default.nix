@@ -8,6 +8,8 @@
   pkg-config,
   fcitx5,
   autoPatchelfHook,
+  patchelf,
+  icu,
 }:
 
 stdenv.mkDerivation (finalAttrs: {
@@ -33,12 +35,17 @@ stdenv.mkDerivation (finalAttrs: {
     cmake
     pkg-config
     autoPatchelfHook
+    patchelf
   ];
 
   buildInputs = [
     fcitx5
+    icu
     stdenv.cc.cc.lib
   ];
+
+  # NativeAOT dlopens libicu; fcitx5-with-addons reads this for LD_LIBRARY_PATH.
+  passthru.extraLdLibraries = [ icu ];
 
   dontConfigure = true;
 
@@ -76,6 +83,12 @@ stdenv.mkDerivation (finalAttrs: {
       --replace-fail '@DIR@' "$out/lib/meltype"
 
     runHook postInstall
+  '';
+
+  # .NET NativeAOT looks up ICU via dlopen (not DT_NEEDED); keep RPATH on the .so.
+  postFixup = ''
+    patchelf --add-rpath ${lib.makeLibraryPath [ icu ]} \
+      $out/lib/meltype/libMeltypeNative.so
   '';
 
   meta = {

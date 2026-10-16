@@ -115,6 +115,7 @@ passwd mitac
 - Meltype 内の英数 ⇔ 日本語: **半角/全角**
 - 学習・設定: `~/.local/share/Meltype`
 - 詳細設定: **Fcitx5 設定**（`fcitx5-configtool`）
+- プロファイル: Home Manager が `/etc/xdg/fcitx5/profile` を `~/.config/fcitx5/profile` に同期（ユーザー側の古い Mozc のみ設定で Meltype が消えないように）
 
 ## フォント
 
