@@ -90,7 +90,7 @@ passwd mitac
 - **Vivaldi** — `vivaldi`
 - **Firefox** — `firefox`
 - **Tor Browser** — `tor-browser`
-- **JQuake** — `jquake` 1.8.4（日本のリアルタイム地震マップ）
+- **JQuake** — `JQuake` / `jquake`（nixpkgs 1.8.5 + `pkgs/jquake` ラッパー。Sway では `_JAVA_AWT_WM_NONREPARENTING` 必須）
 - **ONLYOFFICE** — `onlyoffice-desktopeditors`（文書・表計算・プレゼン）
 - **GIMP** — `gimp`（画像編集）
 - **Affinity** — `affinity-v3`（Canva Affinity suite; Wine via [affinity-nix](https://github.com/mrshmllow/affinity-nix)。初回起動でライセンス／セットアップ。キャッシュ: `cache.forall.systems`）

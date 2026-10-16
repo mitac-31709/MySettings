@@ -40,7 +40,7 @@ in
       grok-bot = "gui grok-bot";
       deepseek-harness = "gui deepseek-harness";
       onlyoffice-desktopeditors = "gui onlyoffice-desktopeditors";
-      jquake = "gui jquake";
+      jquake = "gui JQuake";
       parsec = "gui parsecd";
       bottles = "gui bottles";
       trayscale = "gui trayscale";

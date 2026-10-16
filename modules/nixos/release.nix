@@ -8,5 +8,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "meltype-icu" ];
+  system.nixos.tags = [ "jquake-sway" ];
 }

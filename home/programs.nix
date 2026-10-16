@@ -236,7 +236,11 @@ in
     };
   };
 
-  home.sessionVariables.TERMINAL = "ghostty";
+  home.sessionVariables = {
+    TERMINAL = "ghostty";
+    # Java AWT on Sway/i3: without this, frames often paint solid black.
+    _JAVA_AWT_WM_NONREPARENTING = "1";
+  };
 
   # Fcitx5 prefers ~/.config over /etc/xdg. Keep the declarative profile
   # (Meltype default) from being overwritten by an older user copy.
@@ -317,14 +321,8 @@ in
     grok-bot
     # DeepSeek Harness GUI (Chromium app window; first run installs npm under ~/.local/share).
     deepseek-harness
-    # Pin 1.8.4 (nixpkgs currently ships 1.8.5). Same upstream zip layout.
-    (jquake.overrideAttrs (_old: {
-      version = "1.8.4";
-      src = fetchurl {
-        url = "https://github.com/fleneindre/fleneindre.github.io/raw/master/downloads/JQuake_1.8.4_linux.zip";
-        hash = "sha256-oIYkYmI8uG4zjnm1Jq1mzIcSwRlKbWJqvACygQyp9sA=";
-      };
-    }))
+    # Earthquake map (pkgs/jquake: Sway AWT fix + sounds cwd + http.agent).
+    jquake
     onlyoffice-desktopeditors
     # Raster editor (native).
     gimp

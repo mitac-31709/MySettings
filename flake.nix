@@ -113,6 +113,8 @@
                   };
                   nodejs-official = final.callPackage ./pkgs/nodejs-official { };
                   deepseek-harness = final.callPackage ./pkgs/deepseek-harness { };
+                  # Sway black-screen + sounds + JVM flag fixes over nixpkgs jquake.
+                  jquake = final.callPackage ./pkgs/jquake { jquake = prev.jquake; };
                 }
               )
             ];

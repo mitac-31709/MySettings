@@ -612,6 +612,12 @@ let
       run = "arduino-cli compile -b esp32:esp32:esp32";
       mode = "show";
     }
+    {
+      section = "周辺";
+      label = "JQuake（地震マップ）";
+      run = "JQuake";
+      mode = "exec";
+    }
   ];
 
   cheatsheetDisplay =
