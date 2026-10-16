@@ -8,5 +8,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "rofi-cheatsheet" ];
+  system.nixos.tags = [ "meltype-icu" ];
 }
