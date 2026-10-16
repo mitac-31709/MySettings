@@ -9,6 +9,8 @@
 #   also 403s the default `Java/1.8` User-Agent on some APIs.
 # - 1.8.4 prompts to update to 1.8.5 via https://jquake.net/version; we break
 #   that check (same-length URL → 404) so the dialog never appears.
+# - The JAR Class-Path is relative (`JQuake_lib/…`), so the patched JAR must
+#   stay next to that directory (not in a separate store path).
 {
   lib,
   jquake,
@@ -34,8 +36,9 @@ let
   versionUrlOld = "https://jquake.net/version";
   versionUrlNew = "https://jquake.net/versiox";
 
-  patched = stdenvNoCC.mkDerivation {
-    pname = "jquake-jar";
+  # Copy lib/ (jar + JQuake_lib + sounds) and replace only JQuake.jar.
+  libDir = stdenvNoCC.mkDerivation {
+    pname = "jquake-lib";
     inherit (unwrapped) version;
     nativeBuildInputs = [
       unzip
@@ -45,12 +48,13 @@ let
     installPhase = ''
       runHook preInstall
       mkdir -p "$out" work
-      cp -a ${unwrapped}/lib/JQuake.jar work/JQuake.jar
+      # Store inputs are read-only; drop mode so we can replace the jar.
+      cp -a --no-preserve=mode ${unwrapped}/lib/. "$out/"
       cd work
-      unzip -q JQuake.jar
-      rm JQuake.jar
+      unzip -q "$out/JQuake.jar"
       # Disable update check (endpoint 404s; startup continues without the dialog).
       sed -i 's|${versionUrlOld}|${versionUrlNew}|' net/jquake/c/c.class
+      rm -f "$out/JQuake.jar"
       zip -qr "$out/JQuake.jar" .
       runHook postInstall
     '';
@@ -63,13 +67,13 @@ let
       export _JAVA_AWT_WM_NONREPARENTING="''${_JAVA_AWT_WM_NONREPARENTING:-1}"
       workdir="$(mktemp -d -p /tmp jquake-XXXXXX)"
       trap 'rm -rf "$workdir"' EXIT
-      ln -sf "${unwrapped}/lib/sounds" "$workdir/sounds"
+      ln -sf "${libDir}/sounds" "$workdir/sounds"
       cd "$workdir"
       exec java \
         -Xmx200m -Xms32m -Xmn2m \
         -Djava.net.preferIPv4Stack=true \
         -Dhttp.agent='Mozilla/5.0 (X11; Linux x86_64) JQuake' \
-        -jar "${patched}/JQuake.jar" \
+        -jar "${libDir}/JQuake.jar" \
         "$@" > /dev/null
     '';
   };
