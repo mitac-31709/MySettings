@@ -238,6 +238,16 @@ let
     }
     {
       section = "Yazi / Neovim";
+      label = "特定アプリで開く";
+      keys = "O";
+    }
+    {
+      section = "Yazi / Neovim";
+      label = "パス / 親dir / 名前 コピー";
+      keys = "cc / cd / cf";
+    }
+    {
+      section = "Yazi / Neovim";
       label = "シェル / フィルタ / zoxide";
       keys = "; / : / f / z";
     }
