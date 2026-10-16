@@ -303,6 +303,12 @@ let
     }
     {
       section = "Waybar・日常";
+      label = "OpenCode";
+      run = "opencode";
+      mode = "term";
+    }
+    {
+      section = "Waybar・日常";
       label = "ChatGPT Computer Use 操作中";
       keys = "青枠＋バナー";
     }
