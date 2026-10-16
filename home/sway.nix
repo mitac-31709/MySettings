@@ -176,6 +176,11 @@ let
     }
     {
       section = "入力・Chromebook";
+      label = "Cursor で Meltype → 終了して開き直す";
+      keys = "Wayland IME フラグ";
+    }
+    {
+      section = "入力・Chromebook";
       label = "Meltype 内: 英数 ⇔ 日本語";
       keys = "半角/全角";
     }
@@ -865,7 +870,8 @@ in
         { command = "fcitx5 -d --replace"; }
         # cliphist store: home/clipboard.nix systemd user units
         # Fixed session apps (assigns: WS1 cursor/ChatGPT, WS2 vivaldi).
-        { command = "cursor"; }
+        # NIXOS_OZONE_WL enables Cursor's --enable-wayland-ime (Meltype/fcitx5).
+        { command = "env NIXOS_OZONE_WL=1 cursor"; }
         { command = "vivaldi"; }
         { command = "chatgpt"; }
         { command = "swaymsg 'workspace number 1'"; }

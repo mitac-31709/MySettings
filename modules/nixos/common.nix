@@ -82,6 +82,12 @@
     };
   };
 
+  # Electron (Cursor, etc.): nixpkgs wrappers only pass --enable-wayland-ime
+  # when this is set. Without it Cursor still picks Wayland but does not wire
+  # text-input to fcitx5, so Meltype/Mozc cannot compose. Restart Cursor fully
+  # after changing this (single-instance ignores flags on --new-window).
+  environment.sessionVariables.NIXOS_OZONE_WL = "1";
+
   fonts.packages = with pkgs; [
     nerd-fonts.jetbrains-mono
     noto-fonts-color-emoji

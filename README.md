@@ -116,6 +116,7 @@ passwd mitac
 - 学習・設定: `~/.local/share/Meltype`
 - 詳細設定: **Fcitx5 設定**（`fcitx5-configtool`）
 - プロファイル: Home Manager が `/etc/xdg/fcitx5/profile` を `~/.config/fcitx5/profile` に同期（ユーザー側の古い Mozc のみ設定で Meltype が消えないように）
+- **Cursor** など Electron: `NIXOS_OZONE_WL=1` でラッパーが `--enable-wayland-ime`（text-input-v3）を付与。未設定だと Wayland 窓のまま IME が繋がらず Meltype が効かない。適用後は Cursor を**完全終了**してから開き直す（既存プロセスへの `--new-window` ではフラグが付かない）
 
 ## フォント
 

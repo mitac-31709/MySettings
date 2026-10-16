@@ -8,5 +8,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "jquake-sway" ];
+  system.nixos.tags = [ "cursor-meltype-ime" ];
 }
