@@ -624,9 +624,19 @@ let
     }
     {
       section = "周辺";
-      label = "JQuake（地震マップ）";
+      label = "JQuake（ログイン常駐・警報で全画面）";
       run = "JQuake";
       mode = "exec";
+    }
+    {
+      section = "周辺";
+      label = "JQuake 状態（systemd）";
+      run = "systemctl --user status jquake xembedsniproxy-jquake jquake-sway-alert";
+      mode = "term";
+    }
+    {
+      section = "周辺";
+      label = "警報時は swaylock 解除→全画面（緊急）";
     }
   ];
 
