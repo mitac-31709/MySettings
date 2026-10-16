@@ -1,0 +1,11 @@
+.wf-stage {
+  cursor: grab;
+  touch-action: none;
+}
+.wf-stage:active {
+  cursor: grabbing;
+}
+.wf-stage:focus-visible {
+  outline: 1px solid var(--anatomy-mid);
+  outline-offset: 2px;
+}
