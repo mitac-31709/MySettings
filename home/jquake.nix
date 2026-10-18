@@ -182,5 +182,8 @@ in
   wayland.windowManager.sway.extraConfig = lib.mkAfter ''
     # JQuake (XWayland): alert / tray-open → sticky fullscreen.
     for_window ${swayCriteria} fullscreen enable, sticky enable
+    # AWT SystemTray embed: hide the black JavaEmbeddedFrame square that
+    # xembedsniproxy sometimes leaves visible on Sway/XWayland.
+    for_window [title="^JavaEmbeddedFrame$"] floating enable, border none, move to scratchpad
   '';
 }
