@@ -221,11 +221,6 @@ let
     }
     {
       section = "入力・Chromebook";
-      label = "内蔵 KB は自動無効";
-      keys = "外付け KB 接続時";
-    }
-    {
-      section = "入力・Chromebook";
       label = "注: ELECOM を Mac のままにすると Ctrl↔Win が入れ替わる";
     }
     # Yazi / Neovim
