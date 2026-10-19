@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """Sway/wlroots overlay: show when ChatGPT Computer Use is driving the desktop.
 
-Watches ~/.codex/node_repl/active_execs and sky_linux CPU activity, then draws a
-click-through edge frame + status pill via gtk-layer-shell.
+Watches ~/.codex/node_repl/active_execs and the sky_linux helper process, then
+draws a click-through edge frame + status pill via gtk-layer-shell.
+
+sky_linux is a long-lived server for the session: it stays up between clicks /
+keystrokes while the agent thinks, so we key off process presence (not CPU
+spikes). A short grace period covers process restarts.
 """
 
 from __future__ import annotations
@@ -31,7 +35,8 @@ PILL_PAD_Y = 10
 PILL_TOP = 28
 TITLE = "ChatGPTが操作中"
 HINT = "Escでキャンセル"
-HIDE_AFTER_S = 1.5
+# Grace after sky_linux / active_execs go away (covers helper restarts).
+HIDE_AFTER_S = 2.0
 POLL_MS = 250
 SKY_RE = re.compile(r"sky_linux")
 
@@ -57,30 +62,22 @@ def has_active_execs() -> bool:
         return False
 
 
-def sky_linux_cpu_ticks() -> dict[int, int]:
-    """Map pid -> utime+stime for processes whose cmdline mentions sky_linux."""
-    out: dict[int, int] = {}
+def sky_linux_running() -> bool:
+    """True while any process cmdline mentions sky_linux (CUA input helper)."""
     try:
         for entry in Path("/proc").iterdir():
             if not entry.name.isdigit():
                 continue
-            pid = int(entry.name)
             try:
                 cmdline = (entry / "cmdline").read_bytes()
             except OSError:
                 continue
             text = cmdline.replace(b"\0", b" ").decode("utf-8", "replace")
-            if not SKY_RE.search(text):
-                continue
-            try:
-                fields = (entry / "stat").read_text().split()
-                # utime=13, stime=14 (1-based field numbers → index 13,14)
-                out[pid] = int(fields[13]) + int(fields[14])
-            except (OSError, IndexError, ValueError):
-                continue
+            if SKY_RE.search(text):
+                return True
     except OSError:
         pass
-    return out
+    return False
 
 
 class OverlayWindow(Gtk.Window):
@@ -200,7 +197,6 @@ class IndicatorApp:
         self._windows: list[OverlayWindow] = []
         self._visible = False
         self._last_activity = 0.0
-        self._prev_sky_cpu: dict[int, int] = {}
         self._display = Gdk.Display.get_default()
         if self._display is None:
             raise SystemExit("no Gdk display (need a Wayland session)")
@@ -232,26 +228,16 @@ class IndicatorApp:
                 win._apply_click_through()
 
     def _activity_now(self) -> bool:
-        if has_active_execs():
-            return True
-        cur = sky_linux_cpu_ticks()
-        prev = self._prev_sky_cpu
-        self._prev_sky_cpu = cur
-        if not cur:
-            return False
-        if not prev:
-            # First sighting of sky_linux: treat as activity once.
-            return True
-        for pid, ticks in cur.items():
-            if pid not in prev or ticks > prev[pid]:
-                return True
-        return False
+        # active_execs: brief node_repl tool runs; sky_linux: whole CUA helper.
+        return has_active_execs() or sky_linux_running()
 
     def _tick(self) -> bool:
         now = time.monotonic()
         if self._activity_now():
             self._last_activity = now
-        want = self._last_activity > 0 and (now - self._last_activity) < HIDE_AFTER_S
+            want = True
+        else:
+            want = self._last_activity > 0 and (now - self._last_activity) < HIDE_AFTER_S
         if want and not self._visible:
             self._show()
         elif not want and self._visible:

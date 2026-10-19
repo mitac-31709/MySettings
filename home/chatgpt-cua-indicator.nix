@@ -1,5 +1,5 @@
 # Screen-edge frame + banner while ChatGPT Computer Use is active.
-# Detects ~/.codex/node_repl/active_execs and sky_linux CPU activity.
+# Detects ~/.codex/node_repl/active_execs and the sky_linux helper process.
 { pkgs, ... }:
 
 {

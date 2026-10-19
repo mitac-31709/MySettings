@@ -319,7 +319,7 @@ let
     }
     {
       section = "Waybar・日常";
-      label = "ChatGPT Computer Use 操作中";
+      label = "ChatGPT Computer Use 操作中（セッション中ずっと）";
       keys = "青枠＋バナー";
     }
     # Cursor 進捗（他アプリ使用中）
