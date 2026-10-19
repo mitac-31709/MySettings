@@ -2,8 +2,9 @@
 #
 # - Patches a few Settings.properties keys on each start (tray / always-on-top /
 #   wake screen / no window until alert) without rewriting the whole file.
-# - Sway needs xembedsniproxy so Java AWT SystemTray.isSupported() is true
-#   (waybar speaks SNI; AWT speaks XEmbed).
+# - Sway: AWT SystemTray needs an XEmbed tray host. We use offscreen stalonetray
+#   (not xembedsniproxy→waybar) so the broken JavaEmbeddedFrame SNI icon never
+#   appears in the bar; alerts still raise the main window.
 # - ext-session-lock blocks normal windows above swaylock; on alert we dismiss
 #   swaylock and fullscreen the map (intentional emergency unlock).
 {
@@ -20,7 +21,7 @@ let
   jquakeClass = "net-jquake-app-Main";
   swayCriteria = ''[class="^${jquakeClass}$"]'';
 
-  xembedsniproxyBin = "${pkgs.kdePackages.plasma-workspace}/bin/xembedsniproxy";
+  stalonetrayBin = "${pkgs.stalonetray}/bin/stalonetray";
 
   jquakeAutostart = pkgs.writeShellApplication {
     name = "jquake-autostart";
@@ -54,10 +55,10 @@ let
       # Start in tray; popEEW / popShindo / … open the window on events.
       set_prop openOnStartup false
 
-      # Sway: wait for xembedsniproxy so AWT SystemTray.isSupported() is true.
+      # Sway: wait for stalonetray so AWT SystemTray.isSupported() is true.
       if [[ "''${XDG_CURRENT_DESKTOP:-}" == "sway" ]]; then
         for _ in $(seq 1 40); do
-          if pgrep -x xembedsniproxy >/dev/null 2>&1; then
+          if pgrep -x stalonetray >/dev/null 2>&1; then
             break
           fi
           sleep 0.25
@@ -116,9 +117,9 @@ in
       Description = "JQuake earthquake monitor (background)";
       After = [
         "graphical-session.target"
-        "xembedsniproxy-jquake.service"
+        "stalonetray-jquake.service"
       ];
-      Wants = [ "xembedsniproxy-jquake.service" ];
+      Wants = [ "stalonetray-jquake.service" ];
       BindsTo = [ "graphical-session.target" ];
     };
     Service = {
@@ -136,18 +137,20 @@ in
     };
   };
 
-  # Sway-only: XEmbed → SNI so JQuake's tray icon appears in waybar.
-  # Plasma already runs plasma-xembedsniproxy; skip there.
-  systemd.user.services.xembedsniproxy-jquake = {
+  # Sway-only: offscreen XEmbed tray host so JQuake can background without a
+  # waybar SNI (xembedsniproxy published a black JavaEmbeddedFrame icon).
+  # Plasma already has a tray; skip there.
+  systemd.user.services.stalonetray-jquake = {
     Unit = {
-      Description = "XEmbed→SNI tray proxy for JQuake (Sway)";
+      Description = "Offscreen XEmbed tray for JQuake (Sway)";
       After = [ "graphical-session.target" ];
       BindsTo = [ "graphical-session.target" ];
       ConditionEnvironment = "XDG_CURRENT_DESKTOP=sway";
     };
     Service = {
       Type = "simple";
-      ExecStart = xembedsniproxyBin;
+      # Geometry far off-screen; sway also scratchpads the window.
+      ExecStart = "${stalonetrayBin} --geometry 1x1-32000-32000 --icon-size 16 --window-type utility --window-strut none --kludges force_icons_size";
       Restart = "on-failure";
       RestartSec = 3;
     };
@@ -182,8 +185,8 @@ in
   wayland.windowManager.sway.extraConfig = lib.mkAfter ''
     # JQuake (XWayland): alert / tray-open → sticky fullscreen.
     for_window ${swayCriteria} fullscreen enable, sticky enable
-    # AWT SystemTray embed: hide the black JavaEmbeddedFrame square that
-    # xembedsniproxy sometimes leaves visible on Sway/XWayland.
+    # Hide the offscreen stalonetray host (and any stray AWT embed window).
+    for_window [class="^stalonetray$"] floating enable, border none, move to scratchpad
     for_window [title="^JavaEmbeddedFrame$"] floating enable, border none, move to scratchpad
   '';
 }

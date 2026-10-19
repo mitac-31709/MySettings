@@ -91,7 +91,7 @@ passwd mitac
 - **Vivaldi** — `vivaldi`
 - **Firefox** — `firefox`
 - **Tor Browser** — `tor-browser`
-- **JQuake** — `JQuake` / `jquake`（1.8.4 + `pkgs/jquake` ラッパー。Sway AWT 修正・更新ダイアログ無効化）。ログイン時に `jquake.service` でトレイ常駐。警報時は全画面＋`swaylock` 解除（`home/jquake.nix`）
+- **JQuake** — `JQuake` / `jquake`（1.8.4 + `pkgs/jquake` ラッパー。Sway AWT 修正・更新ダイアログ無効化）。ログイン時に `jquake.service` で常駐（Sway では offscreen `stalonetray` に吸い込み、waybar には出さない）。警報時は全画面＋`swaylock` 解除（`home/jquake.nix`）
 - **ONLYOFFICE** — `onlyoffice-desktopeditors`（文書・表計算・プレゼン）
 - **GIMP** — `gimp`（画像編集）
 - **Affinity** — `affinity-v3`（Canva Affinity suite; Wine via [affinity-nix](https://github.com/mrshmllow/affinity-nix)。初回起動でライセンス／セットアップ。キャッシュ: `cache.forall.systems`）

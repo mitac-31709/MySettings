@@ -648,7 +648,7 @@ let
     {
       section = "周辺";
       label = "JQuake 状態（systemd）";
-      run = "systemctl --user status jquake xembedsniproxy-jquake jquake-sway-alert";
+      run = "systemctl --user status jquake stalonetray-jquake jquake-sway-alert";
       mode = "term";
     }
     {
