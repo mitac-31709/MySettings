@@ -476,6 +476,16 @@ let
       section = "ネット・BT・WARP";
       label = "注: BT 音声は接続後 Pulse で出力シンクを選ぶことあり";
     }
+    {
+      section = "ネット・BT・WARP";
+      label = "Parsec（クライアント）";
+      run = "parsec";
+      mode = "exec";
+    }
+    {
+      section = "ネット・BT・WARP";
+      label = "注: Parsec -6023/-11010 = P2P 失敗（UPnP なし）。WARP 切→再試行。ログ ~/.parsec/log.txt";
+    }
     # Windows 連携
     {
       section = "Windows 連携";
