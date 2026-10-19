@@ -84,7 +84,7 @@ passwd mitac
 - **ChatGPT** — 公式 Linux デスクトップ（Codex 含む、`pkgs/chatgpt`、`.deb`）。アプリメニュー / `chatgpt`
 - **DeepSeek Harness** — GUI（`deepseek-harness`、Chromium アプリ窓）。裏で `dsh web`（:3080）。初回は npm → `~/.local/share/deepseek-harness`。ランタイムは公式 Node（`pkgs/nodejs-official`；nixpkgs Node だと native addon が落ちる）
 - **Node.js / pnpm / Playwright** — `node` / `npm` / `pnpm`、テスト CLI は `playwright`（nixpkgs 版。パッチ済みブラウザ同梱、`playwright install` 不要）。プロジェクトで別版を入れるときは `pnpm exec playwright install`（ブラウザは nix-ld 経由で実行）
-- **Parsec** — `parsec-bin`（Intel VA-API / `intel-media-driver` でハードウェアエンコード）
+- **Parsec** — `parsec-bin`（Intel VA-API / `intel-media-driver` でハードウェアエンコード）。ホテル等で `-6023/-11010` になるときは Tailscale 経由（下記）
 - **Steam** — `programs.steam.enable`
 - **libvirt / QEMU/KVM** — `modules/nixos/virtualisation.nix`（`virt-manager` GUI、`virt-viewer`、Spice USB、`virtiofsd`）。初回は `virsh net-start default` / `net-autostart default`
 - **Bottles** — Wine プレフィックス管理（一般の Windows アプリ用）。`home.packages`
@@ -357,6 +357,33 @@ vainfo
 ```
 
 Parsec を開き直してハードウェアエンコーダーが選べるか確認します。
+
+### Parsec over Tailscale（ホテル等で -6023 のとき）
+
+Parsec は Tailscale の `100.64/10` を LAN とみなさないことが多い。ホスト（Windows / `galleria-mitac` = `100.102.102.53`）側で接続先 IP を強制する。
+
+**1. ホスト（一度だけ）** — Parsec を完全終了し、`%AppData%\Parsec\config.txt` に次を追加してから再起動（自動で `config.json` へ移行される）:
+
+```text
+app_custom_address = 100.102.102.53
+```
+
+**2. クライアント（このマシン）**
+
+```bash
+parsec-ts                 # WARP 切断 → galleria-mitac へ ping → Parsec 起動
+# またはホスト名指定: parsec-ts galleria-mitac
+```
+
+外出先で自宅 LAN（`192.168.1.0/24`）そのものへも行きたいときだけ:
+
+```bash
+ts-home-routes on         # galleria が広告するサブネットを受け取る
+# …作業…
+ts-home-routes off        # 帰宅後は必ず off（オンのまま自宅 Wi-Fi に繋がると LAN が壊れる）
+```
+
+常時 `--accept-routes` は入れない（自宅で同じ `192.168.1.0/24` を受けて Wi-Fi が死ぬため）。
 
 ### キーボード確認
 

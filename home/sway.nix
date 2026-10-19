@@ -478,13 +478,31 @@ let
     }
     {
       section = "ネット・BT・WARP";
-      label = "Parsec（クライアント）";
+      label = "Parsec（通常）";
       run = "parsec";
       mode = "exec";
     }
     {
       section = "ネット・BT・WARP";
-      label = "注: Parsec -6023/-11010 = P2P 失敗（UPnP なし）。WARP 切→再試行。ログ ~/.parsec/log.txt";
+      label = "Parsec via Tailscale（WARP 切＋ping）";
+      run = "parsec-ts";
+      mode = "term";
+    }
+    {
+      section = "ネット・BT・WARP";
+      label = "ts-home-routes on（外出時だけ）";
+      run = "ts-home-routes on";
+      mode = "term";
+    }
+    {
+      section = "ネット・BT・WARP";
+      label = "ts-home-routes off（帰宅後）";
+      run = "ts-home-routes off";
+      mode = "term";
+    }
+    {
+      section = "ネット・BT・WARP";
+      label = "注: Parsec -6023 → ホスト config に app_custom_address=100.102.102.53。自宅では accept-routes 禁止";
     }
     # Windows 連携
     {

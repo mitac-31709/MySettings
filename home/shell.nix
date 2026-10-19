@@ -73,6 +73,45 @@ in
       nix-eval-low() {
         nice -n 19 ionice -c3 nix eval "$@"
       }
+
+      # Accept home LAN routes via Tailscale only when away. On the same
+      # 192.168.1.0/24, --accept-routes steers LAN through galleria and breaks Wi-Fi.
+      ts-home-routes() {
+        case "''${1:-}" in
+          on)
+            tailscale set --accept-routes=true || return $?
+            printf 'accept-routes=on（外出先向け。帰宅後は ts-home-routes off）\n'
+            ;;
+          off)
+            tailscale set --accept-routes=false || return $?
+            printf 'accept-routes=off（自宅 LAN 直通）\n'
+            ;;
+          status|"")
+            if tailscale debug prefs 2>/dev/null | grep -q '"RouteAll": true'; then
+              printf 'accept-routes=on\n'
+            else
+              printf 'accept-routes=off\n'
+            fi
+            ;;
+          *)
+            printf 'usage: ts-home-routes on|off|status\n' >&2
+            return 2
+            ;;
+        esac
+      }
+
+      # Launch Parsec after clearing WARP and checking Tailscale to the host.
+      # Host (Windows) must set app_custom_address to its Tailscale IP — see README.
+      parsec-ts() {
+        local host="''${1:-galleria-mitac}"
+        warp-cli --accept-tos disconnect >/dev/null 2>&1 || warp-cli disconnect >/dev/null 2>&1 || true
+        printf 'Tailscale ping %s …\n' "$host"
+        if ! tailscale ping -c 2 -timeout 5s "$host"; then
+          printf '到達できません。ホストの電源・Tailscale・WOL を確認してください。\n' >&2
+          return 1
+        fi
+        gui parsecd
+      }
     '';
   };
 }
