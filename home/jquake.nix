@@ -23,6 +23,24 @@ let
 
   stalonetrayBin = "${pkgs.stalonetray}/bin/stalonetray";
 
+  # for_window alone races map; re-apply after the tray window exists.
+  hideStalonetray = pkgs.writeShellScript "stalonetray-jquake-hide" ''
+    set -euo pipefail
+    for _ in $(seq 1 40); do
+      if ${pkgs.sway}/bin/swaymsg -t get_tree \
+        | ${pkgs.jq}/bin/jq -e '
+            [.. | objects | select(.window_properties.class? == "stalonetray")] | length > 0
+          ' >/dev/null; then
+        ${pkgs.sway}/bin/swaymsg \
+          '[class="^stalonetray$"] floating enable, border none, sticky enable, opacity 0, move absolute position -2000 px -2000 px' \
+          >/dev/null
+        exit 0
+      fi
+      sleep 0.25
+    done
+    exit 0
+  '';
+
   jquakeAutostart = pkgs.writeShellApplication {
     name = "jquake-autostart";
     runtimeInputs = [
@@ -149,8 +167,10 @@ in
     };
     Service = {
       Type = "simple";
-      # Geometry far off-screen; sway also scratchpads the window.
-      ExecStart = "${stalonetrayBin} --geometry 1x1-32000-32000 --icon-size 16 --window-type utility --window-strut none --kludges force_icons_size";
+      # Placeholder geometry; sway moves it off-screen + opacity 0 (not
+      # scratchpad: Super+- would reveal scratchpad contents).
+      ExecStart = "${stalonetrayBin} --geometry 1x1+0+0 --icon-size 16 --window-type utility --window-strut none --kludges force_icons_size";
+      ExecStartPost = "${hideStalonetray}";
       Restart = "on-failure";
       RestartSec = 3;
     };
@@ -185,8 +205,8 @@ in
   wayland.windowManager.sway.extraConfig = lib.mkAfter ''
     # JQuake (XWayland): alert / tray-open → sticky fullscreen.
     for_window ${swayCriteria} fullscreen enable, sticky enable
-    # Hide the offscreen stalonetray host (and any stray AWT embed window).
-    for_window [class="^stalonetray$"] floating enable, border none, move to scratchpad
-    for_window [title="^JavaEmbeddedFrame$"] floating enable, border none, move to scratchpad
+    # Hide stalonetray host off-screen (scratchpad is wrong: Super+- reveals it).
+    for_window [class="^stalonetray$"] floating enable, border none, sticky enable, opacity 0, move absolute position -2000 px -2000 px
+    for_window [title="^JavaEmbeddedFrame$"] floating enable, border none, sticky enable, opacity 0, move absolute position -2000 px -2000 px
   '';
 }
