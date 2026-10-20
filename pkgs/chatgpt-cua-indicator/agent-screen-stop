@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Stop the active screen-driving agent and dismiss the agent-screen HUD.
+set -euo pipefail
+
+RUNTIME="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+ACTIVE="$RUNTIME/agent-screen/active"
+HIDE="$RUNTIME/agent-screen/hide"
+
+agent=""
+hud_pid=""
+if [[ -f "$ACTIVE" ]]; then
+  agent="$(sed -n 's/.*"agent"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$ACTIVE" | head -n1 || true)"
+  hud_pid="$(sed -n 's/.*"pid"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' "$ACTIVE" | head -n1 || true)"
+fi
+
+focus_and_escape() {
+  local criteria="$1"
+  swaymsg "$criteria focus" >/dev/null 2>&1 || true
+  # Brief settle so the target receives the key.
+  sleep 0.05
+  wtype -k Escape >/dev/null 2>&1 || true
+}
+
+case "${agent:-}" in
+  chatgpt)
+    focus_and_escape '[app_id="chatgpt"]'
+    focus_and_escape '[class="ChatGPT"]'
+    # Force-drop the input helper if Esc was ignored.
+    pkill -f 'sky_linux' >/dev/null 2>&1 || true
+    ;;
+  cursor)
+    focus_and_escape '[app_id="cursor"]'
+    ;;
+  *)
+    # Unknown / missing active file: try both, then kill sky_linux.
+    focus_and_escape '[app_id="chatgpt"]'
+    focus_and_escape '[app_id="cursor"]'
+    pkill -f 'sky_linux' >/dev/null 2>&1 || true
+    ;;
+esac
+
+mkdir -p "$(dirname "$HIDE")"
+: >"$HIDE"
+
+if [[ -n "${hud_pid}" ]] && kill -0 "$hud_pid" 2>/dev/null; then
+  kill -USR1 "$hud_pid" 2>/dev/null || true
+fi
+
+# Leave Esc mode even if HUD is already gone.
+swaymsg mode default >/dev/null 2>&1 || true

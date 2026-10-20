@@ -319,8 +319,15 @@ let
     }
     {
       section = "Waybar・日常";
-      label = "ChatGPT Computer Use 操作中（セッション中ずっと）";
-      keys = "青枠＋バナー";
+      label = "エージェント画面操作中（ChatGPT / Cursorブラウザ）";
+      keys = "青枠＋バナー＋チャット";
+    }
+    {
+      section = "Waybar・日常";
+      label = "画面操作を停止";
+      keys = "Esc / Super+Esc / 停止";
+      run = "agent-screen-stop";
+      mode = "exec";
     }
     # Cursor 進捗（他アプリ使用中）
     {
@@ -936,6 +943,14 @@ in
       # --inhibited: work even when Cursor/Electron inhibit compositor shortcuts.
       bindsym --inhibited --to-code Mod4+slash exec ${showCheatsheet}
       bindsym --inhibited --to-code Mod4+Shift+slash exec ${showCheatsheet}
+
+      # Entered by agent-screen HUD while ChatGPT/Cursor is driving the screen.
+      mode "agent-screen" {
+        bindsym Escape exec ${pkgs.chatgpt-cua-indicator}/bin/agent-screen-stop
+        bindsym --inhibited Escape exec ${pkgs.chatgpt-cua-indicator}/bin/agent-screen-stop
+      }
+      # Always-available stop (works even if mode switch failed).
+      bindsym --inhibited Mod4+Escape exec ${pkgs.chatgpt-cua-indicator}/bin/agent-screen-stop
     '';
   };
 
