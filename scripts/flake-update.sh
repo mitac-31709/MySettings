@@ -40,7 +40,12 @@ if [[ -z "$grok_bot_ver" ]]; then
   exit 1
 fi
 
-python3 - "$root/flake.nix" "$uc_ver" "$uc_url" "$chatgpt_ver" "$chatgpt_url" "$grok_bot_ver" "$grok_bot_url" <<'PY'
+# NixOS often has no python3 on PATH; prefer it when present, else nixpkgs.
+py=(python3)
+if ! command -v python3 >/dev/null 2>&1; then
+  py=(nix shell nixpkgs#python3 --command python3)
+fi
+"${py[@]}" - "$root/flake.nix" "$uc_ver" "$uc_url" "$chatgpt_ver" "$chatgpt_url" "$grok_bot_ver" "$grok_bot_url" <<'PY'
 import pathlib, re, sys
 
 path = pathlib.Path(sys.argv[1])
