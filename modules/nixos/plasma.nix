@@ -21,6 +21,6 @@
     okular
     khelpcenter
     krdp
-    kwin-x11
+    # kwin-x11 removed upstream (EOL); Plasma here is Wayland-only anyway.
   ];
 }
