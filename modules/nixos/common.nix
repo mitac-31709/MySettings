@@ -67,13 +67,22 @@
         "Default Layout" = "jp";
         DefaultIM = "meltype";
       };
-      "Groups/0/Items/0".Name = "keyboard-jp";
-      "Groups/0/Items/1".Name = "meltype";
-      "Groups/0/Items/2".Name = "mozc";
+      # Meltype first: Fcitx Trigger "inactive" is still Meltype (auto EN/JA),
+      # not bare keyboard-jp. Electron (ChatGPT) often cannot reactivate IME
+      # after switching to keyboard-only, so keep keyboard out of the group.
+      "Groups/0/Items/0".Name = "meltype";
+      "Groups/0/Items/1".Name = "mozc";
     };
     # Avoid Super+Shift / lone-Shift hotkeys that steal compositor chords
     # (Win+Shift+q, etc.) on the same seat as Sway.
     fcitx5.settings.globalOptions = {
+      # Electron + text-input-v3: per-IC active/inactive desyncs; share globally
+      # so ChatGPT can leave "English" and return to Meltype/Mozc.
+      Behavior.ShareInputState = "All";
+      Behavior.ActiveByDefault = true;
+      # Super+Space = Meltype ⇔ Mozc. Do NOT bind Zenkaku_Hankaku here —
+      # that key belongs to Meltype's internal 英数⇔日本語 toggle.
+      "Hotkey/TriggerKeys"."0" = "Super+space";
       "Hotkey/AltTriggerKeys" = { };
       "Hotkey/EnumerateForwardKeys" = { };
       "Hotkey/EnumerateBackwardKeys" = { };

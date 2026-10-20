@@ -247,12 +247,16 @@ in
     PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "1";
   };
 
-  # Fcitx5 prefers ~/.config over /etc/xdg. Keep the declarative profile
-  # (Meltype default) from being overwritten by an older user copy.
+  # Fcitx5 prefers ~/.config over /etc/xdg. Keep the declarative profile /
+  # config (Meltype first, TriggerKeys, ShareInputState) from being overwritten
+  # by an older user copy (e.g. keyboard-jp + Zenkaku as Trigger).
   home.activation.syncFcitx5Profile = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     mkdir -p "$HOME/.config/fcitx5"
     if [ -f /etc/xdg/fcitx5/profile ]; then
       cp -f /etc/xdg/fcitx5/profile "$HOME/.config/fcitx5/profile"
+    fi
+    if [ -f /etc/xdg/fcitx5/config ]; then
+      cp -f /etc/xdg/fcitx5/config "$HOME/.config/fcitx5/config"
     fi
   '';
 

@@ -112,12 +112,12 @@ passwd mitac
 
 [Meltype](https://github.com/yksr-melt/Meltype)（Linux プレビュー）を **Fcitx5** アドオンとして入れています（Sway / Plasma の Wayland セッション向け）。半角/全角なしでローマ字の日本語と英語を打ち分けます。Mozc はフォールバックとして同じグループに残しています。
 
-- 切替: パネルの入力インジケータ、または **Super+Space**（Fcitx5）
-- Meltype 内の英数 ⇔ 日本語: **半角/全角**
+- 切替: パネルの入力インジケータ、または **Super+Space**（Meltype ⇔ Mozc）
+- Meltype 内の英数 ⇔ 日本語: **半角/全角**（Fcitx の Trigger には割り当てない。ChatGPT 等 Electron で直接入力に落ちて戻せなくなるのを防ぐ）
 - 学習・設定: `~/.local/share/Meltype`
 - 詳細設定: **Fcitx5 設定**（`fcitx5-configtool`）
-- プロファイル: Home Manager が `/etc/xdg/fcitx5/profile` を `~/.config/fcitx5/profile` に同期（ユーザー側の古い Mozc のみ設定で Meltype が消えないように）
-- **Cursor** など Electron: `NIXOS_OZONE_WL=1` でラッパーが `--enable-wayland-ime`（text-input-v3）を付与。未設定だと Wayland 窓のまま IME が繋がらず Meltype が効かない。適用後は Cursor を**完全終了**してから開き直す（既存プロセスへの `--new-window` ではフラグが付かない）
+- プロファイル／config: Home Manager が `/etc/xdg/fcitx5/{profile,config}` を `~/.config/fcitx5/` に同期（古い `keyboard-jp` + 半角/全角 Trigger を上書きしないように）
+- **Cursor / ChatGPT** など Electron: `NIXOS_OZONE_WL=1` と Wayland IME フラグ。`ShareInputState=All` でフォーカス間の active/inactive ずれを抑える。適用後はアプリを**完全終了**してから開き直す
 
 ## フォント
 

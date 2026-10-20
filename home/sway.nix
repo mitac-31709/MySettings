@@ -171,18 +171,23 @@ let
     # 入力・Chromebook
     {
       section = "入力・Chromebook";
-      label = "IME 切替（Meltype / Mozc）";
+      label = "IME 切替（Meltype ⇔ Mozc）";
       keys = "Super+Space";
-    }
-    {
-      section = "入力・Chromebook";
-      label = "Cursor で Meltype → 終了して開き直す";
-      keys = "Wayland IME フラグ";
     }
     {
       section = "入力・Chromebook";
       label = "Meltype 内: 英数 ⇔ 日本語";
       keys = "半角/全角";
+    }
+    {
+      section = "入力・Chromebook";
+      label = "ChatGPT で英語のまま戻らない → 再起動";
+      keys = "ShareInputState + Meltype先頭";
+    }
+    {
+      section = "入力・Chromebook";
+      label = "Cursor で Meltype → 終了して開き直す";
+      keys = "Wayland IME フラグ";
     }
     {
       section = "入力・Chromebook";

@@ -8,5 +8,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "cursor-meltype-ime" ];
+  system.nixos.tags = [ "chatgpt-ime-reactivate" ];
 }
