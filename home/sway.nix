@@ -433,6 +433,12 @@ let
     }
     {
       section = "ディスク容量";
+      label = "ユーザーGC（sudo不要・死んだパス）";
+      run = "nix-collect-garbage";
+      mode = "term";
+    }
+    {
+      section = "ディスク容量";
       label = "旧世代削除＋GC（危険）";
       run = "sudo nix-collect-garbage -d";
       mode = "show";
