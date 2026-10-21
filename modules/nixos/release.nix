@@ -8,5 +8,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "meltype-only" ];
+  system.nixos.tags = [ "sway-only" ];
 }

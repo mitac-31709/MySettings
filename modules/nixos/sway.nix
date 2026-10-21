@@ -2,12 +2,10 @@
 { pkgs, ... }:
 
 {
-  # Override plasma6's mkDefault "plasma" so the system default is Sway.
   services.displayManager.defaultSession = "sway";
 
   programs.sway = {
     enable = true;
-    # Stock sway.desktop is curated into tuigreet as "1. Sway" (Name= sort).
     wrapperFeatures.gtk = true;
     extraPackages = with pkgs; [
       swaylock
@@ -21,7 +19,6 @@
       brightnessctl
       cliphist
       rofi
-      # Plasma session also uses these (shortcuts / mime); keep on PATH system-wide.
       jq
     ];
   };

@@ -1,4 +1,4 @@
-# greetd + tuigreet: login greeter and curated session list (Sway + Plasma only).
+# greetd + tuigreet: login greeter and curated Sway session list.
 {
   config,
   pkgs,
@@ -9,21 +9,15 @@
 let
   sessionData = config.services.displayManager.sessionData.desktops;
 
-  # Curated tuigreet list. tuigreet sorts by Name= (ASCII), not by filename —
-  # so we number Names to keep Sway first. Hide stock plasmax11 / other DEs.
+  # Curated tuigreet list (hide any stray desktop files; Name= sort).
   curatedSessions =
     pkgs.runCommand "mitac-greetd-sessions" { nativeBuildInputs = [ pkgs.gnused ]; }
       ''
         mkdir -p "$out/wayland-sessions"
         if [ -f ${sessionData}/share/wayland-sessions/sway.desktop ]; then
-          sed -e 's/^Name=.*/Name=1. Sway/' \
+          sed -e 's/^Name=.*/Name=Sway/' \
             ${sessionData}/share/wayland-sessions/sway.desktop \
             > "$out/wayland-sessions/sway.desktop"
-        fi
-        if [ -f ${sessionData}/share/wayland-sessions/plasma.desktop ]; then
-          sed -e 's/^Name=.*/Name=2. Plasma (Wayland)/' \
-            ${sessionData}/share/wayland-sessions/plasma.desktop \
-            > "$out/wayland-sessions/plasma.desktop"
         fi
       '';
 in
@@ -43,7 +37,7 @@ in
           "--asterisks"
           "--remember"
           "--remember-session"
-          # Fallback when no remembered session (plasma6 would otherwise win via defaultSession).
+          # Fallback when no remembered session.
           "--cmd"
           "sway"
           "--user-menu"
@@ -66,7 +60,6 @@ in
 
   # UniClipboard (and other libsecret apps) need an unlocked Secret Service.
   # KWallet's ksecretd rejects UniClipboard's binary probe; use gnome-keyring.
-  # Plasma still gets KWallet via plasma6 → pam on login for native KDE apps.
   services.gnome.gnome-keyring.enable = true;
   security.pam.services.greetd.enableGnomeKeyring = true;
   security.pam.services.login.enableGnomeKeyring = true;

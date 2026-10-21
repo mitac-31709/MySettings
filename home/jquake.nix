@@ -129,7 +129,7 @@ in
     jquakeSwayAlert
   ];
 
-  # All graphical sessions (Sway / Plasma).
+  # Graphical session autostart.
   systemd.user.services.jquake = {
     Unit = {
       Description = "JQuake earthquake monitor (background)";
@@ -155,9 +155,8 @@ in
     };
   };
 
-  # Sway-only: offscreen XEmbed tray host so JQuake can background without a
-  # waybar SNI (xembedsniproxy published a black JavaEmbeddedFrame icon).
-  # Plasma already has a tray; skip there.
+  # Offscreen XEmbed tray host so JQuake can background without a waybar SNI
+  # (xembedsniproxy published a black JavaEmbeddedFrame icon).
   systemd.user.services.stalonetray-jquake = {
     Unit = {
       Description = "Offscreen XEmbed tray for JQuake (Sway)";

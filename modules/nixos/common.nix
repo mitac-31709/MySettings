@@ -19,7 +19,7 @@
   };
 
   # Prefer reclaiming user/session memory under pressure before the whole machine
-  # thrashing (8 GiB Chromebook + Plasma + browsers).
+  # thrashing (8 GiB Chromebook + browsers).
   systemd.oomd = {
     enable = true;
     enableRootSlice = true;
@@ -48,7 +48,7 @@
     LC_TIME = "ja_JP.UTF-8";
   };
 
-  # Fcitx5 + Meltype only — Sway / Plasma Wayland
+  # Fcitx5 + Meltype only — Sway Wayland
   i18n.inputMethod = {
     enable = true;
     type = "fcitx5";
@@ -153,8 +153,8 @@
   # NixOS owns cloudflare-warp.service.
   systemd.packages = [ pkgs.cloudflare-warp ];
   systemd.services.warp-svc.enable = false;
-  # Tray needs a StatusNotifier host (waybar / Plasma). Start in every
-  # graphical session — not KDE-only (manual launch without /usr bind dies).
+  # Tray needs a StatusNotifier host (waybar). Start in every graphical
+  # session (manual launch without /usr bind dies).
   systemd.user.services.warp-taskbar = {
     wantedBy = [ "graphical-session.target" ];
     after = [ "graphical-session-pre.target" ];

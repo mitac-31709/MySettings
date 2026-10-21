@@ -326,12 +326,6 @@ let
     }
     {
       section = "Waybar・日常";
-      label = "OpenCode";
-      run = "opencode";
-      mode = "term";
-    }
-    {
-      section = "Waybar・日常";
       label = "エージェント画面操作中（ChatGPT / Cursorブラウザ）";
       keys = "青枠＋バナー＋チャット";
     }
@@ -363,27 +357,6 @@ let
       label = "実行中一覧（Slack）";
       keys = "@Cursor list my agents";
     }
-    # Plasma
-    {
-      section = "Plasma";
-      label = "Ghostty / Yazi";
-      keys = "Ctrl+Alt+T / Meta+E";
-    }
-    {
-      section = "Plasma";
-      label = "rofi";
-      keys = "Meta+R / Alt+Space";
-    }
-    {
-      section = "Plasma";
-      label = "履歴 / 全画面 / 範囲スクショ";
-      keys = "Meta+V / Print / Meta+Shift+S";
-    }
-    {
-      section = "Plasma";
-      label = "KRunner（設定検索用）";
-      keys = "Alt+F2";
-    }
     # NixOS
     {
       section = "NixOS";
@@ -410,6 +383,12 @@ let
       mode = "show";
     }
     # 開発
+    {
+      section = "開発";
+      label = "OpenCode";
+      run = "opencode";
+      mode = "term";
+    }
     {
       section = "開発";
       label = "pnpm / node";
@@ -859,7 +838,7 @@ in
         };
         "type:touchpad" = {
           natural_scroll = "disabled";
-          # Chromebook / Plasma parity: 1/2/3 finger press = L/R/M;
+          # Chromebook-style: 1/2/3 finger press = L/R/M;
           # tap (lrm default) already maps 2-finger tap to right click.
           tap = "enabled";
           click_method = "clickfinger";
@@ -1017,7 +996,7 @@ in
           hide-empty-text = true;
           tooltip = true;
         };
-        # Plasma-like "keep screen on": marker gates swayidle auto-lock / DPMS.
+        # Keep-screen-on: marker gates swayidle auto-lock / DPMS.
         # (Custom module so the label always matches the skip-lock state.)
         "custom/keep-screen-on" = {
           exec = "${waybarKeepScreenOn}";
@@ -1087,7 +1066,7 @@ in
         background: #0b0f14;
         color: #9fe7e7;
       }
-      /* Match bar chrome; do not inherit Plasma light GTK tooltips. */
+      /* Match bar chrome; do not inherit light GTK tooltips. */
       tooltip {
         background: #0b0f14;
         color: #9fe7e7;
@@ -1121,7 +1100,7 @@ in
       #custom-cheatsheet, #cpu, #memory, #custom-keep-screen-on, #battery, #network, #backlight, #pulseaudio, #clock, #tray {
         padding: 0 8px;
         color: #9fe7e7;
-        /* Stock waybar style + Plasma light GTK use white module chrome. */
+        /* Stock waybar style + light GTK use white module chrome. */
         background: transparent;
       }
       #custom-cheatsheet {

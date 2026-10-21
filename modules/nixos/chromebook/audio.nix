@@ -26,7 +26,7 @@ in
 {
   # delbin / sof-rt5682: PipeWire's ALSA backend hits a known Tiger Lake SOF
   # failure mode (spa.alsa Broken pipe → last buffer loops forever on the amp).
-  # Keep PipeWire for Plasma Wayland (screencast etc.), but use PulseAudio for
+  # Keep PipeWire for Wayland portals (screencast etc.), but use PulseAudio for
   # actual sound — the workaround documented for this class of Chromebooks.
   services.pipewire = {
     enable = true;
@@ -71,7 +71,7 @@ in
   };
   security.rtkit.enable = true;
 
-  # Bluetooth + A2DP audio (PulseAudio). Plasma uses Bluedevil for pairing.
+  # Bluetooth + A2DP audio (PulseAudio). Pair with bluetoothctl.
   hardware.bluetooth = {
     enable = true;
     powerOnBoot = true;

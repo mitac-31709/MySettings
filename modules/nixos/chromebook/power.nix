@@ -30,7 +30,7 @@ in
 {
   # ~8 GiB RAM, no disk swap partition, tight root (Chromebook leftover
   # partitions). zram at 100% of RAM ≈ 8 GiB compressed swap (zstd); avoids
-  # a swapfile on the ~90G root while giving headroom for Plasma + browsers.
+  # a swapfile on the ~90G root while giving headroom for browsers.
   zramSwap = {
     enable = true;
     memoryPercent = 100;

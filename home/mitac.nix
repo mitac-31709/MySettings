@@ -11,7 +11,6 @@
     ./uniclipboard.nix
     ./chatgpt-cua-indicator.nix
     ./jquake.nix
-    ./plasma.nix
     ./sway.nix
   ];
 

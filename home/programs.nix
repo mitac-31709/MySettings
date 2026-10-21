@@ -1,4 +1,4 @@
-# Shared user programs and packages (all sessions).
+# Shared user programs and packages (Sway session).
 { lib, pkgs, ... }:
 
 let
@@ -8,6 +8,16 @@ let
     _type = "literal";
     inherit value;
   };
+
+  # Classic Windows XP startup cue for paplay / PulseAudio.
+  # myinstants started returning 403; use the Internet Archive mirror instead.
+  windowsXpStartupWav = pkgs.fetchurl {
+    url = "https://archive.org/download/windowsxpstartup_201910/Windows%20XP%20Startup.wav";
+    hash = "sha256-j4Weu5AkcDbO0R24VISKvhQ03D/9+leV98XwbbmkI9U=";
+  };
+
+  ghostty = "${pkgs.ghostty}/bin/ghostty";
+  yazi = "${pkgs.yazi}/bin/yazi";
 in
 {
   programs.git = {
@@ -171,21 +181,19 @@ in
     settings.git_protocol = "https";
   };
 
-  # prefer-dark: Plasma sometimes leaves prefer-light + a light colors.css, which
-  # makes waybar discover appearance "light" and flash white on battery/etc.
+  # prefer-dark so waybar does not treat the session as light (white modules).
   dconf.settings = {
     "org/gnome/desktop/interface" = {
       color-scheme = "prefer-dark";
     };
   };
 
-  # Do not @import Plasma's light colors.css (theme_base #fff). Plasma may
-  # rewrite these on a Plasma login; next HM switch restores the stub.
+  # Stub: leftover light colors.css @import breaks waybar module chrome.
   xdg.configFile."gtk-3.0/gtk.css".text = ''
-    /* no Plasma colors.css — light sync breaks waybar module backgrounds */
+    /* keep empty — light GTK sync breaks waybar module backgrounds */
   '';
   xdg.configFile."gtk-4.0/gtk.css".text = ''
-    /* no Plasma colors.css — light sync breaks waybar module backgrounds */
+    /* keep empty — light GTK sync breaks waybar module backgrounds */
   '';
 
   # Bitwarden client (rbw). Holds the restic backup encryption key; see
@@ -221,7 +229,7 @@ in
     ];
   };
 
-  # Default terminal across Sway / Plasma.
+  # Default terminal (Ctrl+Alt+T / Super+Return).
   programs.ghostty = {
     enable = true;
     settings = {
@@ -235,6 +243,63 @@ in
     TERMINAL = "ghostty";
     # Java AWT on Sway/i3: without this, frames often paint solid black.
     _JAVA_AWT_WM_NONREPARENTING = "1";
+  };
+
+  # Yazi via Ghostty for inode/directory mime (xdg-open etc.).
+  xdg.dataFile."applications/mitac-yazi.desktop".text = ''
+    [Desktop Entry]
+    Type=Application
+    Name=Yazi
+    Comment=Terminal file manager (Ghostty)
+    Exec=${ghostty} -e ${yazi} %U
+    Icon=yazi
+    Terminal=false
+    Categories=System;FileManager;FileTools;
+    MimeType=inode/directory;
+    StartupNotify=true
+  '';
+
+  xdg.mimeApps = {
+    enable = true;
+    defaultApplications = {
+      "inode/directory" = [ "mitac-yazi.desktop" ];
+      "text/plain" = [ "nvim.desktop" ];
+      "text/markdown" = [ "nvim.desktop" ];
+      "text/x-cmake" = [ "nvim.desktop" ];
+      "application/json" = [ "nvim.desktop" ];
+      "application/x-shellscript" = [ "nvim.desktop" ];
+      "application/zip" = [ "peazip.desktop" ];
+      "application/x-7z-compressed" = [ "peazip.desktop" ];
+      "application/x-tar" = [ "peazip.desktop" ];
+      "application/gzip" = [ "peazip.desktop" ];
+      "application/x-xz" = [ "peazip.desktop" ];
+      "application/x-rar" = [ "peazip.desktop" ];
+      "application/vnd.rar" = [ "peazip.desktop" ];
+      "text/html" = [ "vivaldi-stable.desktop" ];
+      "x-scheme-handler/http" = [ "vivaldi-stable.desktop" ];
+      "x-scheme-handler/https" = [ "vivaldi-stable.desktop" ];
+      "x-scheme-handler/about" = [ "vivaldi-stable.desktop" ];
+      "x-scheme-handler/unknown" = [ "vivaldi-stable.desktop" ];
+    };
+  };
+
+  systemd.user.services.windows-xp-startup-sound = {
+    Unit = {
+      Description = "Windows XP startup sound";
+      After = [
+        "pulseaudio.service"
+        "graphical-session.target"
+      ];
+      Requires = [ "pulseaudio.service" ];
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStartPre = "${pkgs.coreutils}/bin/sleep 3";
+      ExecStart = "${pkgs.pulseaudio}/bin/paplay ${windowsXpStartupWav}";
+    };
+    Install = {
+      WantedBy = [ "graphical-session.target" ];
+    };
   };
 
   # Fcitx5 prefers ~/.config over /etc/xdg. Keep the declarative profile /
@@ -313,8 +378,7 @@ in
     peazip
     code-cursor
     # Terminal Agent CLI (`cursor-agent`; also aliased as `agent`).
-    cursor-cli
-    # ChatGPT desktop (Codex included). App menu: ChatGPT.
+    cursor-cli    # ChatGPT desktop (Codex included). App menu: ChatGPT.
     chatgpt
     # Grok Bot desktop agent. App menu: Grok Bot (`grok-bot`).
     grok-bot

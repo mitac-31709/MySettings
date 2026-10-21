@@ -1,6 +1,6 @@
 # MySettings — NixOS flake（mitac）
 
-ホスト／ユーザー `mitac` 向けの Flakes + Home Manager 構成。ログインは **greetd + tuigreet** で、複数セッションを切り替え可能。
+ホスト／ユーザー `mitac` 向けの Flakes + Home Manager 構成。ログインは **greetd + tuigreet**、デスクトップは **Sway のみ**。
 
 ## ブランチ
 
@@ -11,32 +11,29 @@
 
 ## セッション（greetd + tuigreet）
 
-起動後の tuigreet でセッションを選びます（`--remember-session` で前回選択を記憶）。一覧は `Name=` の番号順で **1. Sway** が先頭（ファイル名順ではない）。
+起動後の tuigreet でログインします（`--remember` / `--remember-session`、未記憶時は `--cmd sway`）。提供セッションは **Sway** のみ。
 
 | セッション | 内容 |
 |------------|------|
-| **Sway** | キーボード中心のタイル WM（第一環境）。waybar / mako / swayidle。ランチャーは **rofi**（Super+D / Alt+Space）。キーボード配列は **jp** |
-| **Plasma** | KDE Plasma 6（Wayland のみ。X11 セッションは置かない）。既定アプリは Sway スタックに寄せている |
+| **Sway** | キーボード中心のタイル WM。waybar / mako / swayidle。ランチャーは **rofi**（Super+D / Alt+Space）。キーボード配列は **jp** |
 
-### 共通操作感（見た目は各シェルのまま）
+### 操作感
 
-GUI セッションでは次を揃えています（テーマ・パネルの見た目は変更しません。**Super+Space** は Fcitx5 の IME 有効/無効。グループは Meltype のみ）。
+**Super+Space** は Fcitx5 の IME 有効/無効（グループは Meltype のみ）。
 
 | 操作 | キー | 動作 |
 |------|------|------|
-| 検索／ランチャー | **Super+D**（Sway）/ **Super+R**・**Alt+Space**（両環境） | **rofi**（Plasma の Alt+F2 だけ KRunner 残し） |
-| 端末 | **Ctrl+Alt+T**（Sway は Super+Return も可） | **Ghostty** |
+| 検索／ランチャー | **Super+D** / **Alt+Space** | **rofi** |
+| 端末 | **Ctrl+Alt+T** / **Super+Return** | **Ghostty** |
 | ファイルマネージャ | **Super+E** | **Yazi**（Ghostty 内） |
-| ロック | **Super+L** | Plasma 既定ロック / Sway は swaylock |
-| クリップボード履歴 | **Super+V** | **cliphist** + rofi（両環境） |
+| ロック | **Super+L** | swaylock |
+| クリップボード履歴 | **Super+V** | **cliphist** + rofi |
 | スクショ | **Print** / **Super+Shift+S** | **grim**（全画面）/ grim+**slurp**（範囲）→ クリップボード |
 | タッチパッド | — | 自然スクロール off・タップクリック on・入力中もポインタ有効 |
 
-Plasma では Konsole / Dolphin / Kate / Ark / Spectacle / Okular / Gwenview / Elisa などを `environment.plasma6.excludePackages` で外し、上記スタックを既定にしています。
+電源ボタン（`chromebook-power-chords`）: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+Back=強制ログアウト** / **電源+Refresh=再起動**。
 
-電源ボタン（全セッション共通・`chromebook-power-chords`）: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+Back=強制ログアウト** / **電源+Refresh=再起動**。
-
-共通: Polkit / Fcitx5 / cliphist（systemd user）を起動時に起動。音量・輝度は PulseAudio / brightnessctl 経由。Sway は mako で通知、waybar でステータスバー。
+Polkit / Fcitx5 / cliphist（systemd user）を起動時に起動。音量・輝度は PulseAudio / brightnessctl 経由。通知は mako、ステータスバーは waybar。
 
 ## 世代とコミットの対応
 
@@ -100,13 +97,13 @@ passwd mitac
 - **Meltype** — Fcitx5 エンジン（日本語／英語の自動打ち分け。Linux プレビュー。IME は Meltype のみ）
 - **フォント** — JetBrainsMono Nerd Font（ターミナル／等幅の既定）
 - **暗号化バックアップ** — `restic` + `rclone` で `/home` を Google Drive へ。鍵は Bitwarden（`rbw`）。詳細は下記。
-- **マルチセッション** — greetd + tuigreet（Sway 第一 / Plasma）
+- **デスクトップ** — greetd + tuigreet（Sway のみ）
 - **gui** — ディスプレイ無し時は `cage` で単一 GUI アプリを起動（`gui firefox` など）。引数なしは `apps` を起動
 - **apps** — `fzf` アプリ一覧（`gui` 経由起動）。TTY やシェルから利用可。Sway の Super+D は rofi
 
 ## 日本語入力（Meltype / Fcitx5）
 
-[Meltype](https://github.com/yksr-melt/Meltype)（Linux プレビュー）を **Fcitx5** アドオンとして入れています（Sway / Plasma の Wayland セッション向け）。IME グループは **Meltype のみ**（`fcitx5-mozc` / `keyboard-jp` は入れない）。ローマ字の日本語と英語を自動で打ち分けます。
+[Meltype](https://github.com/yksr-melt/Meltype)（Linux プレビュー）を **Fcitx5** アドオンとして入れています（Sway Wayland 向け）。IME グループは **Meltype のみ**（`fcitx5-mozc` / `keyboard-jp` は入れない）。ローマ字の日本語と英語を自動で打ち分けます。
 
 - **Super+Space**: Fcitx Trigger（IME 有効 ⇔ 無効）。グループが Meltype だけなので、どちらもエンジンは Meltype のまま
 - Meltype 内の英数 ⇔ 日本語: **半角/全角**（Fcitx の Trigger には割り当てない。ChatGPT 等 Electron で直接入力に落ちて戻せなくなるのを防ぐ）
@@ -125,16 +122,16 @@ passwd mitac
 
 ## ターミナル
 
-既定は **Ghostty**（`programs.ghostty`）。**Ctrl+Alt+T** で開きます（Sway / Plasma）。
+既定は **Ghostty**（`programs.ghostty`）。**Ctrl+Alt+T** / **Super+Return** で開きます。
 `TERMINAL=ghostty` も Home Manager で設定しています。
 
 ## タッチパッド
 
-ナチュラルスクロールはオフ（従来型: 指を上 → 内容が上）。キーボード入力中もタッチパッドは有効（`DisableWhileTyping=false`）。右クリックは **2本指タップ／2本指押し**（`TapToClick` + `ClickMethod=clickfinger`）。端を押すソフトボタン領域は使わない。delbin の Elan Touchpad 向けに `kcminputrc` で設定。
+ナチュラルスクロールはオフ（従来型: 指を上 → 内容が上）。キーボード入力中もタッチパッドは有効（`dwt = disabled`）。右クリックは **2本指タップ／2本指押し**（`tap` + `click_method = clickfinger`）。端を押すソフトボタン領域は使わない。Sway の `input type:touchpad`（`home/sway.nix`）。
 
 ## クリップボード履歴
 
-両セッションとも `cliphist`（systemd user の `wl-paste --watch`）+ `clipboard-history`（rofi → 選択で貼り付け）。呼び出しは **Super+V**。
+`cliphist`（systemd user の `wl-paste --watch`）+ `clipboard-history`（rofi → 選択で貼り付け）。呼び出しは **Super+V**。
 
 ## Encrypted /home backup
 
@@ -396,10 +393,9 @@ ts-home-routes off        # 帰宅後は必ず off（オンのまま自宅 Wi-Fi
 flake.nix
 hosts/mitac/
 modules/nixos/common.nix          # locale、ユーザー、Meltype/Fcitx5、フォント
-modules/nixos/desktop.nix         # plasma + sway + greetd + console-gui + portals + 共有 XKB/印刷
-modules/nixos/plasma.nix          # Plasma DE + 既定アプリ除外
-modules/nixos/sway.nix            # Sway（第一環境・waybar/mako 等）
-modules/nixos/greetd.nix          # tuigreet + セッション選別（Sway / Plasma）
+modules/nixos/desktop.nix         # sway + greetd + console-gui + portals + XKB/印刷
+modules/nixos/sway.nix            # Sway（waybar/mako 等）
+modules/nixos/greetd.nix          # tuigreet（Sway のみ）
 modules/nixos/console-gui.nix     # gui / apps（Sway ランチャー等）
 modules/nixos/chromebook.nix      # delbin 集約（./chromebook/*）
 modules/nixos/chromebook/         # audio / power / graphics / input
@@ -407,9 +403,8 @@ modules/nixos/backup.nix          # encrypted /home → Google Drive (restic/rcl
 modules/nixos/release.nix         # system.nixos.tags（世代ラベルのスラッグ）
 home/mitac.nix                    # HM エントリ（identity + imports）
 home/shell.nix                    # bash エイリアス / runbtop
-home/programs.nix                 # git / rbw / neovim / 共通パッケージ
-home/plasma.nix                   # Plasma 既定アプリ／ショートカット・起動音
-home/clipboard.nix                # cliphist + clipboard-history（両セッション）
-home/sway.nix                     # Sway 第一環境（waybar/mako/swayidle・rofi・jp）
+home/programs.nix                 # git / rbw / neovim / mime / 起動音 / 共通パッケージ
+home/clipboard.nix                # cliphist + clipboard-history
+home/sway.nix                     # Sway（waybar/mako/swayidle・rofi・jp・チートシート）
 home/nvim/
 ```
