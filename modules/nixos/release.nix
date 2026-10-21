@@ -8,5 +8,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "chatgpt-ime-reactivate" ];
+  system.nixos.tags = [ "meltype-only" ];
 }

@@ -48,14 +48,13 @@
     LC_TIME = "ja_JP.UTF-8";
   };
 
-  # Fcitx5 + Meltype (default) / Mozc fallback — Sway / Plasma Wayland
+  # Fcitx5 + Meltype only — Sway / Plasma Wayland
   i18n.inputMethod = {
     enable = true;
     type = "fcitx5";
     fcitx5.waylandFrontend = true;
     fcitx5.addons = with pkgs; [
       meltype
-      fcitx5-mozc
       fcitx5-gtk
       kdePackages.fcitx5-qt
       kdePackages.fcitx5-configtool
@@ -67,20 +66,19 @@
         "Default Layout" = "jp";
         DefaultIM = "meltype";
       };
-      # Meltype first: Fcitx Trigger "inactive" is still Meltype (auto EN/JA),
-      # not bare keyboard-jp. Electron (ChatGPT) often cannot reactivate IME
-      # after switching to keyboard-only, so keep keyboard out of the group.
+      # Meltype only (no mozc / keyboard-jp). Electron (ChatGPT) often cannot
+      # reactivate IME after switching to keyboard-only, so keep keyboard out.
       "Groups/0/Items/0".Name = "meltype";
-      "Groups/0/Items/1".Name = "mozc";
     };
     # Avoid Super+Shift / lone-Shift hotkeys that steal compositor chords
     # (Win+Shift+q, etc.) on the same seat as Sway.
     fcitx5.settings.globalOptions = {
       # Electron + text-input-v3: per-IC active/inactive desyncs; share globally
-      # so ChatGPT can leave "English" and return to Meltype/Mozc.
+      # so ChatGPT can leave "English" and return to Meltype.
       Behavior.ShareInputState = "All";
       Behavior.ActiveByDefault = true;
-      # Super+Space = Meltype ⇔ Mozc. Do NOT bind Zenkaku_Hankaku here —
+      # Super+Space = Fcitx Trigger (active ⇔ inactive). With only Meltype in
+      # the group, both sides stay Meltype. Do NOT bind Zenkaku_Hankaku here —
       # that key belongs to Meltype's internal 英数⇔日本語 toggle.
       "Hotkey/TriggerKeys"."0" = "Super+space";
       "Hotkey/AltTriggerKeys" = { };
@@ -93,7 +91,7 @@
 
   # Electron (Cursor, etc.): nixpkgs wrappers only pass --enable-wayland-ime
   # when this is set. Without it Cursor still picks Wayland but does not wire
-  # text-input to fcitx5, so Meltype/Mozc cannot compose. Restart Cursor fully
+  # text-input to fcitx5, so Meltype cannot compose. Restart Cursor fully
   # after changing this (single-instance ignores flags on --new-window).
   environment.sessionVariables.NIXOS_OZONE_WL = "1";
 

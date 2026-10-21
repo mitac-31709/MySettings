@@ -172,7 +172,7 @@ let
     # 入力・Chromebook
     {
       section = "入力・Chromebook";
-      label = "IME 切替（Meltype ⇔ Mozc）";
+      label = "IME 有効/無効（Meltype）";
       keys = "Super+Space";
     }
     {

@@ -20,7 +20,7 @@
 
 ### 共通操作感（見た目は各シェルのまま）
 
-GUI セッションでは次を揃えています（テーマ・パネルの見た目は変更しません。**Super+Space** は Meltype / Mozc 切替のまま）。
+GUI セッションでは次を揃えています（テーマ・パネルの見た目は変更しません。**Super+Space** は Fcitx5 の IME 有効/無効。グループは Meltype のみ）。
 
 | 操作 | キー | 動作 |
 |------|------|------|
@@ -98,7 +98,7 @@ passwd mitac
 - **wol-pc** — Wake-on-LAN クライアント（`~/Projects/wol-pc`）。依存: `sshpass` / `zenity`（`home.packages`）。設定は同ディレクトリの `config.env`
 - **7-Zip** — `_7zip-zstd`（コマンド `7z` / `7zz`、Zstd ほか対応）+ GUI `peazip`（PeaZip）
 - **tmux** — `runbtop <cmd>` で上部に実行出力（約 10 行）、下部に `btop`
-- **Meltype** — Fcitx5 エンジン（日本語／英語の自動打ち分け。Linux プレビュー）。フォールバックに Mozc
+- **Meltype** — Fcitx5 エンジン（日本語／英語の自動打ち分け。Linux プレビュー。IME は Meltype のみ）
 - **フォント** — JetBrainsMono Nerd Font（ターミナル／等幅の既定）
 - **暗号化バックアップ** — `restic` + `rclone` で `/home` を Google Drive へ。鍵は Bitwarden（`rbw`）。詳細は下記。
 - **マルチセッション** — greetd + tuigreet（Sway 第一 / Plasma）
@@ -107,14 +107,15 @@ passwd mitac
 
 ## 日本語入力（Meltype / Fcitx5）
 
-[Meltype](https://github.com/yksr-melt/Meltype)（Linux プレビュー）を **Fcitx5** アドオンとして入れています（Sway / Plasma の Wayland セッション向け）。半角/全角なしでローマ字の日本語と英語を打ち分けます。Mozc はフォールバックとして同じグループに残しています。
+[Meltype](https://github.com/yksr-melt/Meltype)（Linux プレビュー）を **Fcitx5** アドオンとして入れています（Sway / Plasma の Wayland セッション向け）。IME グループは **Meltype のみ**（`fcitx5-mozc` / `keyboard-jp` は入れない）。ローマ字の日本語と英語を自動で打ち分けます。
 
-- 切替: パネルの入力インジケータ、または **Super+Space**（Meltype ⇔ Mozc）
+- **Super+Space**: Fcitx Trigger（IME 有効 ⇔ 無効）。グループが Meltype だけなので、どちらもエンジンは Meltype のまま
 - Meltype 内の英数 ⇔ 日本語: **半角/全角**（Fcitx の Trigger には割り当てない。ChatGPT 等 Electron で直接入力に落ちて戻せなくなるのを防ぐ）
 - 学習・設定: `~/.local/share/Meltype`
 - 詳細設定: **Fcitx5 設定**（`fcitx5-configtool`）
-- プロファイル／config: Home Manager が `/etc/xdg/fcitx5/{profile,config}` を `~/.config/fcitx5/` に同期（古い `keyboard-jp` + 半角/全角 Trigger を上書きしないように）
+- プロファイル／config: Home Manager が `/etc/xdg/fcitx5/{profile,config}` を `~/.config/fcitx5/` に同期（古い `mozc` / `keyboard-jp` + 半角/全角 Trigger を上書きしないように）
 - **Cursor / ChatGPT** など Electron: `NIXOS_OZONE_WL=1` と Wayland IME フラグ。`ShareInputState=All` でフォーカス間の active/inactive ずれを抑える。適用後はアプリを**完全終了**してから開き直す
+- 適用後: `rebuild` してから **fcitx5 再起動**（例: `fcitx5 -d --replace`）かセッション再ログイン
 
 ## フォント
 
@@ -395,7 +396,7 @@ ts-home-routes off        # 帰宅後は必ず off（オンのまま自宅 Wi-Fi
 ```
 flake.nix
 hosts/mitac/
-modules/nixos/common.nix          # locale、ユーザー、mozc、フォント
+modules/nixos/common.nix          # locale、ユーザー、Meltype/Fcitx5、フォント
 modules/nixos/desktop.nix         # plasma + sway + greetd + console-gui + portals + 共有 XKB/印刷
 modules/nixos/plasma.nix          # Plasma DE + 既定アプリ除外
 modules/nixos/sway.nix            # Sway（第一環境・waybar/mako 等）
