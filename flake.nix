@@ -111,8 +111,6 @@
                     src = inputs.grok-bot-deb;
                     version = grokBotVersion;
                   };
-                  nodejs-official = final.callPackage ./pkgs/nodejs-official { };
-                  deepseek-harness = final.callPackage ./pkgs/deepseek-harness { };
                   # 1.8.4 + Sway AWT / sounds / no-update-prompt wrapper.
                   jquake = final.callPackage ./pkgs/jquake { jquake = prev.jquake; };
                 }

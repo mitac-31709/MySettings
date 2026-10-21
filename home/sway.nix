@@ -314,7 +314,7 @@ let
     {
       section = "Waybar・日常";
       label = "AI（rofi から）";
-      keys = "ChatGPT / Grok / DeepSeek";
+      keys = "ChatGPT / Grok";
     }
     {
       section = "Waybar・日常";
@@ -407,16 +407,6 @@ let
       label = "pnpm / node";
       run = "pnpm --version; node --version";
       mode = "term";
-    }
-    {
-      section = "開発";
-      label = "Playwright（同梱ブラウザ）";
-      run = "playwright --version";
-      mode = "term";
-    }
-    {
-      section = "開発";
-      label = "注: 別版は pnpm exec playwright install（PATH の playwright は Nix 版）";
     }
     # ディスク容量
     {

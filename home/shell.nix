@@ -38,7 +38,6 @@ in
       agent = "cursor-agent";
       chatgpt = "gui chatgpt";
       grok-bot = "gui grok-bot";
-      deepseek-harness = "gui deepseek-harness";
       onlyoffice-desktopeditors = "gui onlyoffice-desktopeditors";
       jquake = "gui JQuake";
       parsec = "gui parsecd";

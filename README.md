@@ -82,8 +82,7 @@ passwd mitac
 - **Neovim** — **LazyVim**（`home/nvim`）。**lazy.nvim** 自体は nixpkgs から同梱、それ以外のプラグインは lazy が管理
 - **Cursor** — `code-cursor`（GUI）／`cursor-cli`（ターミナル Agent: `cursor-agent` / `agent`）
 - **ChatGPT** — 公式 Linux デスクトップ（Codex 含む、`pkgs/chatgpt`、`.deb`）。アプリメニュー / `chatgpt`
-- **DeepSeek Harness** — GUI（`deepseek-harness`、Chromium アプリ窓）。裏で `dsh web`（:3080）。初回は npm → `~/.local/share/deepseek-harness`。ランタイムは公式 Node（`pkgs/nodejs-official`；nixpkgs Node だと native addon が落ちる）
-- **Node.js / pnpm / Playwright** — `node` / `npm` / `pnpm`、テスト CLI は `playwright`（nixpkgs 版。パッチ済みブラウザ同梱、`playwright install` 不要）。プロジェクトで別版を入れるときは `pnpm exec playwright install`（ブラウザは nix-ld 経由で実行）
+- **Node.js / pnpm** — `node` / `npm` / `pnpm`
 - **Parsec** — `parsec-bin`（Intel VA-API / `intel-media-driver` でハードウェアエンコード）。ホテル等で `-6023/-11010` になるときは Tailscale 経由（下記）
 - **Steam** — `programs.steam.enable`
 - **libvirt / QEMU/KVM** — `modules/nixos/virtualisation.nix`（`virt-manager` GUI、`virt-viewer`、Spice USB、`virtiofsd`）。初回は `virsh net-start default` / `net-autostart default`
@@ -93,7 +92,6 @@ passwd mitac
 - **Tor Browser** — `tor-browser`
 - **JQuake** — `JQuake` / `jquake`（1.8.4 + `pkgs/jquake` ラッパー。Sway AWT 修正・更新ダイアログ無効化）。ログイン時に `jquake.service` で常駐（Sway では offscreen `stalonetray` に吸い込み、waybar には出さない）。警報時は全画面＋`swaylock` 解除（`home/jquake.nix`）
 - **ONLYOFFICE** — `onlyoffice-desktopeditors`（文書・表計算・プレゼン）
-- **GIMP** — `gimp`（画像編集）
 - **Affinity** — `affinity-v3`（Canva Affinity suite; Wine via [affinity-nix](https://github.com/mrshmllow/affinity-nix)。初回起動でライセンス／セットアップ。キャッシュ: `cache.forall.systems`）
 - **LocalSend** — LAN ファイル転送（`programs.localsend`、ファイアウォール 53317）
 - **RQuickShare** — Google Quick Share / Nearby Share の Linux クライアント（`rquickshare`）
