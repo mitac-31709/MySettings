@@ -56,10 +56,11 @@ let
   # Route launches through swaymsg exec so new windows land on the
   # workspace active at selection time (not wherever focus is when they map).
   rofiLauncher = "${rofiBin} -show drun -run-command \"swaymsg exec -- {cmd}\" -run-shell-command \"swaymsg exec -- {terminal} -e {cmd}\"";
-  # waybar cpu / mem → Ghostty + btop; network → Ghostty + nmtui
+  # waybar cpu / mem → Ghostty + btop; network → Ghostty + nmtui; clock → time.is
   openBtop = "${ghosttyBin} -e ${btopBin}";
   openNmtui = "${ghosttyBin} -e ${nmtuiBin}";
   openYazi = "${ghosttyBin} -e ${yaziBin}";
+  openTimeIs = "${pkgs.xdg-utils}/bin/xdg-open https://time.is/Tokyo";
 
   # Searchable / clickable cheatsheet (rofi -dmenu).
   # - keys only → notify-send (no key injection)
@@ -295,6 +296,13 @@ let
       keys = "net クリック";
       run = nmtuiBin;
       mode = "term";
+    }
+    {
+      section = "Waybar・日常";
+      label = "time.is（東京）";
+      keys = "日付クリック";
+      run = openTimeIs;
+      mode = "exec";
     }
     {
       section = "Waybar・日常";
@@ -1074,6 +1082,7 @@ in
         clock = {
           format = "{:%a %m-%d %H:%M}";
           tooltip-format = "{:%Y-%m-%d %H:%M:%S}";
+          on-click = openTimeIs;
         };
       };
     };
