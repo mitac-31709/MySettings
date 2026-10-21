@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Bump versioned .deb URLs then `nix flake update` so Cursor (nixpkgs-cursor),
-# Send Anywhere (rolling .deb), UniClipboard, ChatGPT, and Grok Bot desktop refresh.
+# UniClipboard, ChatGPT, and Grok Bot desktop refresh.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

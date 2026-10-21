@@ -16,10 +16,6 @@
     affinity-nix.url = "github:mrshmllow/affinity-nix"; # Fresher nixpkgs solely for Cursor packages (avoid bumping the whole system).
     nixpkgs-cursor.url = "github:NixOS/nixpkgs/nixos-unstable";
     # Vendor .debs (flake update re-fetches; see scripts/flake-update.sh).
-    sendanywhere-deb = {
-      url = "https://update.send-anywhere.com/linux_downloads/sendanywhere_latest_amd64.deb";
-      flake = false;
-    };
     # Keep URL version in sync with uniclipboardVersion below (flake-update.sh).
     uniclipboard-deb = {
       url = "https://github.com/UniClipboard/UniClipboard/releases/download/v1.1.2/UniClipboard_1.1.2_amd64.deb";
@@ -87,9 +83,6 @@
                 in
                 {
                   inherit (cursorPkgs) code-cursor cursor-cli;
-                  sendanywhere = final.callPackage ./pkgs/sendanywhere {
-                    src = inputs.sendanywhere-deb;
-                  };
                   uniclipboard = final.callPackage ./pkgs/uniclipboard {
                     src = inputs.uniclipboard-deb;
                     version = uniclipboardVersion;

@@ -347,8 +347,6 @@ in
     # Google Quick Share / Nearby Share client for Linux.
     rquickshare
     discord
-    # Send Anywhere (upstream Electron .deb; not in nixpkgs).
-    sendanywhere
     # ESP32 / Arduino CLI flash & board package manager.
     arduino-cli
     # Espressif ROM / flash probe (chip-id, flash-id, …).

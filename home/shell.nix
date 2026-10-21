@@ -25,7 +25,7 @@ in
       ll = "ls -la";
       bcat = "bat";
       generations = "nixos-rebuild list-generations";
-      # UniClipboard / ChatGPT .deb + nix flake update (Cursor / Send Anywhere / …).
+      # UniClipboard / ChatGPT .deb + nix flake update (Cursor / …).
       flake-update = "${config.home.homeDirectory}/MySettings/scripts/flake-update.sh";
       # Emergency: stop looping SOF amp playback (Broken pipe / stuck buffer).
       # Mute levels via the shared chromebook-speaker-levels helper (systemPackages).

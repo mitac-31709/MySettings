@@ -337,20 +337,7 @@
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs_4",
         "nixpkgs-cursor": "nixpkgs-cursor",
-        "sendanywhere-deb": "sendanywhere-deb",
         "uniclipboard-deb": "uniclipboard-deb"
-      }
-    },
-    "sendanywhere-deb": {
-      "flake": false,
-      "locked": {
-        "narHash": "sha256-0WXwZ5jnvEI3PbbQJDAssQIxme1e/RRAz9FaJqLpELs=",
-        "type": "file",
-        "url": "https://update.send-anywhere.com/linux_downloads/sendanywhere_latest_amd64.deb"
-      },
-      "original": {
-        "type": "file",
-        "url": "https://update.send-anywhere.com/linux_downloads/sendanywhere_latest_amd64.deb"
       }
     },
     "treefmt-nix": {
