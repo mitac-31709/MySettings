@@ -650,18 +650,6 @@ let
     # 周辺
     {
       section = "周辺";
-      label = "virt-manager";
-      run = "virt-manager";
-      mode = "exec";
-    }
-    {
-      section = "周辺";
-      label = "virsh list --all";
-      run = "virsh list --all";
-      mode = "term";
-    }
-    {
-      section = "周辺";
       label = "QtScrcpy";
       run = "QtScrcpy";
       mode = "exec";

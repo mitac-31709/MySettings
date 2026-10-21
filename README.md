@@ -85,7 +85,6 @@ passwd mitac
 - **Node.js / pnpm** — `node` / `npm` / `pnpm`
 - **Parsec** — `parsec-bin`（Intel VA-API / `intel-media-driver` でハードウェアエンコード）。ホテル等で `-6023/-11010` になるときは Tailscale 経由（下記）
 - **Steam** — `programs.steam.enable`
-- **libvirt / QEMU/KVM** — `modules/nixos/virtualisation.nix`（`virt-manager` GUI、`virt-viewer`、Spice USB、`virtiofsd`）。初回は `virsh net-start default` / `net-autostart default`
 - **Bottles** — Wine プレフィックス管理（一般の Windows アプリ用）。`home.packages`
 - **Vivaldi** — `vivaldi`
 - **Firefox** — `firefox`

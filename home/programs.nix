@@ -171,14 +171,9 @@ in
     settings.git_protocol = "https";
   };
 
-  # virt-manager: default to system QEMU/KVM (see modules/nixos/virtualisation.nix).
   # prefer-dark: Plasma sometimes leaves prefer-light + a light colors.css, which
   # makes waybar discover appearance "light" and flash white on battery/etc.
   dconf.settings = {
-    "org/virt-manager/virt-manager/connections" = {
-      autoconnect = [ "qemu:///system" ];
-      uris = [ "qemu:///system" ];
-    };
     "org/gnome/desktop/interface" = {
       color-scheme = "prefer-dark";
     };
