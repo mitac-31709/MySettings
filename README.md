@@ -78,6 +78,7 @@ passwd mitac
 
 - **Neovim** — **LazyVim**（`home/nvim`）。**lazy.nvim** 自体は nixpkgs から同梱、それ以外のプラグインは lazy が管理
 - **Cursor** — `code-cursor`（GUI）／`cursor-cli`（ターミナル Agent: `cursor-agent` / `agent`）
+- **OpenCode** — ターミナル AI コーディングエージェント（`opencode`、`pkgs/opencode` で V2 をピン留め。nixpkgs の 1.x は使わない）
 - **ChatGPT** — 公式 Linux デスクトップ（Codex 含む、`pkgs/chatgpt`、`.deb`）。アプリメニュー / `chatgpt`
 - **Node.js / pnpm** — `node` / `npm` / `pnpm`
 - **Parsec** — `parsec-bin`（Intel VA-API / `intel-media-driver` でハードウェアエンコード）。ホテル等で `-6023/-11010` になるときは Tailscale 経由（下記）

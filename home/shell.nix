@@ -12,10 +12,6 @@ let
   nomBin = "${pkgs.nix-output-monitor}/bin/nom";
 in
 {
-  # Official install script: curl -fsSL https://opencode.ai/v2/install | bash
-  # Binary lives outside the Nix store under ~/.opencode/bin.
-  home.sessionPath = [ "${config.home.homeDirectory}/.opencode/bin" ];
-
   programs.bash = {
     enable = true;
     # -1 = unlimited (bash: non-negative caps; negative / unset = no limit).

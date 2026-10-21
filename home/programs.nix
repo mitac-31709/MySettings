@@ -378,7 +378,10 @@ in
     peazip
     code-cursor
     # Terminal Agent CLI (`cursor-agent`; also aliased as `agent`).
-    cursor-cli    # ChatGPT desktop (Codex included). App menu: ChatGPT.
+    cursor-cli
+    # OpenCode 2 terminal agent (`opencode`; pkgs/opencode overrides nixpkgs 1.x).
+    opencode
+    # ChatGPT desktop (Codex included). App menu: ChatGPT.
     chatgpt
     # Grok Bot desktop agent. App menu: Grok Bot (`grok-bot`).
     grok-bot

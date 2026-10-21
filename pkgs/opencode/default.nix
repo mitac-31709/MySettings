@@ -3,14 +3,16 @@
 # nixpkgs `opencode` is still the 1.x line; the upstream V2 terminal client is
 # published as `@opencode/cli-linux-x64` on npm (same binary the
 # https://opencode.ai/v2/install script installs under ~/.opencode/bin).
+#
+# Do not autoPatchelf: the Bun-compiled binary breaks (runs as bare `bun`).
+# NixOS provides /lib64/ld-linux-x86-64.so.2, which is enough for this build.
 {
   lib,
-  stdenv,
+  stdenvNoCC,
   fetchurl,
-  autoPatchelfHook,
 }:
 
-stdenv.mkDerivation (finalAttrs: {
+stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "opencode";
   version = "2.1.2";
 
@@ -19,13 +21,13 @@ stdenv.mkDerivation (finalAttrs: {
     hash = "sha256-LhxmX16C5TFzIynyoxBmcoc0d1BuN4sX0w7qvTHRObM=";
   };
 
-  nativeBuildInputs = [ autoPatchelfHook ];
-
   # npm pack layout: package/bin/opencode
   sourceRoot = "package";
 
   dontConfigure = true;
   dontBuild = true;
+  dontPatchELF = true;
+  dontStrip = true;
 
   installPhase = ''
     runHook preInstall
