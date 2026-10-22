@@ -96,6 +96,18 @@ let
     }
     {
       section = "起動・終了";
+      label = "再起動";
+      run = "systemctl reboot";
+      mode = "show";
+    }
+    {
+      section = "起動・終了";
+      label = "シャットダウン";
+      run = "systemctl poweroff";
+      mode = "show";
+    }
+    {
+      section = "起動・終了";
       label = "このシート（waybar ?）";
       keys = "Super+/";
     }
