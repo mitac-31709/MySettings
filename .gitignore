@@ -9,3 +9,7 @@ result-*
 
 # Agent knowledge graph (local / optional)
 graphify-out/
+
+# Python bytecode from scripts/*.py
+__pycache__/
+*.py[cod]
