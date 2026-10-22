@@ -2,7 +2,8 @@
 """Waybar custom module: AI agent activity + usage (compact icons, rich tooltip).
 
 Local signals for work-in-progress; Cursor usage via DashboardService (cached);
-ChatGPT/Codex rate limits from the newest ~/.codex rollout.
+ChatGPT/Codex rate limits from the newest ~/.codex rollout; Grok Bot persistence;
+Gemini browser history; OpenCode SQLite sessions.
 """
 
 from __future__ import annotations
@@ -10,7 +11,10 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import sqlite3
+import subprocess
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -29,6 +33,7 @@ SKY_RE = re.compile(r"sky_linux")
 ICON_CURSOR = "\ue795"
 ICON_CHATGPT = "\uf085"
 ICON_GROK = "\uf6f0"
+ICON_GEMINI = "\uf1a0"  # nf-fa-google
 ICON_OPENCODE = "\uf120"
 
 COLOR_ACTIVE = "#33c5c5"
@@ -458,34 +463,381 @@ def build_chatgpt(now: float) -> AgentStatus:
     return st
 
 
-def build_grok() -> AgentStatus:
-    st = AgentStatus(key="grok", label="Grok", icon=ICON_GROK)
+def grok_config_dir() -> Path:
+    return home() / ".config" / "Grok Bot"
+
+
+def scan_grok_persistence() -> dict:
+    """Parse Grok Bot sand-client-persistence (bots, usage, cloud agents)."""
+    out: dict = {
+        "bots": [],
+        "usage": None,
+        "cloud_agents": [],
+    }
+    root = grok_config_dir() / "sand-client-persistence"
+    if not root.is_dir():
+        return out
+    try:
+        files = list(root.glob("*.blob"))
+    except OSError:
+        return out
+    for path in files:
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            continue
+        value = data.get("value") if isinstance(data, dict) else None
+        if not isinstance(value, dict):
+            continue
+        rows = value.get("rows")
+        if isinstance(rows, list) and rows and isinstance(rows[0], dict):
+            if "lastActivityAt" in rows[0] or "name" in rows[0]:
+                out["bots"] = rows
+        reading = value.get("reading")
+        if isinstance(reading, dict) and isinstance(reading.get("usage"), dict):
+            out["usage"] = reading["usage"]
+        entries = value.get("entries")
+        if not isinstance(entries, list) or not entries:
+            continue
+        first = entries[0] if isinstance(entries[0], dict) else {}
+        info0 = first.get("info") if isinstance(first.get("info"), dict) else first
+        if isinstance(info0, dict) and "bcId" in info0:
+            out["cloud_agents"] = [
+                (e.get("info") if isinstance(e.get("info"), dict) else e)
+                for e in entries
+                if isinstance(e, dict)
+            ]
+    return out
+
+
+def build_grok(now: float) -> AgentStatus:
+    st = AgentStatus(key="grok", label="Grok Bot", icon=ICON_GROK)
     st.running = any_proc(
         lambda c: ("grok-bot" in c or "/lib/grok" in c or "Grok Bot" in c)
         and "--type=" not in c
     )
-    if st.running:
-        st.working = True
+    status_path = grok_config_dir() / "desktop-status.json"
+    desktop = read_json(status_path) or {}
+    if desktop.get("signedIn"):
+        st.extras.append("サインイン済み")
+    ver = desktop.get("appVersion")
+    if ver:
+        st.extras.append(f"v{ver}")
+    # desktop-status pid may be stale after quit; prefer live process.
+    if not st.running and desktop.get("pid"):
+        try:
+            age_ms = (now * 1000) - float(desktop.get("startedAtMs") or 0)
+            if age_ms < 60_000:
+                st.running = True
+        except (TypeError, ValueError):
+            pass
+
+    data = scan_grok_persistence()
+    usage = data.get("usage") or {}
+    if isinstance(usage, dict) and usage.get("percentUsed") is not None:
+        try:
+            st.usage_pct = float(usage["percentUsed"])
+        except (TypeError, ValueError):
+            st.usage_pct = None
+        plan = usage.get("grokPlanLabel") or "Grok Bot"
+        bits = [f"{st.usage_pct:.0f}%"] if st.usage_pct is not None else []
+        reset_ms = usage.get("nextResetMs")
+        if reset_ms:
+            try:
+                rem_h = max(0, (float(reset_ms) / 1000.0 - now) / 3600.0)
+                bits.append(f"リセットまで {rem_h:.0f}h")
+            except (TypeError, ValueError):
+                pass
+        st.usage_line = " / ".join(bits) if bits else ""
+        st.extras.append(str(plan))
+
+    bots = sorted(
+        (b for b in data.get("bots") or [] if isinstance(b, dict)),
+        key=lambda b: float(b.get("lastActivityAt") or 0),
+        reverse=True,
+    )
+    active_bots: list[str] = []
+    for bot in bots:
+        name = str(bot.get("name") or bot.get("title") or "Bot")
+        last_ms = float(bot.get("lastActivityAt") or 0)
+        age_s = (now * 1000 - last_ms) / 1000.0 if last_ms else 1e9
+        awaiting = bool(bot.get("awaitingUserResponse"))
+        unread = int(bot.get("unreadCount") or 0)
+        if awaiting or unread or age_s <= ACTIVE_GRACE_S:
+            active_bots.append(name)
+            if not st.work:
+                entry = bot.get("lastEntry") or {}
+                text = ""
+                if isinstance(entry, dict):
+                    text = str(entry.get("text") or entry.get("content") or "")
+                st.work = truncate(f"{name}: {text}" if text else name)
+                st.working = True
+        if len(active_bots) >= 4:
+            break
+    if active_bots:
+        st.extras.append("稼働: " + ", ".join(active_bots))
+    elif bots:
+        top = bots[0]
+        name = str(top.get("name") or "Bot")
+        entry = top.get("lastEntry") or {}
+        text = ""
+        if isinstance(entry, dict):
+            text = str(entry.get("text") or entry.get("content") or "")
+        last_ms = float(top.get("lastActivityAt") or 0)
+        if last_ms:
+            age_s = (now * 1000 - last_ms) / 1000.0
+            if age_s < 86400:
+                st.work = truncate(f"直近 {name}: {text}" if text else f"直近 {name}")
+                st.extras.append(f"最終活動 {int(age_s // 60)}分前")
+
+    for agent in data.get("cloud_agents") or []:
+        if not isinstance(agent, dict):
+            continue
+        status = str(agent.get("status") or "")
+        name = str(agent.get("name") or "cloudエージェント")
+        if status and status != "finished":
+            st.working = True
+            st.running = True
+            if not st.work:
+                st.work = truncate(f"☁ {name} ({status})")
+            st.extras.append(f"クラウド: {name} [{status}]")
+            break
+
+    if st.running and not st.work and not st.working:
         st.work = "デスクトップ起動中"
     return st
 
 
-def build_opencode() -> AgentStatus:
-    st = AgentStatus(key="opencode", label="OpenCode", icon=ICON_OPENCODE)
+def _chrome_time_to_unix(chrome_ts: float) -> float:
+    # Chrome/WebKit: microseconds since 1601-01-01 UTC.
+    return chrome_ts / 1_000_000.0 - 11_644_473_600.0
+
+
+def gemini_history_snapshot() -> tuple[float, str, str]:
+    """Return (last_visit_unix, url, title) from Vivaldi/Chromium History."""
+    candidates = [
+        home() / ".config" / "vivaldi" / "Default" / "History",
+        home() / ".config" / "chromium" / "Default" / "History",
+        home() / ".config" / "google-chrome" / "Default" / "History",
+        home() / ".config" / "BraveSoftware" / "Brave-Browser" / "Default" / "History",
+    ]
+    best = (0.0, "", "")
+    for db in candidates:
+        if not db.is_file():
+            continue
+        row = None
+        tmp_path: Path | None = None
+        try:
+            # Copy-on-read avoids "database is locked" while the browser runs.
+            with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+                tmp_path = Path(tmp.name)
+            shutil.copy2(db, tmp_path)
+            con = sqlite3.connect(f"file:{tmp_path}?mode=ro", uri=True)
+            try:
+                row = con.execute(
+                    """
+                    SELECT last_visit_time, url, title FROM urls
+                    WHERE url LIKE '%gemini.google%'
+                       OR url LIKE '%aistudio.google%'
+                    ORDER BY last_visit_time DESC LIMIT 1
+                    """
+                ).fetchone()
+            finally:
+                con.close()
+        except (OSError, sqlite3.Error, shutil.Error):
+            row = None
+        finally:
+            if tmp_path is not None:
+                try:
+                    tmp_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+        if not row:
+            continue
+        try:
+            ts = _chrome_time_to_unix(float(row[0]))
+        except (TypeError, ValueError):
+            continue
+        if ts >= best[0]:
+            best = (ts, str(row[1] or ""), str(row[2] or ""))
+    return best
+
+
+def gemini_window_open() -> bool:
+    try:
+        proc = subprocess.run(
+            ["swaymsg", "-t", "get_tree"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    if proc.returncode != 0 or not proc.stdout:
+        return False
+    return bool(re.search(r"gemini\.google|Google Gemini|\bGemini\b", proc.stdout, re.I))
+
+
+def build_gemini(now: float) -> AgentStatus:
+    st = AgentStatus(key="gemini", label="Gemini", icon=ICON_GEMINI)
     st.running = any_proc(
+        lambda c: re.search(r"(^|[/\s])gemini(\s|$)", c) is not None
+        or "gemini-cli" in c
+        or "@google/gemini" in c
+    )
+    settings = home() / ".gemini" / "settings.json"
+    if settings.is_file():
+        st.extras.append("gemini-cli 設定あり")
+        cfg = read_json(settings) or {}
+        model = cfg.get("model") or (cfg.get("modelConfig") or {}).get("model")
+        if model:
+            st.extras.append(f"model {model}")
+
+    win = gemini_window_open()
+    if win:
+        st.running = True
+        st.working = True
+        st.work = "ブラウザで Gemini を表示中"
+
+    last_ts, url, title = gemini_history_snapshot()
+    if last_ts:
+        age = now - last_ts
+        page = title or url
+        if "/usage" in url:
+            st.extras.append(f"使用状況ページ最終 {int(age // 3600)}h前" if age > 3600 else "使用状況を最近確認")
+        elif age <= ACTIVE_GRACE_S:
+            st.working = True
+            st.running = True
+            st.work = truncate(page or "Gemini 利用中")
+        elif age < 86400 * 7:
+            if not st.work:
+                st.work = truncate(f"直近: {page}")
+            if age < 3600:
+                st.extras.append(f"最終訪問 {int(age // 60)}分前")
+            else:
+                st.extras.append(f"最終訪問 {int(age // 3600)}h前")
+        else:
+            st.extras.append(f"最終訪問 {int(age // 86400)}日前")
+    elif not st.extras:
+        st.extras.append("gemini.google.com / gemini-cli")
+    return st
+
+
+def opencode_db_path() -> Path:
+    env = os.environ.get("OPENCODE_DB")
+    if env and env != ":memory:":
+        p = Path(env)
+        if p.is_absolute():
+            return p
+        return home() / ".local" / "share" / "opencode" / env
+    return home() / ".local" / "share" / "opencode" / "opencode.db"
+
+
+def build_opencode(now: float) -> AgentStatus:
+    st = AgentStatus(key="opencode", label="OpenCode", icon=ICON_OPENCODE)
+    serve = any_proc(
         lambda c: re.search(r"(^|[/\s])opencode(\s|$)", c) is not None
+        and " serve" in f" {c} "
         and "waybar-ai-status" not in c
     )
-    if st.running:
+    cli = any_proc(
+        lambda c: re.search(r"(^|[/\s])opencode(\s|$)", c) is not None
+        and " serve" not in f" {c} "
+        and "waybar-ai-status" not in c
+        and "debug paths" not in c
+    )
+    st.running = serve or cli
+    if cli:
         st.working = True
-        st.work = "ターミナルエージェント"
-        log = home() / ".local" / "share" / "opencode" / "log" / "opencode.log"
-        if log.is_file():
+        st.work = "CLI 稼働中"
+    elif serve:
+        st.work = "バックグラウンドサービス"
+        st.extras.append("opencode serve")
+    log = home() / ".local" / "share" / "opencode" / "log" / "opencode.log"
+    if log.is_file():
+        try:
+            age = now - log.stat().st_mtime
+            st.extras.append(
+                f"log {int(age)}s ago" if age < 3600 else f"log {int(age // 3600)}h ago"
+            )
+        except OSError:
+            pass
+
+    db = opencode_db_path()
+    if db.is_file():
+        try:
+            con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
             try:
-                age = time.time() - log.stat().st_mtime
-                st.extras.append(f"log {int(age)}s ago")
-            except OSError:
-                pass
+                creds = con.execute(
+                    "SELECT label, integration_id FROM credential WHERE active IS NOT 0 OR active IS NULL LIMIT 8"
+                ).fetchall()
+                labels = []
+                for label, integ in creds:
+                    name = label or integ or "provider"
+                    labels.append(str(name))
+                if labels:
+                    st.extras.append("認証: " + ", ".join(labels))
+                else:
+                    st.extras.append("認証なし（opencode auth login）")
+
+                row = con.execute(
+                    """
+                    SELECT title, directory, model, agent, cost,
+                           tokens_input, tokens_output, time_updated, time_idle
+                    FROM session_v2
+                    WHERE time_archived IS NULL
+                    ORDER BY time_updated DESC LIMIT 1
+                    """
+                ).fetchone()
+                if row:
+                    (
+                        title,
+                        directory,
+                        model,
+                        agent,
+                        cost,
+                        tok_in,
+                        tok_out,
+                        t_upd,
+                        t_idle,
+                    ) = row
+                    try:
+                        upd = float(t_upd) / (
+                            1000.0 if float(t_upd) > 1e12 else 1.0
+                        )
+                    except (TypeError, ValueError):
+                        upd = 0.0
+                    age = now - upd if upd else 1e9
+                    work_title = title or Path(str(directory or "")).name or "session"
+                    if age <= ACTIVE_GRACE_S and t_idle is None:
+                        st.working = True
+                        st.running = True
+                        st.work = truncate(str(work_title))
+                    elif age < 86400 * 14:
+                        st.work = truncate(f"直近: {work_title}")
+                    bits = []
+                    if tok_in or tok_out:
+                        bits.append(f"token {int(tok_in or 0)}→{int(tok_out or 0)}")
+                    if cost:
+                        bits.append(f"${float(cost):.3f}")
+                    if model:
+                        bits.append(str(model))
+                    if agent:
+                        bits.append(str(agent))
+                    if bits:
+                        st.usage_line = " / ".join(bits)
+                else:
+                    st.extras.append("セッションなし")
+            finally:
+                con.close()
+        except sqlite3.Error as exc:
+            st.extras.append(f"DB読取失敗: {exc.__class__.__name__}")
+    else:
+        st.extras.append("DB未作成")
+
+    if st.running and not st.work:
+        st.work = "ターミナルエージェント"
     return st
 
 
@@ -530,20 +882,13 @@ def main() -> int:
     agents = [
         build_cursor(now),
         build_chatgpt(now),
-        build_grok(),
-        build_opencode(),
+        build_grok(now),
+        build_gemini(now),
+        build_opencode(now),
     ]
-    # Always show Cursor + ChatGPT; Grok/OpenCode when running (or always if any busy).
-    show = []
-    any_busy = any(a.working for a in agents)
-    for a in agents:
-        if a.key in ("cursor", "chatgpt") or a.running or a.working or any_busy:
-            show.append(a)
-    if not show:
-        show = agents[:2]
-
+    # Always show every tracked agent (icons + optional %); tooltip has details.
     text_lines: list[str] = []
-    for a in show:
+    for a in agents:
         text_lines.extend(compact_block(a))
     tip_lines: list[str] = []
     for a in agents:

@@ -349,7 +349,7 @@ let
     {
       section = "Waybar・日常";
       label = "AI稼働（左バー中央・ホバーで詳細）";
-      keys = "Cursor / ChatGPT / Grok / OpenCode";
+      keys = "Cursor / ChatGPT / Grok / Gemini / OpenCode";
     }
     {
       section = "Waybar・日常";
