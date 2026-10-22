@@ -12,6 +12,7 @@ let
   flakeRoot = "${config.home.homeDirectory}/MySettings";
   flakeUpdateCheck = "${flakeRoot}/scripts/flake-update-check.sh";
   flakeUpdate = "${flakeRoot}/scripts/flake-update.sh";
+  waybarAiStatus = "${pkgs.python3}/bin/python3 ${flakeRoot}/scripts/waybar-ai-status.py";
   ghosttyBin = "${pkgs.ghostty}/bin/ghostty";
   openFlakeUpdate = "${ghosttyBin} -e ${flakeUpdate}";
   swaylockBin = "${pkgs.swaylock}/bin/swaylock";
@@ -344,6 +345,11 @@ let
       section = "Waybar・日常";
       label = "AI（rofi から）";
       keys = "ChatGPT / Grok";
+    }
+    {
+      section = "Waybar・日常";
+      label = "AI稼働（右バー中央・ホバーで詳細）";
+      keys = "Cursor / ChatGPT / Grok / OpenCode";
     }
     {
       section = "Waybar・日常";
@@ -1023,7 +1029,7 @@ in
     };
   };
 
-  # Periodic flake / .deb update probe for the left-bar upd indicator.
+  # Periodic flake / .deb update probe for the side-bar upd indicator.
   systemd.user.services.flake-update-check = {
     Unit = {
       Description = "Check MySettings flake / pinned .deb updates for waybar";
@@ -1160,15 +1166,15 @@ in
           on-click = openTimeIs;
         };
       };
-      # Left vertical bar: tray + flake update indicator (keeps bottom bar lean).
+      # Right vertical bar: updates (top), AI status (center), tray (bottom).
       sideBar = {
         name = "side";
         layer = "top";
-        position = "left";
-        # Icon column (Nerd Font) stacked under refresh glyph.
+        position = "right";
+        # Icon column (Nerd Font); AI module stacks icon + usage %.
         width = 34;
         modules-left = [ "custom/updates" ];
-        modules-center = [ ];
+        modules-center = [ "custom/ai" ];
         modules-right = [ "tray" ];
         "custom/updates" = {
           exec = pkgs.writeShellScript "waybar-flake-updates" ''
@@ -1185,6 +1191,15 @@ in
           hide-empty-text = true;
           tooltip = true;
           on-click = openFlakeUpdate;
+        };
+        # Compact AI icons + %; hover tooltip has task / usage details.
+        "custom/ai" = {
+          exec = waybarAiStatus;
+          return-type = "json";
+          interval = 5;
+          tooltip = true;
+          # Keep pango <span> colors from the script.
+          escape = false;
         };
         tray = {
           icon-size = 16;
@@ -1275,8 +1290,9 @@ in
         color: #e06c75;
         background: #3a1a1e;
       }
-      /* Side bar: refresh + per-app icons, then tray below. */
+      /* Side bar: updates (top), AI status (center), tray (bottom). */
       window.side #custom-updates,
+      window.side #custom-ai,
       window.side #tray {
         padding: 4px 0;
         color: #9fe7e7;
@@ -1292,6 +1308,23 @@ in
         background: #15383a;
         border-top: 2px solid #33c5c5;
         padding: 8px 0;
+      }
+      window.side #custom-ai {
+        font-family: "JetBrainsMono Nerd Font", "Noto Sans CJK JP", sans-serif;
+        font-size: 13px;
+        min-width: 34px;
+        padding: 8px 0;
+      }
+      window.side #custom-ai.busy {
+        background: #15383a;
+        border-right: 2px solid #33c5c5;
+      }
+      window.side #custom-ai.warning {
+        border-right: 2px solid #e5c07b;
+      }
+      window.side #custom-ai.critical {
+        background: #3a1a1e;
+        border-right: 2px solid #e06c75;
       }
       window.side #tray {
         padding-top: 8px;
