@@ -145,7 +145,7 @@ PY
 for line in "${flake_notes[@]+"${flake_notes[@]}"}"; do
   [[ -z "$line" ]] && continue
   if [[ "$line" == __FAIL__* ]]; then
-    fail_fetch "git ls-remote failed for ${line#__FAIL__}"
+    fail_fetch "GitHub tip fetch failed for ${line#__FAIL__}"
   else
     note "$line"
   fi
@@ -172,32 +172,44 @@ if ((n == 0 && fetch_ok == 0)); then
   exit 0
 fi
 
-tooltip="$(
-  if ((n == 0)); then
-    printf '更新なし'
-  else
-    printf '%s' "${outdated[0]}"
-    i=1
-    while ((i < n)); do
-      printf '\n%s' "${outdated[i]}"
-      i=$((i + 1))
-    done
-  fi
-)"
-
+# Narrow left-bar labels (≤4 chars) + full tooltip for hover.
 json_out="$(
-  "${py[@]}" - "$n" "$tooltip" <<'PY'
+  "${py[@]}" -c '
 import json, sys
+
 n = int(sys.argv[1])
-tooltip = sys.argv[2]
+items = sys.argv[2:]
+
+SHORT = {
+    "UniClipboard": "uc",
+    "ChatGPT": "gpt",
+    "Grok": "grok",
+    "nixpkgs": "nix",
+    "nixpkgs-cursor": "cur",
+    "home-manager": "hm",
+    "affinity-nix": "aff",
+    "alsa-ucm-conf-cros": "alsa",
+}
+
+def short_label(item: str) -> str:
+    head = item.split()[0] if item else ""
+    if head in SHORT:
+        return SHORT[head]
+    if head.startswith("Grok"):
+        return "grok"
+    # flake input id or unknown — keep a tight slice
+    return (head[:4] if head else "?")
+
 if n == 0:
-    obj = {"text": "", "class": "idle", "tooltip": tooltip}
-elif n == 1:
-    obj = {"text": "upd", "class": "available", "tooltip": tooltip}
+    obj = {"text": "", "class": "idle", "tooltip": "更新なし"}
 else:
-    obj = {"text": f"upd {n}", "class": "available", "tooltip": tooltip}
+    shorts = [short_label(x) for x in items]
+    # Header on top, one short name per line below (fits ~36–40px bar).
+    text = "upd\n" + "\n".join(shorts)
+    tooltip = "\n".join(items)
+    obj = {"text": text, "class": "available", "tooltip": tooltip}
 print(json.dumps(obj, ensure_ascii=False))
-PY
+' "$n" "${outdated[@]+"${outdated[@]}"}"
 )"
 
 tmp="${status_file}.tmp.$$"

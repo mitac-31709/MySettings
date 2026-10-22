@@ -1165,7 +1165,8 @@ in
         name = "side";
         layer = "top";
         position = "left";
-        width = 36;
+        # ~4-char short labels (uc/gpt/nix…) stacked under "upd".
+        width = 40;
         modules-left = [ "custom/updates" ];
         modules-center = [ ];
         modules-right = [ "tray" ];
@@ -1274,17 +1275,23 @@ in
         color: #e06c75;
         background: #3a1a1e;
       }
-      /* Side bar: updates + tray stacked vertically. */
+      /* Side bar: "upd" + short names (one per line), then tray below. */
       window.side #custom-updates,
       window.side #tray {
-        padding: 6px 0;
+        padding: 4px 0;
         color: #9fe7e7;
         background: transparent;
+      }
+      window.side #custom-updates {
+        font-size: 10px;
+        /* Center short labels in the narrow column. */
+        min-width: 40px;
       }
       window.side #custom-updates.available {
         color: #e6edf3;
         background: #15383a;
         border-top: 2px solid #33c5c5;
+        padding: 6px 2px;
       }
       window.side #tray {
         padding-top: 8px;
