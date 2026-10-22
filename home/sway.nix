@@ -348,7 +348,7 @@ let
     }
     {
       section = "Waybar・日常";
-      label = "AI稼働（右バー中央・ホバーで詳細）";
+      label = "AI稼働（左バー中央・ホバーで詳細）";
       keys = "Cursor / ChatGPT / Grok / OpenCode";
     }
     {
@@ -1166,11 +1166,11 @@ in
           on-click = openTimeIs;
         };
       };
-      # Right vertical bar: updates (top), AI status (center), tray (bottom).
+      # Left vertical bar: updates (top), AI status (center), tray (bottom).
       sideBar = {
         name = "side";
         layer = "top";
-        position = "right";
+        position = "left";
         # Icon column (Nerd Font); AI module stacks icon + usage %.
         width = 34;
         modules-left = [ "custom/updates" ];
@@ -1317,14 +1317,14 @@ in
       }
       window.side #custom-ai.busy {
         background: #15383a;
-        border-right: 2px solid #33c5c5;
+        border-left: 2px solid #33c5c5;
       }
       window.side #custom-ai.warning {
-        border-right: 2px solid #e5c07b;
+        border-left: 2px solid #e5c07b;
       }
       window.side #custom-ai.critical {
         background: #3a1a1e;
-        border-right: 2px solid #e06c75;
+        border-left: 2px solid #e06c75;
       }
       window.side #tray {
         padding-top: 8px;
