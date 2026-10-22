@@ -1,7 +1,6 @@
 # Bash aliases and helpers shared across all greetd sessions.
 {
   config,
-  pkgs,
   ...
 }:
 
@@ -9,7 +8,6 @@ let
   # Absolute flake path so `rebuild` works from $HOME (or any cwd), not only
   # when the shell is already inside the MySettings checkout.
   flakeUri = "${config.home.homeDirectory}/MySettings#mitac";
-  nomBin = "${pkgs.nix-output-monitor}/bin/nom";
 in
 {
   programs.bash = {
@@ -61,8 +59,15 @@ in
       rebuild() {
         # Ask for the password on the real TTY (|& nom swallows/hides the prompt).
         sudo -v || return $?
+        # Resolve nom at call time (PATH) so GC of an old store path cannot break
+        # a long-lived shell that still has this function body.
+        local nom
+        nom="$(command -v nom)" || {
+          printf 'rebuild: nom not on PATH (nix-output-monitor)\n' >&2
+          return 127
+        }
         # Human-readable mode: pass-through eval/activation; ETA only while building.
-        sudo nixos-rebuild switch --flake ${flakeUri} |& ${nomBin}
+        sudo nixos-rebuild switch --flake ${flakeUri} |& "$nom"
         return "''${PIPESTATUS[0]}"
       }
 
