@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Compare pinned .deb versions and GitHub flake inputs to upstream tips.
+# For nixpkgs / nixpkgs-cursor, list watched apps that changed (GitHub compare).
 # Writes $XDG_RUNTIME_DIR/flake-update-status for waybar (does not mutate the flake).
 set -u
 
@@ -9,12 +10,14 @@ cd "$root"
 status_file="${XDG_RUNTIME_DIR:-/tmp}/flake-update-status"
 flake_nix="$root/flake.nix"
 flake_lock="$root/flake.lock"
+flake_py="$root/scripts/flake-update-check-flake.py"
 
+# Records: icon<TAB>bar_label<TAB>tooltip_line
 outdated=()
 fetch_ok=1
 
 note() {
-  outdated+=("$1")
+  outdated+=("$1"$'\t'"$2"$'\t'"$3")
 }
 
 fail_fetch() {
@@ -23,9 +26,13 @@ fail_fetch() {
 }
 
 current_ver() {
-  # $1 = attr name in flake.nix (e.g. chatgptVersion)
   sed -n "s/.*${1}[[:space:]]*=[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p" "$flake_nix" | head -n1
 }
+
+py=(python3)
+if ! command -v python3 >/dev/null 2>&1; then
+  py=(nix shell nixpkgs#python3 --command python3)
+fi
 
 # --- UniClipboard ---
 uc_cur="$(current_ver uniclipboardVersion)"
@@ -33,7 +40,7 @@ if uc_json="$(curl -fsSL --max-time 20 https://api.github.com/repos/UniClipboard
   uc_tag="$(printf '%s\n' "$uc_json" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
   uc_ver="${uc_tag#v}"
   if [[ -n "$uc_ver" && -n "$uc_cur" && "$uc_ver" != "$uc_cur" ]]; then
-    note "UniClipboard ${uc_cur}→${uc_ver}"
+    note $'\uf0ea' "uc" "UniClipboard ${uc_cur}→${uc_ver}"
   fi
 else
   fail_fetch "UniClipboard release fetch failed"
@@ -46,7 +53,7 @@ if chatgpt_ver="$(
     awk '/^Package: chatgpt$/{p=1;next} p&&/^Version:/{print $2;exit} p&&/^$/{exit}'
 )"; then
   if [[ -n "$chatgpt_ver" && -n "$chatgpt_cur" && "$chatgpt_ver" != "$chatgpt_cur" ]]; then
-    note "ChatGPT ${chatgpt_cur}→${chatgpt_ver}"
+    note $'\uf075' "gpt" "ChatGPT ${chatgpt_cur}→${chatgpt_ver}"
   fi
 else
   fail_fetch "ChatGPT Packages fetch failed"
@@ -61,99 +68,27 @@ if grok_bot_url="$(
 )"; then
   grok_bot_ver="$(printf '%s\n' "$grok_bot_url" | sed -n 's/.*grok-bot_\([^_]*\)_amd64\.deb/\1/p')"
   if [[ -n "$grok_bot_ver" && -n "$grok_cur" && "$grok_bot_ver" != "$grok_cur" ]]; then
-    note "Grok Bot ${grok_cur}→${grok_bot_ver}"
+    note $'\uf544' "grok" "Grok Bot ${grok_cur}→${grok_bot_ver}"
   fi
 else
   fail_fetch "Grok Bot download page fetch failed"
 fi
 
-# --- GitHub flake inputs (root only; skip file/path) ---
-py=(python3)
-if ! command -v python3 >/dev/null 2>&1; then
-  py=(nix shell nixpkgs#python3 --command python3)
-fi
-
-mapfile -t flake_notes < <(
-  "${py[@]}" - "$flake_lock" <<'PY' 2>/dev/null || true
-import json, sys, urllib.error, urllib.request
-
-lock = json.load(open(sys.argv[1]))
-nodes = lock["nodes"]
-root_inputs = nodes["root"]["inputs"]
-
-
-def tip_sha(owner: str, repo: str, ref: str) -> str:
-    # Prefer git/ref API (branch/tag); fall back to commits endpoint.
-    headers = {"Accept": "application/vnd.github+json", "User-Agent": "flake-update-check"}
-    candidates = [
-        f"https://api.github.com/repos/{owner}/{repo}/git/ref/heads/{ref}",
-        f"https://api.github.com/repos/{owner}/{repo}/git/ref/tags/{ref}",
-        f"https://api.github.com/repos/{owner}/{repo}/commits/{ref}",
-    ]
-    if ref == "HEAD":
-        candidates = [
-            f"https://api.github.com/repos/{owner}/{repo}/commits/HEAD",
-        ]
-    for url in candidates:
-        req = urllib.request.Request(url, headers=headers)
-        try:
-            with urllib.request.urlopen(req, timeout=20) as resp:
-                data = json.load(resp)
-        except urllib.error.HTTPError as e:
-            if e.code == 404:
-                continue
-            raise
-        if "object" in data and isinstance(data["object"], dict):
-            sha = data["object"].get("sha") or ""
-            # Annotated tags point at tag objects; resolve commit if needed.
-            if data["object"].get("type") == "tag":
-                treq = urllib.request.Request(
-                    f"https://api.github.com/repos/{owner}/{repo}/git/tags/{sha}",
-                    headers=headers,
-                )
-                with urllib.request.urlopen(treq, timeout=20) as tresp:
-                    tdata = json.load(tresp)
-                return (tdata.get("object") or {}).get("sha") or sha
-            return sha
-        if "sha" in data:
-            return data["sha"] or ""
-    return ""
-
-
-for name, node_key in sorted(root_inputs.items()):
-    node = nodes[node_key]
-    original = node.get("original") or {}
-    locked = node.get("locked") or {}
-    if original.get("type") != "github" and locked.get("type") != "github":
-        continue
-    owner = locked.get("owner") or original.get("owner")
-    repo = locked.get("repo") or original.get("repo")
-    rev = locked.get("rev")
-    if not owner or not repo or not rev:
-        continue
-    ref = original.get("ref") or "HEAD"
-    try:
-        tip = tip_sha(owner, repo, ref)
-    except Exception:
-        print(f"__FAIL__{name}", flush=True)
-        continue
-    if tip and tip != rev:
-        print(f"{name}", flush=True)
-PY
-)
+# --- GitHub flake inputs (+ nixpkgs watched apps via compare) ---
+mapfile -t flake_notes < <("${py[@]}" "$flake_py" "$flake_lock" 2>/dev/null || true)
 
 for line in "${flake_notes[@]+"${flake_notes[@]}"}"; do
   [[ -z "$line" ]] && continue
   if [[ "$line" == __FAIL__* ]]; then
-    fail_fetch "GitHub tip fetch failed for ${line#__FAIL__}"
-  else
-    note "$line"
+    fail_fetch "GitHub tip/compare failed for ${line#__FAIL__}"
+  elif [[ "$line" == REC$'\t'* ]]; then
+    IFS=$'\t' read -r _rec icon short tip <<<"$line"
+    note "$icon" "$short" "$tip"
   fi
 done
 
 n="${#outdated[@]}"
 
-# Human-readable stdout (cheatsheet / terminal).
 if ((n == 0)); then
   if ((fetch_ok == 0)); then
     printf 'flake-update-check: no confirmed updates (some fetches failed)\n'
@@ -162,54 +97,51 @@ if ((n == 0)); then
   fi
 else
   printf 'flake-update-check: %d update(s)\n' "$n"
-  for item in "${outdated[@]}"; do
-    printf '  - %s\n' "$item"
+  for rec in "${outdated[@]}"; do
+    IFS=$'\t' read -r icon short tip <<<"$rec"
+    printf '  - %s %s  %s\n' "$icon" "$short" "$tip"
   done
 fi
 
-# On total fetch failure with nothing found, keep previous status file.
 if ((n == 0 && fetch_ok == 0)); then
   exit 0
 fi
 
-# Narrow left-bar labels (≤4 chars) + full tooltip for hover.
+export FUC_N="$n"
+export FUC_RECORDS="$(
+  if ((n > 0)); then
+    printf '%s\n' "${outdated[@]}"
+  fi
+)"
+
 json_out="$(
-  "${py[@]}" -c '
-import json, sys
+  "${py[@]}" <<'PY'
+import json, os
 
-n = int(sys.argv[1])
-items = sys.argv[2:]
+n = int(os.environ.get("FUC_N", "0"))
+raw = os.environ.get("FUC_RECORDS", "")
+recs = []
+for line in raw.splitlines():
+    parts = line.split("\t", 2)
+    if len(parts) == 3:
+        recs.append(tuple(parts))
 
-SHORT = {
-    "UniClipboard": "uc",
-    "ChatGPT": "gpt",
-    "Grok": "grok",
-    "nixpkgs": "nix",
-    "nixpkgs-cursor": "cur",
-    "home-manager": "hm",
-    "affinity-nix": "aff",
-    "alsa-ucm-conf-cros": "alsa",
-}
-
-def short_label(item: str) -> str:
-    head = item.split()[0] if item else ""
-    if head in SHORT:
-        return SHORT[head]
-    if head.startswith("Grok"):
-        return "grok"
-    # flake input id or unknown — keep a tight slice
-    return (head[:4] if head else "?")
-
-if n == 0:
+if n == 0 or not recs:
     obj = {"text": "", "class": "idle", "tooltip": "更新なし"}
 else:
-    shorts = [short_label(x) for x in items]
-    # Header on top, one short name per line below (fits ~36–40px bar).
-    text = "upd\n" + "\n".join(shorts)
-    tooltip = "\n".join(items)
-    obj = {"text": text, "class": "available", "tooltip": tooltip}
+    # Refresh header, then one icon per update (narrow left bar).
+    lines = ["\uf021"]
+    tips = []
+    for icon, short, tip in recs:
+        lines.append(icon if icon else short)
+        tips.append(f"{icon} {tip}".strip() if icon else tip)
+    obj = {
+        "text": "\n".join(lines),
+        "class": "available",
+        "tooltip": "\n".join(tips),
+    }
 print(json.dumps(obj, ensure_ascii=False))
-' "$n" "${outdated[@]+"${outdated[@]}"}"
+PY
 )"
 
 tmp="${status_file}.tmp.$$"

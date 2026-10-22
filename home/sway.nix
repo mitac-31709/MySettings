@@ -1165,8 +1165,8 @@ in
         name = "side";
         layer = "top";
         position = "left";
-        # ~4-char short labels (uc/gpt/nix…) stacked under "upd".
-        width = 40;
+        # Icon column (Nerd Font) stacked under refresh glyph.
+        width = 34;
         modules-left = [ "custom/updates" ];
         modules-center = [ ];
         modules-right = [ "tray" ];
@@ -1275,7 +1275,7 @@ in
         color: #e06c75;
         background: #3a1a1e;
       }
-      /* Side bar: "upd" + short names (one per line), then tray below. */
+      /* Side bar: refresh + per-app icons, then tray below. */
       window.side #custom-updates,
       window.side #tray {
         padding: 4px 0;
@@ -1283,15 +1283,15 @@ in
         background: transparent;
       }
       window.side #custom-updates {
-        font-size: 10px;
-        /* Center short labels in the narrow column. */
-        min-width: 40px;
+        font-family: "JetBrainsMono Nerd Font", "Noto Sans CJK JP", sans-serif;
+        font-size: 13px;
+        min-width: 34px;
       }
       window.side #custom-updates.available {
-        color: #e6edf3;
+        color: #9fe7e7;
         background: #15383a;
         border-top: 2px solid #33c5c5;
-        padding: 6px 2px;
+        padding: 8px 0;
       }
       window.side #tray {
         padding-top: 8px;
