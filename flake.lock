@@ -48,13 +48,13 @@
     "chatgpt-deb": {
       "flake": false,
       "locked": {
-        "narHash": "sha256-z/wZjpyoNoBuAX0AAFf+aZ5iynyKYvgW9ZRPd5mNXBQ=",
+        "narHash": "sha256-HpFstA+GAgBSDhXFmF/iDYzPIY4D425wEKegzAOg/kY=",
         "type": "file",
-        "url": "https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.1013.40934_amd64.deb"
+        "url": "https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.1016.61520_amd64.deb"
       },
       "original": {
         "type": "file",
-        "url": "https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.1013.40934_amd64.deb"
+        "url": "https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.1016.61520_amd64.deb"
       }
     },
     "corefonts": {
@@ -157,13 +157,13 @@
     "grok-bot-deb": {
       "flake": false,
       "locked": {
-        "narHash": "sha256-Iim/Q7GoeCx4cEBsB6npKpnieo+OpKKALrr3c5aXkOY=",
+        "narHash": "sha256-jwr8LI2I17ni02HNr+52gl6GnlY3XTizaJxglKEU5Zs=",
         "type": "file",
-        "url": "https://downloads.cursor.com/grokbot/stable/6a17bb448f856a2390dd63ba42bf6e80e63b08fd/linux/x64/grok-bot_0.72.0_amd64.deb"
+        "url": "https://downloads.cursor.com/grokbot/stable/0754837254309a566ace488b3a8de245c7a82ea5/linux/x64/grok-bot_0.75.0_amd64.deb"
       },
       "original": {
         "type": "file",
-        "url": "https://downloads.cursor.com/grokbot/stable/6a17bb448f856a2390dd63ba42bf6e80e63b08fd/linux/x64/grok-bot_0.72.0_amd64.deb"
+        "url": "https://downloads.cursor.com/grokbot/stable/0754837254309a566ace488b3a8de245c7a82ea5/linux/x64/grok-bot_0.75.0_amd64.deb"
       }
     },
     "hiragino-fonts-src": {
@@ -361,13 +361,13 @@
     "uniclipboard-deb": {
       "flake": false,
       "locked": {
-        "narHash": "sha256-txldFNWPQQl5q0DDsH+hDu84jl3Z/xFEk8FcdBFe9iU=",
+        "narHash": "sha256-qZQtXkY0/4AOsdqxQi+35zb4QdQYnXCwLyKxQEU8aoA=",
         "type": "file",
-        "url": "https://github.com/UniClipboard/UniClipboard/releases/download/v1.1.2/UniClipboard_1.1.2_amd64.deb"
+        "url": "https://github.com/UniClipboard/UniClipboard/releases/download/v1.3.1/UniClipboard_1.3.1_amd64.deb"
       },
       "original": {
         "type": "file",
-        "url": "https://github.com/UniClipboard/UniClipboard/releases/download/v1.1.2/UniClipboard_1.1.2_amd64.deb"
+        "url": "https://github.com/UniClipboard/UniClipboard/releases/download/v1.3.1/UniClipboard_1.3.1_amd64.deb"
       }
     },
     "windows-rs": {
