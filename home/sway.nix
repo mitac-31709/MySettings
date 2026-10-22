@@ -493,6 +493,16 @@ let
     }
     {
       section = "ネット・BT・WARP";
+      label = "学校Wi-Fi: Hazamaru AP-{E,tr,U,Ryo} / eduroam（PEAP・同一PW）";
+    }
+    {
+      section = "ネット・BT・WARP";
+      label = "学校Wi-Fi 再作成（AP-EのPW流用）";
+      run = "PASS=$(nmcli -s -g 802-1x.password connection show 'Hazamaru AP-E'); for n in 'Hazamaru AP-tr' 'Hazamaru AP-U' 'Hazamaru AP-Ryo'; do nmcli connection add type wifi con-name \"$n\" ifname '*' ssid \"$n\" wifi-sec.key-mgmt wpa-eap 802-1x.eap peap 802-1x.phase2-auth mschapv2 802-1x.identity s24184 802-1x.password \"$PASS\" || true; done; nmcli connection add type wifi con-name eduroam ifname '*' ssid eduroam wifi-sec.key-mgmt wpa-eap 802-1x.eap peap 802-1x.phase2-auth mschapv2 802-1x.identity s24184@tokyo-ct.ac.jp 802-1x.password \"$PASS\" || true; unset PASS";
+      mode = "show";
+    }
+    {
+      section = "ネット・BT・WARP";
       label = "全 IF の IP";
       run = "ip -br addr";
       mode = "term";
