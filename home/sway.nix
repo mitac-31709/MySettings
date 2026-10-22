@@ -440,6 +440,36 @@ let
     }
     {
       section = "ディスク容量";
+      label = "ゴミ箱を空にする";
+      run = "find ~/.local/share/Trash/files ~/.local/share/Trash/info -mindepth 1 -delete; rm -rf ~/.local/share/Trash/info && mkdir -p ~/.local/share/Trash/files ~/.local/share/Trash/info; du -sh ~/.local/share/Trash";
+      mode = "term";
+    }
+    {
+      section = "ディスク容量";
+      label = "PIO download cache 削除";
+      run = "rm -rf ~/.platformio/.cache && du -sh ~/.platformio";
+      mode = "term";
+    }
+    {
+      section = "ディスク容量";
+      label = "npm npx キャッシュ削除";
+      run = "rm -rf ~/.npm/_npx && du -sh ~/.npm";
+      mode = "term";
+    }
+    {
+      section = "ディスク容量";
+      label = "PIO 版付き toolchain 重複削除";
+      run = "rm -rf ~/.platformio/packages/toolchain-*@* && ls -d ~/.platformio/packages/toolchain-*";
+      mode = "show";
+    }
+    {
+      section = "ディスク容量";
+      label = "Cursor agent 旧 versions 削除（最新以外）";
+      run = "d=~/.config/Cursor/User/globalStorage/anysphere.cursor-agent-worker/agent-cli/.local/share/cursor-agent/versions; keep=$(ls -1 \"$d\" | sort | tail -1); for x in \"$d\"/*; do [ \"$(basename \"$x\")\" = \"$keep\" ] || rm -rf \"$x\"; done; rm -rf ~/.local/share/cursor-agent/versions/*; ls \"$d\"";
+      mode = "show";
+    }
+    {
+      section = "ディスク容量";
       label = "注: ChromeOS残骸(p1/p3/p5)は root の前。拡大は LiveUSB";
     }
     # ネット・BT・WARP
