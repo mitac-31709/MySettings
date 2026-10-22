@@ -23,6 +23,8 @@ in
       generations = "nixos-rebuild list-generations";
       # UniClipboard / ChatGPT .deb + nix flake update (Cursor / …).
       flake-update = "${config.home.homeDirectory}/MySettings/scripts/flake-update.sh";
+      # Waybar upd indicator: compare pinned debs + GitHub flake tips (no mutate).
+      flake-update-check = "${config.home.homeDirectory}/MySettings/scripts/flake-update-check.sh";
       # Emergency: stop looping SOF amp playback (Broken pipe / stuck buffer).
       # Mute levels via the shared chromebook-speaker-levels helper (systemPackages).
       audio-panic = "chromebook-speaker-levels mute && systemctl --user restart pulseaudio.service 2>/dev/null; systemctl --user restart pipewire.service wireplumber.service 2>/dev/null; true";

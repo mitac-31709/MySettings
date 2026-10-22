@@ -2,13 +2,18 @@
 # Visual language stays terminal/greeter-adjacent (dark + cyan).
 # Launcher: rofi (drun). Keyboard layout: jp.
 {
+  config,
   pkgs,
   lib,
   ...
 }:
 
 let
+  flakeRoot = "${config.home.homeDirectory}/MySettings";
+  flakeUpdateCheck = "${flakeRoot}/scripts/flake-update-check.sh";
+  flakeUpdate = "${flakeRoot}/scripts/flake-update.sh";
   ghosttyBin = "${pkgs.ghostty}/bin/ghostty";
+  openFlakeUpdate = "${ghosttyBin} -e ${flakeUpdate}";
   swaylockBin = "${pkgs.swaylock}/bin/swaylock";
   swayidleBin = "${pkgs.swayidle}/bin/swayidle";
   rofiBin = "${pkgs.rofi}/bin/rofi";
@@ -374,6 +379,12 @@ let
       keys = "@Cursor list my agents";
     }
     # NixOS
+    {
+      section = "NixOS";
+      label = "更新チェック（waybar upd）";
+      run = "flake-update-check";
+      mode = "term";
+    }
     {
       section = "NixOS";
       label = "入力＋Cursor/ChatGPT 等更新";
@@ -1012,11 +1023,38 @@ in
     };
   };
 
+  # Periodic flake / .deb update probe for the left-bar upd indicator.
+  systemd.user.services.flake-update-check = {
+    Unit = {
+      Description = "Check MySettings flake / pinned .deb updates for waybar";
+      ConditionPathExists = "${flakeRoot}/flake.nix";
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = flakeUpdateCheck;
+    };
+  };
+  systemd.user.timers.flake-update-check = {
+    Unit = {
+      Description = "Periodic flake update check for waybar";
+      ConditionPathExists = "${flakeRoot}/flake.nix";
+    };
+    Timer = {
+      OnBootSec = "3min";
+      OnUnitActiveSec = "6h";
+      Persistent = true;
+    };
+    Install = {
+      WantedBy = [ "timers.target" ];
+    };
+  };
+
   programs.waybar = {
     enable = true;
     systemd.enable = true;
     settings = {
       mainBar = {
+        name = "main";
         layer = "top";
         position = "bottom";
         height = 30;
@@ -1037,7 +1075,6 @@ in
           "backlight"
           "pulseaudio"
           "clock"
-          "tray"
         ];
         "custom/cheatsheet" = {
           format = "?";
@@ -1123,6 +1160,36 @@ in
           on-click = openTimeIs;
         };
       };
+      # Left vertical bar: tray + flake update indicator (keeps bottom bar lean).
+      sideBar = {
+        name = "side";
+        layer = "top";
+        position = "left";
+        width = 36;
+        modules-left = [ "custom/updates" ];
+        modules-center = [ ];
+        modules-right = [ "tray" ];
+        "custom/updates" = {
+          exec = pkgs.writeShellScript "waybar-flake-updates" ''
+            f="''${XDG_RUNTIME_DIR}/flake-update-status"
+            if [ -s "$f" ]; then
+              cat "$f"
+            else
+              printf '%s\n' '{"text":"","class":"idle"}'
+            fi
+          '';
+          return-type = "json";
+          interval = 30;
+          signal = 9;
+          hide-empty-text = true;
+          tooltip = true;
+          on-click = openFlakeUpdate;
+        };
+        tray = {
+          icon-size = 16;
+          spacing = 4;
+        };
+      };
     };
     style = ''
       * {
@@ -1134,6 +1201,10 @@ in
         min-height: 0;
       }
       window#waybar {
+        background: #0b0f14;
+        color: #9fe7e7;
+      }
+      window.side#waybar {
         background: #0b0f14;
         color: #9fe7e7;
       }
@@ -1168,7 +1239,7 @@ in
         color: #9aa7b5;
         padding: 0 8px;
       }
-      #custom-cheatsheet, #cpu, #memory, #custom-keep-screen-on, #battery, #network, #backlight, #pulseaudio, #clock, #tray {
+      #custom-cheatsheet, #cpu, #memory, #custom-keep-screen-on, #battery, #network, #backlight, #pulseaudio, #clock {
         padding: 0 8px;
         color: #9fe7e7;
         /* Stock waybar style + light GTK use white module chrome. */
@@ -1202,6 +1273,21 @@ in
       #custom-restic.failed {
         color: #e06c75;
         background: #3a1a1e;
+      }
+      /* Side bar: updates + tray stacked vertically. */
+      window.side #custom-updates,
+      window.side #tray {
+        padding: 6px 0;
+        color: #9fe7e7;
+        background: transparent;
+      }
+      window.side #custom-updates.available {
+        color: #e6edf3;
+        background: #15383a;
+        border-top: 2px solid #33c5c5;
+      }
+      window.side #tray {
+        padding-top: 8px;
       }
       /* Stock #battery is white; critical blinks to white — pin transparent. */
       #battery.charging,
