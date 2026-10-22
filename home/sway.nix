@@ -158,6 +158,10 @@ let
     }
     {
       section = "ウィンドウ・WS";
+      label = "外部リンク → Vivaldi(WS2)へフォーカス";
+    }
+    {
+      section = "ウィンドウ・WS";
       label = "注: Super+e は既定の分割ではなく Yazi";
     }
     # スクショ・音量・輝度・履歴
@@ -979,6 +983,9 @@ in
       # showmethekey floating overlay
       for_window [app_id="showmethekey-gtk"] floating enable, sticky enable, border none
       for_window [app_id="one.alynx.showmethekey"] floating enable, sticky enable, border none
+      # External http(s) opens (xdg-open → existing Vivaldi) set urgent but do not
+      # activate across workspaces (focus_on_window_activation is smart). Raise WS2.
+      for_window [app_id="vivaldi-stable" urgent=latest] focus
       # Layout-independent cheatsheet (rofi; same as waybar ?)
       # --inhibited: work even when Cursor/Electron inhibit compositor shortcuts.
       bindsym --inhibited --to-code Mod4+slash exec ${showCheatsheet}
