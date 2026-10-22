@@ -382,6 +382,18 @@ let
       run = "sudo nixos-rebuild --rollback switch";
       mode = "show";
     }
+    {
+      section = "NixOS";
+      label = "時刻同期状態";
+      run = "timedatectl status";
+      mode = "term";
+    }
+    {
+      section = "NixOS";
+      label = "NTP 有効化（時計ずれ時）";
+      run = "sudo timedatectl set-ntp true";
+      mode = "show";
+    }
     # 開発
     {
       section = "開発";

@@ -388,9 +388,10 @@ in
     # Earthquake map (pkgs/jquake: Sway AWT fix + sounds cwd + http.agent).
     jquake
     onlyoffice-desktopeditors
-    # Affinity v3 omitted: affinity-nix patches wineWow64 and often
-    # source-builds for hours when cache.forall.systems misses.
-    # Re-enable with: affinity-v3
+    # Affinity v3 omitted: affinity-nix Wine builds often compile for hours
+    # when cache.forall.systems misses (and that cache is not in nix.settings).
+    # Re-enable: add affinity-v3 here and restore cache.forall.systems in
+    # modules/nixos/common.nix (extra-substituters + trusted-public-keys).
     parsec-bin
     # Wineprefix manager for Windows apps/games (FHS-wrapped).
     (bottles.override { removeWarningPopup = true; })

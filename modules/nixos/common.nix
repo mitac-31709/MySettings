@@ -34,6 +34,9 @@
   };
 
   time.timeZone = "Asia/Tokyo";
+  # Chromebook RTC can wake in the past (seen as 2024-01-24) until NTP lands;
+  # TLS then fails with "certificate is not yet valid". Keep timesyncd on.
+  services.timesyncd.enable = true;
 
   i18n.defaultLocale = "ja_JP.UTF-8";
   i18n.extraLocaleSettings = {
@@ -115,11 +118,14 @@
       "nix-command"
       "flakes"
     ];
-    # Binary cache for affinity-nix (Wine Affinity builds).
-    extra-substituters = [ "https://cache.forall.systems" ];
-    extra-trusted-public-keys = [
-      "cache.forall.systems:5PmD7QO4MSF8YgyRZtkSGXRDo96H3bybIf2SsQh8ScI="
-    ];
+    # Affinity omitted (home/programs.nix): do not hard-depend on
+    # cache.forall.systems — a wrong RTC before NTP makes every fetch fail
+    # with SSL "certificate is not yet valid", and misses also stall rebuild.
+    # When re-enabling affinity-v3, restore:
+    #   extra-substituters = [ "https://cache.forall.systems" ];
+    #   extra-trusted-public-keys = [
+    #     "cache.forall.systems:5PmD7QO4MSF8YgyRZtkSGXRDo96H3bybIf2SsQh8ScI="
+    #   ];
   };
 
   users.users.mitac = {
