@@ -612,6 +612,18 @@ let
       section = "ネット・BT・WARP";
       label = "注: Parsec -6023 → ホスト config に app_custom_address=100.102.102.53。自宅では accept-routes 禁止";
     }
+    {
+      section = "ネット・BT・WARP";
+      label = "RTSP 再生（mpv・低遅延+TCP）";
+      run = "mpv --profile=low-latency --demuxer-lavf-o=rtsp_transport=tcp 'rtsp://user:pass@host:554/path'";
+      mode = "show";
+    }
+    {
+      section = "ネット・BT・WARP";
+      label = "RTSP 診断（ffplay・TCP）";
+      run = "ffplay -rtsp_transport tcp 'rtsp://user:pass@host:554/path'";
+      mode = "show";
+    }
     # Windows 連携
     {
       section = "Windows 連携";
