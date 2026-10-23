@@ -82,6 +82,12 @@ let
     }
     {
       section = "起動・終了";
+      label = "OBS Studio";
+      run = "obs";
+      mode = "exec";
+    }
+    {
+      section = "起動・終了";
       label = "rofi（選択中 WS に起動）";
       keys = "Super+D / Alt+Space";
     }
