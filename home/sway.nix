@@ -514,6 +514,34 @@ let
     }
     {
       section = "ネット・BT・WARP";
+      label = "SSID一覧";
+      run = "nmcli device wifi list";
+      mode = "term";
+    }
+    {
+      section = "ネット・BT・WARP";
+      label = "SSID接続（保存済み）";
+      run = "nmcli connection up id 'SSID'";
+      mode = "show";
+    }
+    {
+      section = "ネット・BT・WARP";
+      label = "SSID接続（新規・PSK）";
+      run = "nmcli device wifi connect 'SSID' password 'PASSWORD'";
+      mode = "show";
+    }
+    {
+      section = "ネット・BT・WARP";
+      label = "隠しSSID接続（PSK）";
+      run = "nmcli connection add type wifi con-name 'SSID' ssid 'SSID' wifi.hidden yes wifi-sec.key-mgmt wpa-psk wifi-sec.psk 'PASSWORD' && nmcli connection up 'SSID'";
+      mode = "show";
+    }
+    {
+      section = "ネット・BT・WARP";
+      label = "注: 隠しSSIDは nmtui → Edit → Add → Wi-Fi → SSID手入力 → Hidden: Yes";
+    }
+    {
+      section = "ネット・BT・WARP";
       label = "学校Wi-Fi: Hazamaru AP-{E,tr,U,Ryo} / eduroam（PEAP・同一PW）";
     }
     {
