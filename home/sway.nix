@@ -624,6 +624,12 @@ let
       run = "ffplay -rtsp_transport tcp 'rtsp://user:pass@host:554/path'";
       mode = "show";
     }
+    {
+      section = "ネット・BT・WARP";
+      label = "RTSP 録画（ffmpeg・再エンコなし）";
+      run = "ffmpeg -rtsp_transport tcp -i 'rtsp://user:pass@host:554/path' -c copy ~/Videos/rtsp-$(date +%Y%m%d-%H%M%S).mkv";
+      mode = "show";
+    }
     # Windows 連携
     {
       section = "Windows 連携";
