@@ -643,9 +643,19 @@ let
     }
     {
       section = "ネット・BT・WARP";
-      label = "RTSP 録画（ffmpeg・再エンコなし）";
+      label = "RTSP 録画 TCP（ffmpeg・copy）";
       run = "ffmpeg -rtsp_transport tcp -i 'rtsp://user:pass@host:554/path' -c copy ~/Videos/rtsp-$(date +%Y%m%d-%H%M%S).mkv";
       mode = "show";
+    }
+    {
+      section = "ネット・BT・WARP";
+      label = "IP Webcam 録画 UDP（genpts・copy）";
+      run = "ffmpeg -rtsp_transport udp -fflags +genpts -i 'rtsp://172.29.33.7:8080/h264_ulaw.sdp' -c copy -avoid_negative_ts make_zero ~/Videos/ipcam-$(date +%Y%m%d-%H%M%S).mkv";
+      mode = "show";
+    }
+    {
+      section = "ネット・BT・WARP";
+      label = "注: IP Webcam は TCP refused なら UDP。RTP missed が多いなら端末側解像度↓か同一LAN";
     }
     # Windows 連携
     {
