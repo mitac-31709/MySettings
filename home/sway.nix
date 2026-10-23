@@ -655,7 +655,13 @@ let
     }
     {
       section = "ネット・BT・WARP";
-      label = "注: IP Webcam は TCP refused なら UDP。RTP missed が多いなら端末側解像度↓か同一LAN";
+      label = "IP Webcam 録画 UDP（バッファ大・遅延OK）";
+      run = "ffmpeg -rtsp_transport udp -fflags +genpts -max_delay 5000000 -reorder_queue_size 10000 -buffer_size 16M -i 'rtsp://172.29.33.7:8080/h264_ulaw.sdp' -c copy -avoid_negative_ts make_zero ~/Videos/ipcam-$(date +%Y%m%d-%H%M%S).mkv";
+      mode = "show";
+    }
+    {
+      section = "ネット・BT・WARP";
+      label = "注: バッファは遅延・並べ替え向け。本当に落ちた RTP は復元不可 → 解像度↓/同一LAN/TCP";
     }
     # Windows 連携
     {
