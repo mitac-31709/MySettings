@@ -440,6 +440,17 @@ let
       run = "pnpm --version; node --version";
       mode = "term";
     }
+    {
+      section = "開発";
+      label = "一時停止 → バックグラウンド";
+      keys = "Ctrl+Z → bg";
+    }
+    {
+      section = "開発";
+      label = "ジョブ一覧 / 前面復帰";
+      run = "jobs; fg  # または fg %1";
+      mode = "show";
+    }
     # ディスク容量
     {
       section = "ディスク容量";
