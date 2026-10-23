@@ -451,6 +451,12 @@ let
       run = "jobs; fg  # または fg %1";
       mode = "show";
     }
+    {
+      section = "開発";
+      label = "ジョブ kill";
+      run = "kill %1  # 強制: kill -9 %1";
+      mode = "show";
+    }
     # ディスク容量
     {
       section = "ディスク容量";
