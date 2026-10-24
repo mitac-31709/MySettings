@@ -10,6 +10,7 @@
     ./taildrop.nix
     ./uniclipboard.nix
     ./chatgpt-cua-indicator.nix
+    ./vivaldi-chatgpt-extension.nix
     ./jquake.nix
     ./sway.nix
   ];

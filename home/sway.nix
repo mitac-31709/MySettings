@@ -348,8 +348,19 @@ let
     }
     {
       section = "Waybar・日常";
-      label = "Vivaldi の ChatGPT 拡張が無効 → ChatGPT 再起動";
-      keys = "Native Messaging 再登録";
+      label = "Vivaldi ChatGPT 拡張が真っ白";
+      keys = "setOptions 非対応 → パッチ版を Load unpacked";
+    }
+    {
+      section = "Waybar・日常";
+      label = "ChatGPT 拡張パッチ再生成";
+      run = "vivaldi-chatgpt-extension-patch";
+      mode = "term";
+    }
+    {
+      section = "Waybar・日常";
+      label = "パッチ版パス (~/.local/share/…)";
+      keys = "vivaldi-chatgpt-extension";
     }
     {
       section = "Waybar・日常";
