@@ -82,12 +82,6 @@ let
     }
     {
       section = "起動・終了";
-      label = "OBS Studio";
-      run = "obs";
-      mode = "exec";
-    }
-    {
-      section = "起動・終了";
       label = "rofi（選択中 WS に起動）";
       keys = "Super+D / Alt+Space";
     }
@@ -487,6 +481,12 @@ let
       label = "旧世代削除＋GC（危険）";
       run = "sudo nix-collect-garbage -d";
       mode = "show";
+    }
+    {
+      section = "ディスク容量";
+      label = "ストア重複をハードリンク最適化";
+      run = "sudo nix store optimise";
+      mode = "term";
     }
     {
       section = "ディスク容量";
