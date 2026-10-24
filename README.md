@@ -334,7 +334,8 @@ SOF（Tiger Lake）では PipeWire の ALSA バックエンドが `Broken pipe` 
 対策:
 
 - **音声は PulseAudio**（PipeWire はデスクトップ用のみ）。設定は `modules/nixos/chromebook/audio.nix`
-- sof-rt5682 は UCM プロファイル探索に失敗するため、**`hw:0,0`（Speaker）を直接** `module-alsa-sink` でバインド
+- sof-rt5682 は UCM Mic/DMIC 探索で `module-alsa-card` が落ちるため、**`hw:0,0`（Speaker）/ `hw:0,1`（Headset mic）を直接**バインド（`module-udev-detect` は無効）
+- `chromebook-alsactl-init` / レジュームに `ALSA_CONFIG_UCM2`（cros マージ + `sofrt5682` エイリアス）を明示。これがないと `alsactl init` が毎回 -2 になる
 - 起動／レジューム時に `alsactl init` + `chromebook-speaker-levels apply`（max98373 Digital/Spk）
 - 緊急停止: `audio-panic`（`chromebook-speaker-levels mute`）
 

@@ -24,6 +24,14 @@ in
   # ignores this mask; kept so classic SysRq still works if needed.
   boot.kernel.sysctl."kernel.sysrq" = 244;
 
+  # delbin registers Chrome EC on LPC (cros_ec_lpcs). The SPI companion probe
+  # always times out (-110) and only adds boot noise; LPC already exposes
+  # /dev/cros_ec, sensors, Type-C, etc.
+  boot.blacklistedKernelModules = [ "cros_ec_spi" ];
+
+  # keyd drops privileges to group "keyd"; NixOS module never creates it.
+  users.groups.keyd = { };
+
   # NixOS keyd sets ProcSubset=pid, which hides /proc/sysrq-trigger.
   systemd.services.keyd.serviceConfig.ProcSubset = lib.mkForce "all";
 

@@ -2,12 +2,14 @@
 {
   pkgs,
   inputs,
+  lib,
   ...
 }:
 
 let
   # Merge upstream UCM with ChromeOS overlays (WeirdTreeThing) without replacing
   # alsa-ucm-conf globally (avoids large rebuilds).
+  # Card id is "sofrt5682" (no hyphen) while upstream conf.d uses "sof-rt5682".
   alsa-ucm-conf-chromebook = pkgs.runCommand "alsa-ucm-conf-chromebook" { } ''
     mkdir -p $out/share/alsa/ucm2
     cp -a --no-preserve=mode ${pkgs.alsa-ucm-conf}/share/alsa/ucm2/. $out/share/alsa/ucm2/
@@ -15,13 +17,36 @@ let
     if [ -d ${inputs.alsa-ucm-conf-cros}/overrides ]; then
       cp -a --no-preserve=mode ${inputs.alsa-ucm-conf-cros}/overrides/. $out/share/alsa/ucm2/
     fi
+    # Kernel card id omits the hyphen; alias so alsactl/alsaucm resolve without
+    # falling back to a generic (non-UCM) init.
+    if [ -d $out/share/alsa/ucm2/conf.d/sof-rt5682 ] && [ ! -e $out/share/alsa/ucm2/conf.d/sofrt5682 ]; then
+      ln -s sof-rt5682 $out/share/alsa/ucm2/conf.d/sofrt5682
+      ln -s sof-rt5682.conf $out/share/alsa/ucm2/conf.d/sofrt5682/sofrt5682.conf
+    fi
   '';
+
+  ucm2 = "${alsa-ucm-conf-chromebook}/share/alsa/ucm2";
 
   chromebook-speaker-levels = pkgs.writeShellApplication {
     name = "chromebook-speaker-levels";
     runtimeInputs = [ pkgs.alsa-utils ];
     text = builtins.readFile ./speaker-levels.sh;
   };
+
+  # Stock default.pa loads module-udev-detect before our extraConfig can unload
+  # it, which logs a hard "Failed to find a working profile" on sof-rt5682 even
+  # though we then bind hw:0,0 / hw:0,1 successfully. Disable udev detect here.
+  pulseDefaultPa =
+    pkgs.runCommand "chromebook-pulse-default.pa"
+      {
+        preferLocalBuild = true;
+      }
+      ''
+        sed -E \
+          -e 's/^load-module module-udev-detect/# load-module module-udev-detect (chromebook: use explicit alsa sink\/source)/' \
+          -e 's/^load-module module-detect/# load-module module-detect/' \
+          ${pkgs.pulseaudioFull}/etc/pulse/default.pa >"$out"
+      '';
 in
 {
   # delbin / sof-rt5682: PipeWire's ALSA backend hits a known Tiger Lake SOF
@@ -40,6 +65,7 @@ in
     support32Bit = true;
     # A2DP / HSP need the full build (codec modules).
     package = pkgs.pulseaudioFull;
+    configFile = pulseDefaultPa;
     # Chromebook / this host: libpulse SHM (shared memfd) negotiates then the
     # server drops the client ("接続失敗: 接続切断"). pactl and waybar's
     # pulseaudio module then reconnect in a tight loop; waybar leaks ~50–70
@@ -59,8 +85,6 @@ in
     # Bind speaker PCM (hw:0,0) and headset mic (hw:0,1) directly instead.
     extraConfig = ''
       .nofail
-      unload-module module-udev-detect
-      unload-module module-alsa-card
       unload-module module-null-sink
       load-module module-alsa-sink device=hw:0,0 sink_name=speaker sink_properties=device.description=Speakers tsched=false
       # Headset capture: avoid source_properties (Pulse logs "Invalid properties"
@@ -71,6 +95,17 @@ in
   };
   security.rtkit.enable = true;
 
+  # Silence dbus-broker "Invalid user-name … user=pulse" from pulseaudio's
+  # system.d fragment (we run per-user PA; the policy user still must exist).
+  users.groups.pulse = { };
+  users.users.pulse = {
+    isSystemUser = true;
+    group = "pulse";
+    home = "/var/lib/pulse";
+    createHome = true;
+    description = "PulseAudio system user (dbus policy only)";
+  };
+
   # Bluetooth + A2DP audio (PulseAudio). Pair with bluetoothctl.
   hardware.bluetooth = {
     enable = true;
@@ -78,8 +113,8 @@ in
   };
 
   # Session + system env so PulseAudio and early tools both see UCM.
-  environment.sessionVariables.ALSA_CONFIG_UCM2 = "${alsa-ucm-conf-chromebook}/share/alsa/ucm2";
-  environment.variables.ALSA_CONFIG_UCM2 = "${alsa-ucm-conf-chromebook}/share/alsa/ucm2";
+  environment.sessionVariables.ALSA_CONFIG_UCM2 = ucm2;
+  environment.variables.ALSA_CONFIG_UCM2 = ucm2;
 
   environment.systemPackages = [ chromebook-speaker-levels ];
 
@@ -91,6 +126,9 @@ in
     description = "Initialize Chromebook ALSA card state";
     after = [ "sound.target" ];
     wantedBy = [ "sound.target" ];
+    # System units do not inherit environment.variables; without this, alsactl
+    # uses stock ucm2 and fails with "import hw:0 … -2" on every boot.
+    environment.ALSA_CONFIG_UCM2 = ucm2;
     serviceConfig = {
       Type = "oneshot";
       # alsactl init exits 99 when UCM import fails but still applies a generic
@@ -106,7 +144,9 @@ in
   };
 
   # SOF + max98373 often need a fresh codec init after S3.
+  # sleep-actions runs this outside the user session — set UCM path explicitly.
   powerManagement.resumeCommands = ''
+    export ALSA_CONFIG_UCM2=${lib.escapeShellArg ucm2}
     ${pkgs.alsa-utils}/bin/alsactl init || true
     ${chromebook-speaker-levels}/bin/chromebook-speaker-levels apply || true
   '';
