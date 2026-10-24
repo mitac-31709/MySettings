@@ -443,6 +443,18 @@ let
       run = "sudo timedatectl set-ntp true";
       mode = "show";
     }
+    {
+      section = "NixOS";
+      label = "前回ブートの err ログ";
+      run = "journalctl -b -1 -p err..alert --no-pager";
+      mode = "term";
+    }
+    {
+      section = "NixOS";
+      label = "前回ブートの coredump";
+      run = "coredumpctl -b -1 list";
+      mode = "term";
+    }
     # 開発
     {
       section = "開発";
