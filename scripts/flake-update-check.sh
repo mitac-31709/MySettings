@@ -103,11 +103,8 @@ else
   done
 fi
 
-if ((n == 0 && fetch_ok == 0)); then
-  exit 0
-fi
-
 export FUC_N="$n"
+export FUC_FETCH_OK="$fetch_ok"
 export FUC_RECORDS="$(
   if ((n > 0)); then
     printf '%s\n' "${outdated[@]}"
@@ -119,6 +116,7 @@ json_out="$(
 import json, os
 
 n = int(os.environ.get("FUC_N", "0"))
+fetch_ok = os.environ.get("FUC_FETCH_OK", "1") == "1"
 raw = os.environ.get("FUC_RECORDS", "")
 recs = []
 for line in raw.splitlines():
@@ -126,11 +124,16 @@ for line in raw.splitlines():
     if len(parts) == 3:
         recs.append(tuple(parts))
 
+# Always keep the refresh glyph visible (waybar side-bar button).
+header = "\uf021"
 if n == 0 or not recs:
-    obj = {"text": "", "class": "idle", "tooltip": "更新なし"}
+    if fetch_ok:
+        tip = "更新なし\nクリックで flake-update"
+    else:
+        tip = "確認失敗（一部取得不可）\nクリックで flake-update"
+    obj = {"text": header, "class": "idle", "tooltip": tip}
 else:
-    # Refresh header, then one icon per update (narrow left bar).
-    lines = ["\uf021"]
+    lines = [header]
     tips = []
     for icon, short, tip in recs:
         lines.append(icon if icon else short)
@@ -138,7 +141,7 @@ else:
     obj = {
         "text": "\n".join(lines),
         "class": "available",
-        "tooltip": "\n".join(tips),
+        "tooltip": "\n".join(tips) + "\n\nクリックで flake-update",
     }
 print(json.dumps(obj, ensure_ascii=False))
 PY

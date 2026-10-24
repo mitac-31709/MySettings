@@ -1283,13 +1283,13 @@ in
             if [ -s "$f" ]; then
               cat "$f"
             else
-              printf '%s\n' '{"text":"","class":"idle"}'
+              # Always show the check button before the first timer run.
+              printf '%s\n' '{"text":"","class":"idle","tooltip":"更新チェック待ち\nクリックで flake-update"}'
             fi
           '';
           return-type = "json";
           interval = 30;
           signal = 9;
-          hide-empty-text = true;
           tooltip = true;
           on-click = openFlakeUpdate;
         };
@@ -1403,12 +1403,16 @@ in
         font-family: "JetBrainsMono Nerd Font", "Noto Sans CJK JP", sans-serif;
         font-size: 13px;
         min-width: 34px;
+        padding: 8px 0;
+      }
+      /* Always-visible check button; muted when nothing to update. */
+      window.side #custom-updates.idle {
+        color: #6b7785;
       }
       window.side #custom-updates.available {
         color: #9fe7e7;
         background: #15383a;
         border-top: 2px solid #33c5c5;
-        padding: 8px 0;
       }
       window.side #custom-ai {
         font-family: "JetBrainsMono Nerd Font", "Noto Sans CJK JP", sans-serif;
