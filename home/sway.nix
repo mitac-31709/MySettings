@@ -348,6 +348,11 @@ let
     }
     {
       section = "Waybar・日常";
+      label = "Vivaldi の ChatGPT 拡張が無効 → ChatGPT 再起動";
+      keys = "Native Messaging 再登録";
+    }
+    {
+      section = "Waybar・日常";
       label = "AI稼働（左バー中央・ホバーで詳細）";
       keys = "Cursor / ChatGPT / Grok / Gemini / OpenCode";
     }

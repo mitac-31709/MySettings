@@ -154,27 +154,63 @@ stdenv.mkDerivation {
     PY
 
     pluginsSrc="$out/lib/chatgpt/resources/plugins"
+    resourcesDir="$out/lib/chatgpt/resources"
     cat > $out/lib/chatgpt/prepare-bundled-plugins <<'PREPARE_EOF'
     #!/bin/bash
     set -euo pipefail
     pluginsSrc='@pluginsSrc@'
+    resourcesDir='@resourcesDir@'
     res_cache="''${XDG_CACHE_HOME:-$HOME/.cache}/chatgpt-bundled-resources/@version@"
     if [[ ! -f "$res_cache/.sync-ok" ]]; then
       rm -rf "$res_cache"
       mkdir -p "$res_cache"
+      # Drop store modes so the tree is writable, then restore +x from the
+      # source (needed for Browser Use extension-host; --no-preserve=mode
+      # otherwise leaves it non-executable and native messaging fails).
       cp -a --no-preserve=mode "$pluginsSrc" "$res_cache/plugins"
       chmod -R u+w "$res_cache"
       : >"$res_cache/.sync-ok"
     fi
+    # Restore +x lost by --no-preserve=mode (paths have no newlines).
+    while IFS= read -r rel; do
+      [[ -z "$rel" ]] && continue
+      target="$res_cache/plugins/$rel"
+      if [[ -f "$target" ]]; then
+        chmod u+x "$target" || true
+      fi
+    done < <(find "$pluginsSrc" -type f -executable -printf '%P\n' 2>/dev/null || true)
     staging="''${CODEX_HOME:-$HOME/.codex}/.tmp/bundled-marketplaces"
     if [[ -d "$staging" ]]; then
       chmod -R u+w "$staging" 2>/dev/null || true
     fi
     export CODEX_ELECTRON_BUNDLED_PLUGINS_RESOURCES_PATH="$res_cache"
+
+    # Official .deb installs Native Messaging hosts for Chromium browsers
+    # (including Vivaldi). On NixOS the desktop installer often never runs
+    # successfully (plugin +x lost; bundled node can SIGSEGV), so write the
+    # same manifests the upstream installManifest.mjs would create.
+    chrome_plugin="$res_cache/plugins/openai-bundled/plugins/chrome"
+    extension_host="$chrome_plugin/extension-host/linux/x64/extension-host"
+    if [[ -n "''${HOME:-}" && -f "$extension_host" ]]; then
+      chmod u+x "$extension_host" || true
+      host_dir="$(dirname "$extension_host")"
+      # Single-line JSON (avoid under-indented lines that shrink Nix's common
+      # indent and break the python <<'PY' terminator in installPhase).
+      printf '%s\n' "{\"schemaVersion\":1,\"channel\":\"prod\",\"browserClientPath\":\"$chrome_plugin/scripts/browser-client.mjs\",\"codexCliPath\":\"$resourcesDir/codex\",\"nodePath\":\"$resourcesDir/cua_node/bin/node\",\"nodeReplPath\":\"$resourcesDir/cua_node/bin/node_repl\",\"proxyHost\":\"127.0.0.1\",\"proxyPort\":0}" >"$host_dir/extension-host-config.json"
+      nmh_json="{\"allowed_origins\":[\"chrome-extension://hehggadaopoacecdllhhajmbjkdcmajg/\",\"chrome-extension://odlomjlbamekndcpllcnffbgeohgkmjh/\"],\"description\":\"ChatGPT browser native messaging host\",\"name\":\"com.openai.codexextension\",\"path\":\"$extension_host\",\"type\":\"stdio\"}"
+      for nmh_dir in \
+        "$HOME/.config/vivaldi/NativeMessagingHosts" \
+        "$HOME/.config/google-chrome/NativeMessagingHosts" \
+        "$HOME/.config/chromium/NativeMessagingHosts"; do
+        mkdir -p "$nmh_dir"
+        printf '%s\n' "$nmh_json" >"$nmh_dir/com.openai.codexextension.json"
+      done
+    fi
     PREPARE_EOF
     sed -i 's/^    //' $out/lib/chatgpt/prepare-bundled-plugins
     substituteInPlace $out/lib/chatgpt/prepare-bundled-plugins \
       --replace-fail '@pluginsSrc@' "$pluginsSrc" \
+      --replace-fail '@resourcesDir@' "$resourcesDir" \
       --replace-fail '@version@' ${lib.escapeShellArg version}
     chmod +x $out/lib/chatgpt/prepare-bundled-plugins
 
