@@ -364,8 +364,8 @@ let
     }
     {
       section = "Waybar・日常";
-      label = "AI稼働（左バー中央・ホバーで詳細）";
-      keys = "Cursor / ChatGPT / Grok / Gemini / OpenCode";
+      label = "AI稼働（左バー中央）";
+      keys = "作/●=作業中 ○=起動 ·=待機／ホバーで詳細";
     }
     {
       section = "Waybar・日常";

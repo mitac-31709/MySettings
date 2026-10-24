@@ -842,7 +842,11 @@ def build_opencode(now: float) -> AgentStatus:
 
 
 def compact_block(st: AgentStatus) -> list[str]:
-    """One icon (+ optional %) for the narrow vertical bar."""
+    """Icon + work mark (●/○) and optional usage % for the narrow bar.
+
+    ● = 作業中, ○ = 起動のみ, · = 待機 — so status is visible at a glance
+    even when a usage percentage is also shown.
+    """
     if st.working:
         color = COLOR_ACTIVE
     elif st.usage_pct is not None and st.usage_pct >= 80:
@@ -853,10 +857,17 @@ def compact_block(st: AgentStatus) -> list[str]:
         color = COLOR_IDLE
     lines = [span(st.icon, color)]
     pct = format_pct(st.usage_pct)
-    if pct != "":
-        lines.append(span(pct, pct_color(st.usage_pct)))
-    elif st.working:
-        lines.append(span("●", COLOR_ACTIVE))
+    if st.working:
+        # Always keep the work glyph; fold % beside it when present.
+        mark = f"●{pct}" if pct else "●"
+        lines.append(span(mark, COLOR_ACTIVE))
+    elif st.running:
+        mark = f"○{pct}" if pct else "○"
+        lines.append(span(mark, COLOR_ACTIVE))
+    elif pct:
+        lines.append(span(f"·{pct}", pct_color(st.usage_pct)))
+    else:
+        lines.append(span("·", COLOR_IDLE))
     return lines
 
 
@@ -866,7 +877,7 @@ def tooltip_block(st: AgentStatus) -> list[str]:
     elif st.running:
         mark = "○ 起動中"
     else:
-        mark = "○ 待機"
+        mark = "· 待機"
     lines = [f"{st.label}  {mark}"]
     if st.work:
         lines.append(f"  {st.work}")
@@ -875,6 +886,16 @@ def tooltip_block(st: AgentStatus) -> list[str]:
     for extra in st.extras:
         lines.append(f"  {extra}")
     return lines
+
+
+def tooltip_summary(agents: list[AgentStatus]) -> list[str]:
+    working = [a.label for a in agents if a.working]
+    if working:
+        return [f"● 作業中: {', '.join(working)}", ""]
+    running = [a.label for a in agents if a.running]
+    if running:
+        return [f"○ 起動中: {', '.join(running)}（作業なし）", ""]
+    return ["· すべて待機", ""]
 
 
 def main() -> int:
@@ -886,11 +907,15 @@ def main() -> int:
         build_gemini(now),
         build_opencode(now),
     ]
-    # Always show every tracked agent (icons + optional %); tooltip has details.
-    text_lines: list[str] = []
+    # Header glyph: 作 when anyone is working, else · — instant glance.
+    any_working = any(a.working for a in agents)
+    text_lines: list[str] = [
+        span("作", COLOR_ACTIVE) if any_working else span("·", COLOR_IDLE)
+    ]
     for a in agents:
         text_lines.extend(compact_block(a))
-    tip_lines: list[str] = []
+
+    tip_lines = tooltip_summary(agents)
     for a in agents:
         tip_lines.extend(tooltip_block(a))
         tip_lines.append("")
@@ -898,7 +923,7 @@ def main() -> int:
         tip_lines.pop()
 
     classes = ["ai"]
-    if any(a.working for a in agents):
+    if any_working:
         classes.append("busy")
     elif any(a.running for a in agents):
         classes.append("running")
@@ -914,7 +939,7 @@ def main() -> int:
         "text": "\n".join(text_lines),
         "tooltip": "\n".join(tip_lines),
         "class": " ".join(classes),
-        "alt": "busy" if "busy" in classes else "idle",
+        "alt": "busy" if any_working else "idle",
     }
     print(json.dumps(obj, ensure_ascii=False))
     return 0
