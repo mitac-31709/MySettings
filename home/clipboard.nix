@@ -29,12 +29,15 @@ let
     Unit = {
       Description = "cliphist store (${name})";
       PartOf = [ "graphical-session.target" ];
+      BindsTo = [ "graphical-session.target" ];
       After = [ "graphical-session.target" ];
+      StartLimitIntervalSec = 30;
+      StartLimitBurst = 3;
     };
     Service = {
       ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste ${pasteArgs} --watch ${pkgs.cliphist}/bin/cliphist store";
       Restart = "on-failure";
-      RestartSec = 1;
+      RestartSec = 2;
     };
     Install = {
       WantedBy = [ "graphical-session.target" ];

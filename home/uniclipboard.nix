@@ -25,6 +25,8 @@
       Description = "UniClipboard sync daemon";
       After = [ "graphical-session.target" ];
       BindsTo = [ "graphical-session.target" ];
+      StartLimitIntervalSec = 30;
+      StartLimitBurst = 3;
     };
     Service = {
       ExecStart = "${pkgs.uniclipboard}/bin/uniclipd";

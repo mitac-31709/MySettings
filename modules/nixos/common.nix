@@ -164,6 +164,13 @@
   systemd.user.services.warp-taskbar = {
     wantedBy = [ "graphical-session.target" ];
     after = [ "graphical-session-pre.target" ];
+    # Logout: tray dies then Restart (upstream unit) storms without a limit.
+    unitConfig = {
+      PartOf = [ "graphical-session.target" ];
+      BindsTo = [ "graphical-session.target" ];
+      StartLimitIntervalSec = "30";
+      StartLimitBurst = "3";
+    };
   };
 
   # Tailscale daemon; Trayscale (GUI) is in home.packages.

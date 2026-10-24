@@ -1145,6 +1145,11 @@ in
   # Cap waybar so a module leak cannot OOM the whole 8 GiB session again.
   # Started via programs.waybar.systemd (sway-session → graphical-session).
   systemd.user.services.waybar = {
+    Unit = {
+      # Compositor teardown: Broken pipe → Restart storm (42× last logout).
+      StartLimitIntervalSec = 30;
+      StartLimitBurst = 3;
+    };
     Service = {
       MemoryMax = "256M";
       MemoryHigh = "192M";
@@ -1170,7 +1175,8 @@ in
       ConditionPathExists = "${flakeRoot}/flake.nix";
     };
     Timer = {
-      OnBootSec = "3min";
+      # Boot+3min often races Wi‑Fi/WARP; fetches then fail spuriously.
+      OnBootSec = "5min";
       OnUnitActiveSec = "6h";
       Persistent = true;
     };

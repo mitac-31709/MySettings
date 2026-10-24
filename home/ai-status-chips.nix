@@ -16,6 +16,8 @@
       BindsTo = [ "graphical-session.target" ];
       # Waybar publishes agent JSON; start even if waybar unit naming differs.
       Wants = [ "waybar.service" ];
+      StartLimitIntervalSec = 30;
+      StartLimitBurst = 3;
     };
     Service = {
       ExecStart = "${pkgs.ai-status-chips}/bin/ai-status-chips";

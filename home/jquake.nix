@@ -139,6 +139,9 @@ in
       ];
       Wants = [ "stalonetray-jquake.service" ];
       BindsTo = [ "graphical-session.target" ];
+      # Logout: AWT dies with Broken pipe then Restart would storm until stop.
+      StartLimitIntervalSec = 30;
+      StartLimitBurst = 3;
     };
     Service = {
       Type = "simple";
@@ -163,11 +166,14 @@ in
       After = [ "graphical-session.target" ];
       BindsTo = [ "graphical-session.target" ];
       ConditionEnvironment = "XDG_CURRENT_DESKTOP=sway";
+      StartLimitIntervalSec = 30;
+      StartLimitBurst = 3;
     };
     Service = {
       Type = "simple";
       # Placeholder geometry; sway moves it off-screen + opacity 0 (not
       # scratchpad: Super+- would reveal scratchpad contents).
+      # BadWindow on icon destroy is noisy but harmless; keep going.
       ExecStart = "${stalonetrayBin} --geometry 1x1+0+0 --icon-size 16 --window-type utility --window-strut none --kludges force_icons_size";
       ExecStartPost = "${hideStalonetray}";
       Restart = "on-failure";
@@ -188,6 +194,8 @@ in
       ];
       BindsTo = [ "graphical-session.target" ];
       ConditionEnvironment = "XDG_CURRENT_DESKTOP=sway";
+      StartLimitIntervalSec = 30;
+      StartLimitBurst = 3;
     };
     Service = {
       Type = "simple";

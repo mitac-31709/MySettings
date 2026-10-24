@@ -15,6 +15,8 @@
       Description = "Lan Mouse (receive input from Windows)";
       After = [ "graphical-session.target" ];
       BindsTo = [ "graphical-session.target" ];
+      StartLimitIntervalSec = 30;
+      StartLimitBurst = 3;
     };
     Service = {
       ExecStart = "${pkgs.lan-mouse}/bin/lan-mouse daemon";

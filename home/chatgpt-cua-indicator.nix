@@ -10,6 +10,8 @@
       Description = "Agent screen HUD (ChatGPT / Cursor browser control)";
       After = [ "graphical-session.target" ];
       BindsTo = [ "graphical-session.target" ];
+      StartLimitIntervalSec = 30;
+      StartLimitBurst = 3;
     };
     Service = {
       ExecStart = "${pkgs.chatgpt-cua-indicator}/bin/chatgpt-cua-indicator";
