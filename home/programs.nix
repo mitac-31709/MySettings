@@ -376,8 +376,6 @@ in
     mpv
     # ffmpeg + ffplay (RTSP probe / playback).
     ffmpeg
-    # OBS Studio (screen / RTSP capture; Wayland via portal + PipeWire).
-    obs-studio
     # 7-Zip with Zstd/Brotli/LZ4/etc. (`7z` / `7zz`). Attribute starts with `_` (digit).
     _7zip-zstd
     # Archive manager GUI (7z / Zstd / zip / tar / …). Desktop: PeaZip.
