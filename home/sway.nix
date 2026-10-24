@@ -348,6 +348,17 @@ let
     }
     {
       section = "Waybar・日常";
+      label = "Teams 等 PWA が開かない";
+      keys = "古い /nix/store の Exec → vivaldi-pwa-desktop-fix";
+    }
+    {
+      section = "Waybar・日常";
+      label = "Vivaldi PWA ショートカット修復";
+      run = "vivaldi-pwa-desktop-fix";
+      mode = "term";
+    }
+    {
+      section = "Waybar・日常";
       label = "Vivaldi ChatGPT 拡張が真っ白";
       keys = "setOptions 非対応 → パッチ版を Load unpacked";
     }
