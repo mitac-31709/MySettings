@@ -99,6 +99,8 @@
                   };
                   # Sway HUD while ChatGPT / Cursor screen agents drive the desktop.
                   chatgpt-cua-indicator = final.callPackage ./pkgs/chatgpt-cua-indicator { };
+                  # Left-bar AI status: hover slide-in chips (companion to waybar custom/ai).
+                  ai-status-chips = final.callPackage ./pkgs/ai-status-chips { };
                   # Official Grok Bot Linux desktop (Cursor / x.ai).
                   grok-bot = final.callPackage ./pkgs/grok-bot {
                     src = inputs.grok-bot-deb;

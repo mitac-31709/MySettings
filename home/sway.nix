@@ -365,7 +365,7 @@ let
     {
       section = "Waybar・日常";
       label = "AI稼働（左バー中央）";
-      keys = "作/●=作業中 ○=起動 ·=待機／ホバーで詳細";
+      keys = "作/●作業 ○起動 ·待機／ホバーでチップ・クリックで詳細";
     }
     {
       section = "Waybar・日常";
@@ -1305,12 +1305,13 @@ in
           tooltip = true;
           on-click = openFlakeUpdate;
         };
-        # Compact AI icons + %; hover tooltip has task / usage details.
+        # Compact AI icons + %; details via ai-status-chips hover overlay.
         "custom/ai" = {
           exec = waybarAiStatus;
           return-type = "json";
           interval = 5;
-          tooltip = true;
+          # Native tooltip replaced by slide-in chips (pkgs/ai-status-chips).
+          tooltip = false;
           # Keep pango <span> colors from the script.
           escape = false;
         };

@@ -14,6 +14,7 @@ import re
 import shutil
 import sqlite3
 import subprocess
+import sys
 import tempfile
 import time
 import urllib.error
@@ -55,6 +56,11 @@ def home() -> Path:
 
 def usage_cache_path() -> Path:
     return runtime_dir() / "ai-status-usage-cache.json"
+
+
+def agents_status_path() -> Path:
+    """Structured agent list for the hover-chip overlay."""
+    return runtime_dir() / "ai-status-agents.json"
 
 
 def read_json(path: Path) -> dict | None:
@@ -121,6 +127,27 @@ class AgentStatus:
     usage_line: str = ""
     usage_pct: float | None = None
     extras: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        if self.working:
+            status, mark = "working", "●"
+        elif self.running:
+            status, mark = "running", "○"
+        else:
+            status, mark = "idle", "·"
+        return {
+            "key": self.key,
+            "label": self.label,
+            "icon": self.icon,
+            "running": self.running,
+            "working": self.working,
+            "work": self.work,
+            "usage_line": self.usage_line,
+            "usage_pct": self.usage_pct,
+            "extras": list(self.extras),
+            "status": status,
+            "status_mark": mark,
+        }
 
 
 def truncate(text: str, n: int = 72) -> str:
@@ -898,15 +925,50 @@ def tooltip_summary(agents: list[AgentStatus]) -> list[str]:
     return ["· すべて待機", ""]
 
 
-def main() -> int:
-    now = time.time()
-    agents = [
+def collect_agents(now: float | None = None) -> list[AgentStatus]:
+    if now is None:
+        now = time.time()
+    return [
         build_cursor(now),
         build_chatgpt(now),
         build_grok(now),
         build_gemini(now),
         build_opencode(now),
     ]
+
+
+def publish_agents(agents: list[AgentStatus]) -> None:
+    """Write structured status for the left-bar chip overlay."""
+    write_json(
+        agents_status_path(),
+        {
+            "updated": time.time(),
+            "any_working": any(a.working for a in agents),
+            "agents": [a.to_dict() for a in agents],
+        },
+    )
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = list(sys.argv[1:] if argv is None else argv)
+    agents_only = "--agents" in args
+
+    agents = collect_agents()
+    publish_agents(agents)
+
+    if agents_only:
+        print(
+            json.dumps(
+                {
+                    "updated": time.time(),
+                    "any_working": any(a.working for a in agents),
+                    "agents": [a.to_dict() for a in agents],
+                },
+                ensure_ascii=False,
+            )
+        )
+        return 0
+
     # Header glyph: 作 when anyone is working, else · — instant glance.
     any_working = any(a.working for a in agents)
     text_lines: list[str] = [
@@ -937,6 +999,7 @@ def main() -> int:
 
     obj = {
         "text": "\n".join(text_lines),
+        # Tooltip disabled in waybar; chips overlay shows details on hover.
         "tooltip": "\n".join(tip_lines),
         "class": " ".join(classes),
         "alt": "busy" if any_working else "idle",
