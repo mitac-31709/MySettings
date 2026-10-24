@@ -82,7 +82,19 @@
                   };
                 in
                 {
-                  inherit (cursorPkgs) code-cursor cursor-cli;
+                  inherit (cursorPkgs) cursor-cli;
+                  # Cursor's resources/helpers/node is an unpatched FHS binary that
+                  # SIGSEGVs under nix-ld on this host (dl_main / SEGV_ACCERR). MCP
+                  # / npm-exec helpers then dump core. Point it at nixpkgs node.
+                  code-cursor = cursorPkgs.code-cursor.overrideAttrs (old: {
+                    postInstall = (old.postInstall or "") + ''
+                      helperNode="$out/lib/cursor/resources/app/resources/helpers/node"
+                      if [[ -e "$helperNode" ]]; then
+                        rm -f "$helperNode"
+                        ln -s ${final.nodejs}/bin/node "$helperNode"
+                      fi
+                    '';
+                  });
                   uniclipboard = final.callPackage ./pkgs/uniclipboard {
                     src = inputs.uniclipboard-deb;
                     version = uniclipboardVersion;

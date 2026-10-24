@@ -6,6 +6,7 @@
   dpkg,
   autoPatchelfHook,
   makeWrapper,
+  nodejs,
   python3,
   alsa-lib,
   at-spi2-atk,
@@ -226,6 +227,21 @@ stdenv.mkDerivation {
       --replace-fail 'Exec=chatgpt %U' 'Exec=chatgpt %U'
 
     runHook postInstall
+  '';
+
+  # Bundled cua_node SIGSEGVs after autoPatchelf (dl_main) and also when
+  # inheriting Electron's LD_LIBRARY_PATH=/lib/chatgpt. Point CUA at nixpkgs
+  # node instead (same approach as code-cursor's helpers/node).
+  postFixup = ''
+    cuaBin="$out/lib/chatgpt/resources/cua_node/bin"
+    if [[ -e "$cuaBin/node" ]]; then
+      rm -f "$cuaBin/node"
+      ln -s ${lib.getExe nodejs} "$cuaBin/node"
+    fi
+    if [[ -e "$cuaBin/node_repl" ]]; then
+      rm -f "$cuaBin/node_repl"
+      ln -s ${lib.getExe nodejs} "$cuaBin/node_repl"
+    fi
   '';
 
   meta = {
