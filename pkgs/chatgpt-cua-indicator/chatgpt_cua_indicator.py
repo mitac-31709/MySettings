@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Sway/wlroots overlay while an agent is driving the screen / browser.
 
-ChatGPT Computer Use: sky_linux / active_execs.
+ChatGPT:
+  - Computer Use helpers: sky_linux / node_repl active_execs
+  - Codex agent turns: open task_started in ~/.codex rollout (or fresh mtime)
 Cursor: recent browser_* / cursor-ide-browser tool_use in agent transcripts.
 
 Shows a click-through edge frame, top-center banner, chat panel underneath,
@@ -45,8 +47,10 @@ STOP_W = 72
 STOP_H = 28
 STOP_MARGIN = 10
 HINT = "Escで停止"
-# Grace after ChatGPT helper vanishes (covers restarts).
-CHAT_HIDE_AFTER_S = 2.0
+# Grace after ChatGPT helper / turn signal vanishes (covers restarts & think gaps).
+CHAT_HIDE_AFTER_S = 3.0
+# Match waybar-ai-status: keep "working" while the newest rollout is fresh.
+CHAT_ROLLOUT_GRACE_S = 120.0
 # Cursor browser tools are bursty; keep HUD up between actions.
 CURSOR_BROWSER_GRACE_S = 10.0
 POLL_MS = 400
@@ -110,8 +114,49 @@ def sky_linux_running() -> bool:
     return False
 
 
+def chatgpt_open_turn(path: Path) -> bool:
+    """True when the newest rollout has a task_started without task_complete."""
+    open_turns: set[str] = set()
+    for line in _read_tail_text(path, max_bytes=160_000).splitlines():
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if obj.get("type") != "event_msg":
+            continue
+        payload = obj.get("payload") or {}
+        if not isinstance(payload, dict):
+            continue
+        ptype = payload.get("type")
+        turn_id = payload.get("turn_id") or payload.get("root_turn_id")
+        if not turn_id:
+            continue
+        tid = str(turn_id)
+        if ptype == "task_started":
+            open_turns.add(tid)
+        elif ptype == "task_complete":
+            open_turns.discard(tid)
+    return bool(open_turns)
+
+
 def chatgpt_active() -> bool:
-    return has_active_execs() or sky_linux_running()
+    """Computer Use helpers, or an in-progress / recently-writing Codex turn."""
+    if has_active_execs() or sky_linux_running():
+        return True
+    rollout = newest_codex_rollout()
+    if rollout is None:
+        return False
+    try:
+        age = time.time() - rollout.stat().st_mtime
+    except OSError:
+        return False
+    # Open turn wins even if the file went quiet mid-think (mtime can stall).
+    if chatgpt_open_turn(rollout):
+        return True
+    if age > CHAT_ROLLOUT_GRACE_S:
+        return False
+    # Fresh mtime without a closed turn: streaming / tool gaps between events.
+    return age <= 15.0
 
 
 def cursor_projects_root() -> Path:
@@ -600,7 +645,7 @@ class IndicatorApp:
             candidates.append(
                 Activity(
                     agent="chatgpt",
-                    title="ChatGPTが操作中",
+                    title="ChatGPTが作業中",
                     chat=extract_chatgpt_chat(rollout),
                     score=self._last_chatgpt,
                 )
@@ -610,7 +655,7 @@ class IndicatorApp:
             candidates.append(
                 Activity(
                     agent="chatgpt",
-                    title="ChatGPTが操作中",
+                    title="ChatGPTが作業中",
                     chat=extract_chatgpt_chat(rollout),
                     score=self._last_chatgpt,
                 )

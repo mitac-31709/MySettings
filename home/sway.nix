@@ -380,7 +380,7 @@ let
     }
     {
       section = "Waybar・日常";
-      label = "エージェント画面操作中（ChatGPT / Cursorブラウザ）";
+      label = "エージェント作業中（ChatGPTターン / Cursorブラウザ）";
       keys = "青枠＋バナー＋チャット";
     }
     {
