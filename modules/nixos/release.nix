@@ -8,5 +8,5 @@
 { ... }:
 
 {
-  system.nixos.tags = [ "sway-only" ];
+  system.nixos.tags = [ "chatgpt-hud-turns" ];
 }
