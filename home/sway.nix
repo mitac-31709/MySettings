@@ -540,6 +540,30 @@ let
     }
     {
       section = "ディスク容量";
+      label = "journal を 200M に真空";
+      run = "sudo journalctl --vacuum-size=200M";
+      mode = "show";
+    }
+    {
+      section = "ディスク容量";
+      label = "/tmp remotion 残骸削除";
+      run = "rm -rf /tmp/remotion-* /tmp/react-motion-render* && df -h /";
+      mode = "show";
+    }
+    {
+      section = "ディスク容量";
+      label = "Downloads .tmp 残骸確認";
+      run = "du -sh ~/Downloads/.tmp_* 2>/dev/null; ls -la ~/Downloads/.tmp_* 2>/dev/null";
+      mode = "term";
+    }
+    {
+      section = "ディスク容量";
+      label = "restic-bak 残骸確認（復元済みなら削除可）";
+      run = "du -sh ~/restic-bak; du -xh --max-depth=2 ~/restic-bak | sort -hr | head";
+      mode = "term";
+    }
+    {
+      section = "ディスク容量";
       label = "ゴミ箱を空にする";
       run = "find ~/.local/share/Trash/files ~/.local/share/Trash/info -mindepth 1 -delete; rm -rf ~/.local/share/Trash/info && mkdir -p ~/.local/share/Trash/files ~/.local/share/Trash/info; du -sh ~/.local/share/Trash";
       mode = "term";
