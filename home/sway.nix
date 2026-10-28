@@ -296,6 +296,11 @@ let
     }
     {
       section = "Yazi / Neovim";
+      label = "隠しファイル既定ON（切替: ツリー H / 検索 Alt-h）";
+      keys = "H / Alt-h";
+    }
+    {
+      section = "Yazi / Neovim";
       label = "定義 / 参照 / ホバー";
       keys = "gd / gr / K";
     }
