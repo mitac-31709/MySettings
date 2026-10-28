@@ -9,11 +9,12 @@ let
     inherit value;
   };
 
-  # Classic Windows XP startup cue for paplay / PulseAudio.
-  # myinstants started returning 403; use the Internet Archive mirror instead.
-  windowsXpStartupWav = pkgs.fetchurl {
-    url = "https://archive.org/download/windowsxpstartup_201910/Windows%20XP%20Startup.wav";
-    hash = "sha256-j4Weu5AkcDbO0R24VISKvhQ03D/9+leV98XwbbmkI9U=";
+  # Windows 7 / Vista startup cue for paplay / PulseAudio (same Fripp boot sound).
+  # Official Media/Windows Startup.wav in Win7 is a ~0.2s stub; this is the iconic one.
+  windows7StartupWav = pkgs.fetchurl {
+    url = "https://archive.org/download/10-.-wav/Vista%20.WAV.wav";
+    name = "windows-7-startup.wav";
+    hash = "sha256-fOaAm7YsloolLoknFqr1Tqh81p9gFkq+T17LFwRg8vM=";
   };
 
   ghostty = "${pkgs.ghostty}/bin/ghostty";
@@ -283,9 +284,9 @@ in
     };
   };
 
-  systemd.user.services.windows-xp-startup-sound = {
+  systemd.user.services.windows-7-startup-sound = {
     Unit = {
-      Description = "Windows XP startup sound";
+      Description = "Windows 7 startup sound";
       After = [
         "pulseaudio.service"
         "graphical-session.target"
@@ -295,7 +296,7 @@ in
     Service = {
       Type = "oneshot";
       ExecStartPre = "${pkgs.coreutils}/bin/sleep 3";
-      ExecStart = "${pkgs.pulseaudio}/bin/paplay ${windowsXpStartupWav}";
+      ExecStart = "${pkgs.pulseaudio}/bin/paplay ${windows7StartupWav}";
     };
     Install = {
       WantedBy = [ "graphical-session.target" ];
