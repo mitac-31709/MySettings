@@ -6,17 +6,16 @@
   dpkg,
   autoPatchelfHook,
   makeWrapper,
-  wrapGAppsHook3,
-  cairo,
+  wrapGAppsHook4,
   dbus,
-  gdk-pixbuf,
   glib,
-  gtk3,
-  gtk-layer-shell,
+  gtk4,
+  gtk4-layer-shell,
   libayatana-appindicator,
   libsoup_3,
   openssl,
-  webkitgtk_4_1,
+  webkitgtk_6_0,
+  libx11,
 }:
 
 stdenv.mkDerivation {
@@ -27,20 +26,19 @@ stdenv.mkDerivation {
     dpkg
     autoPatchelfHook
     makeWrapper
-    wrapGAppsHook3
+    wrapGAppsHook4
   ];
 
   buildInputs = [
-    cairo
     dbus
-    gdk-pixbuf
     glib
-    gtk3
-    gtk-layer-shell
+    gtk4
+    gtk4-layer-shell
     libayatana-appindicator
     libsoup_3
     openssl
-    webkitgtk_4_1
+    webkitgtk_6_0
+    libx11
     stdenv.cc.cc
   ];
 
@@ -66,10 +64,12 @@ stdenv.mkDerivation {
 
     wrapProgram $out/bin/uniclipboard \
       "''${gappsWrapperArgs[@]}" \
-      --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath [
-        gtk-layer-shell
-        libayatana-appindicator
-      ]}" \
+      --prefix LD_LIBRARY_PATH : "${
+        lib.makeLibraryPath [
+          gtk4-layer-shell
+          libayatana-appindicator
+        ]
+      }" \
       --set-default WEBKIT_DISABLE_DMABUF_RENDERER 1
 
     runHook postInstall
