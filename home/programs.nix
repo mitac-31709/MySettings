@@ -393,6 +393,8 @@ in
     # Earthquake map (pkgs/jquake: Sway AWT fix + sounds cwd + http.agent).
     jquake
     onlyoffice-desktopeditors
+    # 3D printer slicer (Bambu/Prusa fork). App menu: OrcaSlicer (`orca-slicer`).
+    orca-slicer
     # Affinity v3 omitted: affinity-nix Wine builds often compile for hours
     # when cache.forall.systems misses (and that cache is not in nix.settings).
     # Re-enable: add affinity-v3 here and restore cache.forall.systems in

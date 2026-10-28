@@ -737,6 +737,13 @@ let
       section = "ネット・BT・WARP";
       label = "注: バッファは遅延・並べ替え向け。本当に落ちた RTP は復元不可 → 解像度↓/同一LAN/TCP";
     }
+    # 3D印刷
+    {
+      section = "3D印刷";
+      label = "Orca Slicer";
+      run = "orca-slicer";
+      mode = "exec";
+    }
     # Windows 連携
     {
       section = "Windows 連携";
