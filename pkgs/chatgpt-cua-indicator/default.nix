@@ -13,7 +13,7 @@
 
 python3.pkgs.buildPythonApplication {
   pname = "chatgpt-cua-indicator";
-  version = "0.2.1";
+  version = "0.2.2";
   format = "other";
 
   src = ./.;

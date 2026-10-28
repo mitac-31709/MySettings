@@ -1,5 +1,5 @@
 # Screen-edge frame + banner + chat panel while an agent drives the screen.
-# ChatGPT: active_execs / sky_linux / open Codex turn (rollout). Cursor: browser tools.
+# ChatGPT: active_execs / sky_linux (Computer Use only). Cursor: browser tools.
 { pkgs, ... }:
 
 {
