@@ -204,6 +204,11 @@ let
     }
     {
       section = "入力・Chromebook";
+      label = "←↓↑→ ・ … など";
+      keys = "zh/zj/zk/zl / z/ z.";
+    }
+    {
+      section = "入力・Chromebook";
       label = "ChatGPT で英語のまま戻らない → 再起動";
       keys = "ShareInputState + Meltype先頭";
     }

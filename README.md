@@ -111,6 +111,7 @@ passwd mitac
 
 - **Super+Space**: Fcitx Trigger（IME 有効 ⇔ 無効）。グループが Meltype だけなので、どちらもエンジンは Meltype のまま
 - Meltype 内の英数 ⇔ 日本語: **半角/全角**（Fcitx の Trigger には割り当てない。ChatGPT 等 Electron で直接入力に落ちて戻せなくなるのを防ぐ）
+- **z + 記号 / hjkl**: `zl`→`→`、`zh`→`←`、`zj`→`↓`、`zk`→`↑`、`z/`→`・`、`z.`→`…` など（Meltype 1.4+、既定 ON）
 - 学習・設定: `~/.local/share/Meltype`
 - 詳細設定: **Fcitx5 設定**（`fcitx5-configtool`）
 - プロファイル／config: Home Manager が `/etc/xdg/fcitx5/{profile,config}` を `~/.config/fcitx5/` に同期（古い `mozc` / `keyboard-jp` + 半角/全角 Trigger を上書きしないように）
