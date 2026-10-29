@@ -44,21 +44,26 @@ PANEL_W = 560
 PANEL_H = 220
 PANEL_GAP = 10
 PANEL_PAD = 12
-BTN_W = 72
+BTN_W = 80
 BTN_H = 28
 BTN_GAP = 8
-BTN_MARGIN = 10
 HINT = "Escで停止"
 # Grace after Computer Use helpers vanish (covers brief restarts between actions).
 CHAT_HIDE_AFTER_S = 3.0
 # Cursor browser tools are bursty; keep HUD up between actions.
-CURSOR_BROWSER_GRACE_S = 10.0
+CURSOR_BROWSER_GRACE_S = 8.0
+# Browser tool must be among the newest transcript lines (not earlier in the turn).
+CURSOR_BROWSER_MAX_LINES_AFTER = 8
 POLL_MS = 400
 CHAT_MAX_CHARS = 1800
 SKY_RE = re.compile(r"sky_linux")
 BROWSER_TOOL_RE = re.compile(
     r"(?:browser_[a-z0-9_]+|cursor-ide-browser)", re.IGNORECASE
 )
+# Match home/sway.nix waybar exclusive zones so the HUD covers the full output
+# (sway insets overlay surfaces by other layers' exclusive zones otherwise).
+WAYBAR_LEFT_PX = 34  # sideBar.width
+WAYBAR_BOTTOM_PX = 30  # mainBar.height
 
 
 def runtime_dir() -> Path:
@@ -135,18 +140,41 @@ def _read_tail_text(path: Path, max_bytes: int = 256_000) -> str:
         return ""
 
 
-def _recent_lines_have_browser_tools(path: Path, last_n: int = 40) -> bool:
-    """True only if browser tools appear in the newest transcript lines."""
+def _line_is_browser_tool_invocation(line: str) -> bool:
+    if not BROWSER_TOOL_RE.search(line):
+        return False
+    # Require an actual tool invocation, not a prose mention.
+    return '"tool_use"' in line or "CallDynamicTool" in line or '"browser_' in line
+
+
+def _cursor_browser_tool_mtime(path: Path, now: float) -> float | None:
+    """mtime if a browser tool_use is still among the newest lines; else None.
+
+    Avoids keeping the HUD up for an old browser call while the agent has moved
+    on to ordinary (non-screen) work in the same transcript.
+    """
+    try:
+        mtime = path.stat().st_mtime
+    except OSError:
+        return None
+    if now - mtime > CURSOR_BROWSER_GRACE_S * 3:
+        return None
     text = _read_tail_text(path, max_bytes=96_000)
     if not text:
-        return False
-    for line in text.splitlines()[-last_n:]:
-        if not BROWSER_TOOL_RE.search(line):
-            continue
-        # Require an actual tool invocation, not a prose mention.
-        if '"tool_use"' in line or "CallDynamicTool" in line or '"browser_' in line:
-            return True
-    return False
+        return None
+    lines = text.splitlines()
+    last_idx: int | None = None
+    for i in range(len(lines) - 1, -1, -1):
+        if _line_is_browser_tool_invocation(lines[i]):
+            last_idx = i
+            break
+    if last_idx is None:
+        return None
+    if (len(lines) - 1 - last_idx) > CURSOR_BROWSER_MAX_LINES_AFTER:
+        return None
+    if now - mtime > CURSOR_BROWSER_GRACE_S:
+        return None
+    return mtime
 
 
 def scan_cursor_browser_activity(
@@ -164,14 +192,8 @@ def scan_cursor_browser_activity(
             if not transcripts.is_dir():
                 continue
             for jsonl in transcripts.rglob("*.jsonl"):
-                try:
-                    mtime = jsonl.stat().st_mtime
-                except OSError:
-                    continue
-                # Skip cold files; keep scans cheap.
-                if now - mtime > CURSOR_BROWSER_GRACE_S * 3:
-                    continue
-                if not _recent_lines_have_browser_tools(jsonl):
+                mtime = _cursor_browser_tool_mtime(jsonl, now)
+                if mtime is None:
                     continue
                 if mtime >= best_mtime:
                     best_mtime = mtime
@@ -340,7 +362,12 @@ class OverlayWindow(Gtk.Window):
             GtkLayerShell.Edge.RIGHT,
         ):
             GtkLayerShell.set_anchor(self, edge, True)
-            GtkLayerShell.set_margin(self, edge, 0)
+        # Negative margins cancel sway's usable-area inset from waybar exclusive
+        # zones so the blue frame sits on the true output edges.
+        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, 0)
+        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, 0)
+        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.LEFT, -WAYBAR_LEFT_PX)
+        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.BOTTOM, -WAYBAR_BOTTOM_PX)
 
         geo = monitor.get_geometry()
         self._width = geo.width
@@ -349,6 +376,7 @@ class OverlayWindow(Gtk.Window):
 
         self.connect("draw", self._on_draw)
         self.connect("realize", self._on_realize)
+        self.connect("size-allocate", self._on_size_allocate)
         self.connect("button-press-event", self._on_button)
         self.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
 
@@ -361,6 +389,17 @@ class OverlayWindow(Gtk.Window):
 
     def _on_realize(self, *_args) -> None:
         self._apply_input_region()
+
+    def _on_size_allocate(self, _widget, allocation) -> None:
+        w = int(allocation.width)
+        h = int(allocation.height)
+        if w < 2 or h < 2:
+            return
+        if w == self._width and h == self._height:
+            return
+        self._width = w
+        self._height = h
+        self.queue_draw()
 
     def _apply_input_region(self) -> None:
         window = self.get_window()
@@ -446,10 +485,19 @@ class OverlayWindow(Gtk.Window):
         )
         cr.show_text(HINT)
 
-        # Chat panel directly under the banner (primary monitor only).
+        # Buttons + chat under the banner (primary monitor only).
         if self._primary:
             panel_x = (w - PANEL_W) / 2
-            panel_y = pill_y + pill_h + PANEL_GAP
+            btn_y = pill_y + pill_h + BTN_GAP
+            stop_x = panel_x + PANEL_W - BTN_W
+            hide_x = stop_x - BTN_GAP - BTN_W
+            self._stop_rect = (stop_x, btn_y, BTN_W, BTN_H)
+            self._hide_rect = (hide_x, btn_y, BTN_W, BTN_H)
+
+            self._draw_button(cr, hide_x, btn_y, BTN_W, BTN_H, HIDE_BG, "非表示")
+            self._draw_button(cr, stop_x, btn_y, BTN_W, BTN_H, STOP_BG, "停止")
+
+            panel_y = btn_y + BTN_H + PANEL_GAP
             self._panel_rect = (panel_x, panel_y, PANEL_W, PANEL_H)
 
             cr.set_source_rgba(*PANEL_BG)
@@ -460,25 +508,14 @@ class OverlayWindow(Gtk.Window):
             self._rounded_rect(cr, panel_x, panel_y, PANEL_W, PANEL_H, 8)
             cr.stroke()
 
-            stop_x = panel_x + PANEL_W - BTN_W - BTN_MARGIN
-            stop_y = panel_y + PANEL_H - BTN_H - BTN_MARGIN
-            hide_x = stop_x - BTN_GAP - BTN_W
-            hide_y = stop_y
-            self._stop_rect = (stop_x, stop_y, BTN_W, BTN_H)
-            self._hide_rect = (hide_x, hide_y, BTN_W, BTN_H)
-
-            chat_bottom = stop_y - 8
             self._draw_wrapped_text(
                 cr,
                 self._chat or "（思考・操作ログを待機中…）",
                 panel_x + PANEL_PAD,
                 panel_y + PANEL_PAD,
                 PANEL_W - PANEL_PAD * 2,
-                chat_bottom - (panel_y + PANEL_PAD),
+                PANEL_H - PANEL_PAD * 2,
             )
-
-            self._draw_button(cr, hide_x, hide_y, BTN_W, BTN_H, HIDE_BG, "非表示")
-            self._draw_button(cr, stop_x, stop_y, BTN_W, BTN_H, STOP_BG, "停止")
             self._apply_input_region()
         else:
             self._hide_rect = (0.0, 0.0, 0.0, 0.0)
@@ -658,8 +695,8 @@ class IndicatorApp:
                 )
             )
 
-        browser_mtime, transcript = scan_cursor_browser_activity(now)
-        if transcript is not None and (now - browser_mtime) <= CURSOR_BROWSER_GRACE_S:
+        _browser_mtime, transcript = scan_cursor_browser_activity(now)
+        if transcript is not None:
             self._last_cursor = mono
             self._cursor_transcript = transcript
             candidates.append(

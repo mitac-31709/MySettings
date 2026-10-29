@@ -1,5 +1,7 @@
 # Screen-edge frame + banner + chat panel while an agent drives the screen.
-# ChatGPT: active_execs / sky_linux (Computer Use only). Cursor: browser tools.
+# ChatGPT: active_execs / sky_linux (Computer Use only — not ordinary chat turns).
+# Cursor: recent browser_* / cursor-ide-browser tool_use only.
+# Do not override ExecStart with a local drop-in; it pins an old binary.
 { pkgs, ... }:
 
 {
