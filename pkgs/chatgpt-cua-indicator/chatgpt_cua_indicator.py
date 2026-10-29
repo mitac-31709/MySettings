@@ -6,7 +6,8 @@ Only screen ops — not ordinary chat / think turns:
   Cursor: recent browser_* / cursor-ide-browser tool_use in agent transcripts
 
 Shows a click-through edge frame, top-center banner, chat panel underneath,
-and a Stop button. Esc is handled via Sway mode "agent-screen".
+Hide (dismiss HUD only) and Stop buttons. Esc is handled via Sway mode
+"agent-screen".
 """
 
 from __future__ import annotations
@@ -33,6 +34,7 @@ from gi.repository import GLib, Gdk, Gtk, GtkLayerShell  # noqa: E402
 ACCENT = (0x33 / 255.0, 0x9C / 255.0, 0xFF / 255.0, 1.0)
 PILL_BG = (0.043, 0.059, 0.078, 0.92)
 PANEL_BG = (0.043, 0.059, 0.078, 0.94)
+HIDE_BG = (0.22, 0.28, 0.36, 0.95)
 STOP_BG = (0.88, 0.27, 0.35, 0.95)  # soft-ish
 EDGE_PX = 4
 PILL_PAD_X = 18
@@ -42,9 +44,10 @@ PANEL_W = 560
 PANEL_H = 220
 PANEL_GAP = 10
 PANEL_PAD = 12
-STOP_W = 72
-STOP_H = 28
-STOP_MARGIN = 10
+BTN_W = 72
+BTN_H = 28
+BTN_GAP = 8
+BTN_MARGIN = 10
 HINT = "Escで停止"
 # Grace after Computer Use helpers vanish (covers brief restarts between actions).
 CHAT_HIDE_AFTER_S = 3.0
@@ -307,8 +310,10 @@ class OverlayWindow(Gtk.Window):
         self._primary = primary
         self._title = "エージェントが操作中"
         self._chat = ""
-        self._stop_rect = (0.0, 0.0, 0.0, 0.0)  # x,y,w,h
+        self._hide_rect = (0.0, 0.0, 0.0, 0.0)  # x,y,w,h
+        self._stop_rect = (0.0, 0.0, 0.0, 0.0)
         self._panel_rect = (0.0, 0.0, 0.0, 0.0)
+        self._on_hide = None  # type: ignore
         self._on_stop = None  # type: ignore
 
         self.set_app_paintable(True)
@@ -361,20 +366,32 @@ class OverlayWindow(Gtk.Window):
         window = self.get_window()
         if window is None:
             return
-        # Click-through everywhere except the Stop button on the primary monitor.
+        # Click-through everywhere except Hide/Stop on the primary monitor.
         region = cairo.Region()
         if self._primary:
-            x, y, w, h = self._stop_rect
-            if w > 0 and h > 0:
+            for box in (self._hide_rect, self._stop_rect):
+                x, y, w, h = box
+                if w <= 0 or h <= 0:
+                    continue
                 rect = cairo.RectangleInt(int(x), int(y), int(w), int(h))
-                region = cairo.Region(rect)
+                if region.is_empty():
+                    region = cairo.Region(rect)
+                else:
+                    region.union(cairo.Region(rect))
         window.input_shape_combine_region(region, 0, 0)
 
+    @staticmethod
+    def _hit(box: tuple[float, float, float, float], x: float, y: float) -> bool:
+        bx, by, bw, bh = box
+        return bw > 0 and bh > 0 and bx <= x <= bx + bw and by <= y <= by + bh
+
     def _on_button(self, _widget, event) -> bool:
-        if not self._primary or self._on_stop is None:
+        if not self._primary:
             return False
-        x, y, w, h = self._stop_rect
-        if x <= event.x <= x + w and y <= event.y <= y + h:
+        if self._on_hide is not None and self._hit(self._hide_rect, event.x, event.y):
+            self._on_hide()
+            return True
+        if self._on_stop is not None and self._hit(self._stop_rect, event.x, event.y):
             self._on_stop()
             return True
         return False
@@ -443,9 +460,12 @@ class OverlayWindow(Gtk.Window):
             self._rounded_rect(cr, panel_x, panel_y, PANEL_W, PANEL_H, 8)
             cr.stroke()
 
-            stop_x = panel_x + PANEL_W - STOP_W - STOP_MARGIN
-            stop_y = panel_y + PANEL_H - STOP_H - STOP_MARGIN
-            self._stop_rect = (stop_x, stop_y, STOP_W, STOP_H)
+            stop_x = panel_x + PANEL_W - BTN_W - BTN_MARGIN
+            stop_y = panel_y + PANEL_H - BTN_H - BTN_MARGIN
+            hide_x = stop_x - BTN_GAP - BTN_W
+            hide_y = stop_y
+            self._stop_rect = (stop_x, stop_y, BTN_W, BTN_H)
+            self._hide_rect = (hide_x, hide_y, BTN_W, BTN_H)
 
             chat_bottom = stop_y - 8
             self._draw_wrapped_text(
@@ -457,25 +477,35 @@ class OverlayWindow(Gtk.Window):
                 chat_bottom - (panel_y + PANEL_PAD),
             )
 
-            cr.set_source_rgba(*STOP_BG)
-            self._rounded_rect(cr, stop_x, stop_y, STOP_W, STOP_H, 6)
-            cr.fill()
-            cr.set_source_rgba(1, 1, 1, 1)
-            cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-            cr.set_font_size(13)
-            stop_label = "停止"
-            se = cr.text_extents(stop_label)
-            cr.move_to(
-                stop_x + (STOP_W - se.width) / 2,
-                stop_y + (STOP_H + se.height) / 2,
-            )
-            cr.show_text(stop_label)
+            self._draw_button(cr, hide_x, hide_y, BTN_W, BTN_H, HIDE_BG, "非表示")
+            self._draw_button(cr, stop_x, stop_y, BTN_W, BTN_H, STOP_BG, "停止")
             self._apply_input_region()
         else:
+            self._hide_rect = (0.0, 0.0, 0.0, 0.0)
             self._stop_rect = (0.0, 0.0, 0.0, 0.0)
             self._apply_input_region()
 
         return False
+
+    def _draw_button(
+        self,
+        cr: cairo.Context,
+        x: float,
+        y: float,
+        w: float,
+        h: float,
+        bg: tuple[float, float, float, float],
+        label: str,
+    ) -> None:
+        cr.set_source_rgba(*bg)
+        self._rounded_rect(cr, x, y, w, h, 6)
+        cr.fill()
+        cr.set_source_rgba(1, 1, 1, 1)
+        cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+        cr.set_font_size(13)
+        ext = cr.text_extents(label)
+        cr.move_to(x + (w - ext.width) / 2, y + (h + ext.height) / 2)
+        cr.show_text(label)
 
     def _draw_wrapped_text(
         self,
@@ -533,6 +563,8 @@ class IndicatorApp:
     def __init__(self) -> None:
         self._windows: list[OverlayWindow] = []
         self._visible = False
+        # User dismissed HUD for the current screen-control session.
+        self._dismissed = False
         self._agent = ""
         self._title = ""
         self._chat = ""
@@ -568,12 +600,19 @@ class IndicatorApp:
             if mon is None:
                 continue
             win = OverlayWindow(mon, primary=(i == 0))
+            win._on_hide = self._request_dismiss
             win._on_stop = self._request_stop
             win.set_content(self._title or "エージェントが操作中", self._chat)
             self._windows.append(win)
             if self._visible:
                 win.show_all()
                 win._apply_input_region()
+
+    def _request_dismiss(self) -> None:
+        """Hide the HUD only; leave the agent running until this session ends."""
+        self._dismissed = True
+        if self._visible:
+            self._hide()
 
     def _request_stop(self) -> None:
         try:
@@ -586,6 +625,7 @@ class IndicatorApp:
             self.force_hide()
 
     def force_hide(self) -> None:
+        self._dismissed = True
         self._last_chatgpt = 0.0
         self._last_cursor = 0.0
         if self._visible:
@@ -659,18 +699,25 @@ class IndicatorApp:
 
         activity = self._poll_activity()
         want = activity is not None
-        if want and activity is not None:
-            self._agent = activity.agent
-            self._title = activity.title
-            self._chat = activity.chat
-            for win in self._windows:
-                win.set_content(self._title, self._chat)
-            if not self._visible:
-                self._show()
-            else:
-                self._write_active()
-        elif not want and self._visible:
-            self._hide()
+        if not want:
+            # Next screen-control session may show the HUD again.
+            self._dismissed = False
+            if self._visible:
+                self._hide()
+            return True
+
+        assert activity is not None
+        self._agent = activity.agent
+        self._title = activity.title
+        self._chat = activity.chat
+        if self._dismissed:
+            return True
+        for win in self._windows:
+            win.set_content(self._title, self._chat)
+        if not self._visible:
+            self._show()
+        else:
+            self._write_active()
         return True
 
     def _write_active(self) -> None:

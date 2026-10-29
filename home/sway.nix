@@ -395,6 +395,11 @@ let
     }
     {
       section = "Waybar・日常";
+      label = "画面操作HUDを非表示（エージェントは継続）";
+      keys = "非表示";
+    }
+    {
+      section = "Waybar・日常";
       label = "画面操作を停止";
       keys = "Esc / Super+Esc / 停止";
       run = "agent-screen-stop";
