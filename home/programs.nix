@@ -428,5 +428,9 @@ in
     # Node.js (`node` / `npm`) and pnpm (standalone binary; uses `node` on PATH).
     nodejs
     pnpm
+    # Typst typesetting (CLI). Cursor uses the Tinymist extension for LSP/preview.
+    typst
+    tinymist
+    typstyle
   ];
 }

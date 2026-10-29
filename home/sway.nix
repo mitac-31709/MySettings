@@ -501,6 +501,23 @@ let
     }
     {
       section = "開発";
+      label = "Typst コンパイル（PDF）";
+      run = "typst compile main.typ";
+      mode = "term";
+    }
+    {
+      section = "開発";
+      label = "Typst 監視コンパイル";
+      run = "typst watch main.typ";
+      mode = "term";
+    }
+    {
+      section = "開発";
+      label = "Cursor: Tinymist プレビュー";
+      keys = "コマンドパレット → Typst Preview";
+    }
+    {
+      section = "開発";
       label = "一時停止 → バックグラウンド";
       keys = "Ctrl+Z → bg";
     }

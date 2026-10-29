@@ -101,6 +101,8 @@
   fonts.packages = with pkgs; [
     nerd-fonts.jetbrains-mono
     noto-fonts-color-emoji
+    # Typst / docs often request "Noto Sans CJK JP" by name.
+    noto-fonts-cjk-sans
     hiragino-fonts
   ];
   fonts.fontconfig.defaultFonts = {
