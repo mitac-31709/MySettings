@@ -1,6 +1,7 @@
 # Left-edge AI status chips: hover Waybar AI column → slide-in chips;
-# click a chip for expanded detail. Reads $XDG_RUNTIME_DIR/ai-status-agents.json
-# written by scripts/waybar-ai-status.py.
+# click a chip for expanded detail; trailing chip toggles completion sound
+# (Windows Me startup). Reads $XDG_RUNTIME_DIR/ai-status-agents.json
+# written by scripts/waybar-ai-status.py. Prefs: ~/.config/ai-status/prefs.json
 { pkgs, ... }:
 
 {

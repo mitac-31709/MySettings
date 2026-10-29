@@ -4,6 +4,9 @@
 Hover near the left waybar AI column → modern chips slide in from the left
 (vertically centered, one chip per agent, same order as the bar icons).
 Click a chip to expand details; click again or press Esc to collapse / hide.
+
+A trailing control chip toggles the Windows Me startup cue played when all
+agents leave the working state (prefs in ~/.config/ai-status/prefs.json).
 """
 
 from __future__ import annotations
@@ -12,6 +15,7 @@ import json
 import math
 import os
 import signal
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -48,6 +52,7 @@ SLIDE_MS = 220
 POLL_MS = 1500
 HIDE_GRACE_MS = 280
 ANIM_HZ = 60
+SOUND_CHIP_KEY = "__sound__"
 
 
 def runtime_dir() -> Path:
@@ -57,18 +62,87 @@ def runtime_dir() -> Path:
     return Path(f"/run/user/{os.getuid()}")
 
 
+def config_dir() -> Path:
+    env = os.environ.get("XDG_CONFIG_HOME")
+    if env:
+        return Path(env) / "ai-status"
+    return Path.home() / ".config" / "ai-status"
+
+
+def prefs_path() -> Path:
+    return config_dir() / "prefs.json"
+
+
 def agents_path() -> Path:
     return runtime_dir() / "ai-status-agents.json"
 
 
-def load_agents() -> list[dict]:
+def load_status() -> dict:
     path = agents_path()
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return []
-    agents = data.get("agents")
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def load_agents() -> list[dict]:
+    agents = load_status().get("agents")
     return agents if isinstance(agents, list) else []
+
+
+def load_prefs() -> dict:
+    try:
+        data = json.loads(prefs_path().read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def save_prefs(prefs: dict) -> None:
+    path = prefs_path()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        tmp.write_text(json.dumps(prefs, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        tmp.replace(path)
+    except OSError:
+        pass
+
+
+def done_sound_enabled() -> bool:
+    """Default on; only an explicit false disables."""
+    return load_prefs().get("done_sound", True) is not False
+
+
+def set_done_sound_enabled(enabled: bool) -> None:
+    prefs = load_prefs()
+    prefs["done_sound"] = bool(enabled)
+    save_prefs(prefs)
+
+
+def done_sound_path() -> Path | None:
+    env = os.environ.get("AI_STATUS_DONE_SOUND")
+    if not env:
+        return None
+    p = Path(env)
+    return p if p.is_file() else None
+
+
+def play_done_sound() -> None:
+    wav = done_sound_path()
+    if wav is None:
+        return
+    try:
+        subprocess.Popen(
+            ["paplay", str(wav)],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except OSError:
+        pass
 
 
 def status_color(agent: dict) -> tuple[float, float, float, float]:
@@ -103,6 +177,7 @@ class ChipsWindow(Gtk.Window):
         self._screen_w = geo.width
 
         self._agents: list[dict] = []
+        self._sound_enabled = done_sound_enabled()
         self._expanded: str | None = None
         self._visible_progress = 0.0  # 0 hidden → 1 shown
         self._want_visible = False
@@ -155,12 +230,22 @@ class ChipsWindow(Gtk.Window):
         self._apply_input_region()
 
     def set_agents(self, agents: list[dict]) -> None:
-        if agents == self._agents:
+        sound = done_sound_enabled()
+        if agents == self._agents and sound == self._sound_enabled:
             return
         self._agents = agents
+        self._sound_enabled = sound
         if self._expanded and not any(a.get("key") == self._expanded for a in agents):
             self._expanded = None
         self._layout_dirty()
+        self.queue_draw()
+
+    def toggle_done_sound(self) -> None:
+        enabled = not self._sound_enabled
+        set_done_sound_enabled(enabled)
+        self._sound_enabled = enabled
+        if enabled:
+            play_done_sound()
         self.queue_draw()
 
     def _layout_dirty(self) -> None:
@@ -175,22 +260,25 @@ class ChipsWindow(Gtk.Window):
             self.resize(self._win_w, self._screen_h)
             self._apply_input_region()
 
-    def _chip_heights(self) -> list[int]:
-        heights = []
+    def _chip_entries(self) -> list[tuple[str, int]]:
+        """(key, height) for agent chips plus the done-sound toggle."""
+        entries: list[tuple[str, int]] = []
         for a in self._agents:
-            if a.get("key") == self._expanded:
-                heights.append(CHIP_H_EXPANDED)
-            else:
-                heights.append(CHIP_H)
-        return heights
+            key = str(a.get("key") or "")
+            h = CHIP_H_EXPANDED if key == self._expanded else CHIP_H
+            entries.append((key, h))
+        # Always show the sound control when any agent status is available,
+        # and also alone so the toggle stays reachable.
+        entries.append((SOUND_CHIP_KEY, CHIP_H))
+        return entries
 
     def _stack_geometry(self) -> tuple[float, list[tuple[str, float, float, float, float]]]:
         """Return (slide_x, [(key,x,y,w,h), ...]) with vertical centering."""
-        heights = self._chip_heights()
-        n = len(heights)
+        entries = self._chip_entries()
+        n = len(entries)
         if n == 0:
             return 0.0, []
-        total_h = sum(heights) + CHIP_GAP * (n - 1)
+        total_h = sum(h for _, h in entries) + CHIP_GAP * (n - 1)
         y0 = (self._screen_h - total_h) / 2.0
         # Slide: off under the bar → parked to the right of the bar.
         hidden_x = float(WAYBAR_W - CHIP_W - 8)
@@ -199,8 +287,7 @@ class ChipsWindow(Gtk.Window):
         slide_x = hidden_x + (shown_x - hidden_x) * t
         rects: list[tuple[str, float, float, float, float]] = []
         y = y0
-        for agent, h in zip(self._agents, heights):
-            key = str(agent.get("key") or "")
+        for key, h in entries:
             rects.append((key, slide_x, y, float(CHIP_W), float(h)))
             y += h + CHIP_GAP
         return slide_x, rects
@@ -324,6 +411,9 @@ class ChipsWindow(Gtk.Window):
                 self.queue_draw()
             else:
                 self._request_hide(force=True)
+            return True
+        if key == SOUND_CHIP_KEY:
+            self.toggle_done_sound()
             return True
         if self._expanded == key:
             self._expanded = None
@@ -475,13 +565,74 @@ class ChipsWindow(Gtk.Window):
                 if cy > y + h - 10:
                     break
 
+    def _draw_sound_chip(
+        self, cr: cairo.Context, x: float, y: float, w: float, h: float
+    ) -> None:
+        on = self._sound_enabled
+        bg = BG_CHIP_HOT if on else BG_CHIP
+        accent = ACCENT if on else TEXT_DIM
+
+        cr.set_source_rgba(0, 0, 0, 0.28 * self._visible_progress)
+        self._rounded_rect(cr, x + 2, y + 3, w, h, CHIP_RADIUS)
+        cr.fill()
+
+        cr.set_source_rgba(*bg)
+        self._rounded_rect(cr, x, y, w, h, CHIP_RADIUS)
+        cr.fill()
+        cr.set_source_rgba(*accent)
+        cr.set_line_width(1.6 if on else 1.1)
+        self._rounded_rect(cr, x, y, w, h, CHIP_RADIUS)
+        cr.stroke()
+
+        cr.set_source_rgba(*accent)
+        self._rounded_rect(cr, x, y + 6, 3, h - 12, 1.5)
+        cr.fill()
+
+        # Speaker glyph (Nerd Font / Font Awesome).
+        icon = "\uf028" if on else "\uf026"
+        cr.select_font_face(
+            "JetBrainsMono Nerd Font",
+            cairo.FONT_SLANT_NORMAL,
+            cairo.FONT_WEIGHT_NORMAL,
+        )
+        cr.set_font_size(16)
+        cr.set_source_rgba(*accent)
+        cr.move_to(x + 14, y + 28)
+        cr.show_text(icon)
+
+        self._draw_text(
+            cr,
+            "完了音",
+            x + 40,
+            y + 8,
+            size=13,
+            bold=True,
+            color=TEXT_BRIGHT,
+            max_w=140,
+        )
+        state = "ON（Windows Me）" if on else "OFF"
+        self._draw_text(
+            cr,
+            state,
+            x + 40,
+            y + 26,
+            size=11,
+            color=accent,
+            max_w=180,
+        )
+        tip = "クリックで切替"
+        cr.select_font_face("Sans", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+        cr.set_font_size(10)
+        tw = cr.text_extents(tip).width
+        self._draw_text(cr, tip, x + w - PAD - tw, y + 16, size=10, color=TEXT_DIM)
+
     def _on_draw(self, _widget, cr: cairo.Context) -> bool:
         cr.set_operator(cairo.OPERATOR_SOURCE)
         cr.set_source_rgba(0, 0, 0, 0)
         cr.paint()
         cr.set_operator(cairo.OPERATOR_OVER)
 
-        if self._visible_progress < 0.01 or not self._agents:
+        if self._visible_progress < 0.01:
             self._chip_rects = []
             return False
 
@@ -489,10 +640,14 @@ class ChipsWindow(Gtk.Window):
         cr.push_group()
         _, rects = self._stack_geometry()
         self._chip_rects = rects
-        for agent, (key, x, y, w, h) in zip(self._agents, rects):
-            if str(agent.get("key") or "") != key:
+        by_key = {str(a.get("key") or ""): a for a in self._agents}
+        for key, x, y, w, h in rects:
+            if key == SOUND_CHIP_KEY:
+                self._draw_sound_chip(cr, x, y, w, h)
                 continue
-            self._draw_chip(cr, agent, x, y, w, h)
+            agent = by_key.get(key)
+            if agent is not None:
+                self._draw_chip(cr, agent, x, y, w, h)
         cr.pop_group_to_source()
         cr.paint_with_alpha(alpha)
         return False
@@ -504,6 +659,8 @@ class App:
         if self._display is None:
             raise SystemExit("no Gdk display (need a Wayland session)")
         self._windows: list[ChipsWindow] = []
+        # None until first poll; avoid playing on service start.
+        self._was_working: bool | None = None
         self._rebuild()
         if hasattr(self._display, "connect"):
             try:
@@ -526,8 +683,18 @@ class App:
             win.set_agents(load_agents())
             self._windows.append(win)
 
+    def _maybe_play_on_idle(self, any_working: bool) -> None:
+        if self._was_working is True and not any_working and done_sound_enabled():
+            play_done_sound()
+        self._was_working = bool(any_working)
+
     def _poll(self) -> bool:
-        agents = load_agents()
+        status = load_status()
+        agents = status.get("agents") if isinstance(status.get("agents"), list) else []
+        any_working = bool(status.get("any_working")) or any(
+            isinstance(a, dict) and a.get("working") for a in agents
+        )
+        self._maybe_play_on_idle(any_working)
         for w in self._windows:
             w.set_agents(agents)
         return True

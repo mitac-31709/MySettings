@@ -390,6 +390,11 @@ let
     }
     {
       section = "Waybar・日常";
+      label = "AI完了音（Windows Me）";
+      keys = "チップ末尾の「完了音」で ON/OFF／作業終了時に再生";
+    }
+    {
+      section = "Waybar・日常";
       label = "画面操作中（ChatGPT CUA / Cursorブラウザ）";
       keys = "青枠＋バナー＋チャット";
     }
