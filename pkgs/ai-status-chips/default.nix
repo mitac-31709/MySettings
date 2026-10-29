@@ -21,7 +21,7 @@ let
 in
 python3.pkgs.buildPythonApplication {
   pname = "ai-status-chips";
-  version = "0.2.0";
+  version = "0.2.1";
   format = "other";
 
   src = ./.;

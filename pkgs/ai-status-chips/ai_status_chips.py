@@ -311,7 +311,7 @@ class ChipsWindow(Gtk.Window):
         else:
             x, y, w, h = self._hover_band()
             region = cairo.Region(cairo.RectangleInt(x, y, w, h))
-        window.input_shape_combine_region(region)
+        window.input_shape_combine_region(region, 0, 0)
 
     def _request_show(self) -> None:
         self._cancel_hide()
