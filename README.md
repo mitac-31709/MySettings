@@ -55,6 +55,8 @@ NixOS の世代番号はマシン固有です。コミットとの対応はビ�
 
 ## 適用手順
 
+既存バックアップからデータを戻す場合は、先に「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」を実行してください。
+
 ```bash
 # NixOS マシン上で、このリポジトリから:
 git checkout main
@@ -219,7 +221,43 @@ session is logged in, **Sway waybar** shows live progress (`バックアップ N
    backup log
    ```
 
-### Restore / inspect
+### OS ビルド前に実機へ復元
+
+既存バックアップを実機の NixOS へ戻すときは、`mitac` ユーザーでこのリポジトリから実行します。OS の再ビルドは不要です。
+
+```bash
+./scripts/restore-on-nixos.sh
+# 別ディスクに復元する場合（親ディレクトリは作成済み、復元先自体は未作成）:
+./scripts/restore-on-nixos.sh /mnt/restore-disk/mitac-restored
+```
+
+不足するツールは `nix shell` で取得します。既存の `gdrive` 接続設定と Bitwarden に保存済みの **`restic-home` 鍵**を利用します。認証設定がまだない実機では、先に次のシェル内で準備してください。
+
+```bash
+nix --extra-experimental-features 'nix-command flakes' shell \
+  nixpkgs#rclone nixpkgs#rbw nixpkgs#pinentry-curses --command bash
+rclone config                   # リモート名 gdrive、種類 Google Drive、自分の OAuth client_id/secret
+rbw config set email YOUR_BITWARDEN_EMAIL
+rbw config set base_url https://api.bitwarden.eu
+rbw config set identity_url https://identity.bitwarden.eu
+rbw config set pinentry pinentry-curses
+rbw login
+rbw unlock
+exit
+./scripts/restore-on-nixos.sh
+```
+
+既存の設定・ログインがある場合は再設定不要です。上の例はこのリポジトリと同じ Bitwarden EU 向けです。`RCLONE_CONFIG` があればその設定を使い、未指定なら `~/.config/rclone/rclone.conf`、それもなければ rclone の既定設定を使います。鍵は `rbw get restic-home` で取得し、`RESTIC_PASSWORD_FILE` / `RESTIC_PASSWORD_COMMAND` などが設定済みならそれを優先します。復元には**元の鍵**が必要です。新しい鍵の生成や `backup setup` は行わないでください。Google が `invalid_grant` を返す場合は、上のシェルで `rclone config reconnect gdrive:` を実行します。
+
+スクリプトは最新スナップショットを固定し、必要容量と空き容量を確認して、全体を `/var/tmp/restore-mitac-日時/` へ復元します。`restic restore --verify` の成功後に完了を表示します。既存ディレクトリへの上書きはせず、中断・失敗時のファイルも残します。
+
+- ホーム: `復元先/home/mitac/`
+- フォント: `復元先/home/mitac/Documents/hiragino-otf/`
+- Wi-Fi / Bluetooth / WARP / Tailscale の保存状態: `復元先/run/restic-backups-home/system/`
+
+実際の `/home` や `/etc` への反映は、復元内容と現在のファイルを確認してから行います。OS ビルド前に、フォントを flake が参照する `/home/mitac/Documents/hiragino-otf` に配置してください。復元対象はバックアップに含まれる範囲で、`MySettings`、キャッシュ、ゲーム本体などの除外対象や `/etc/shadow` は含まれません。使い方は `./scripts/restore-on-nixos.sh --help` でも確認できます。
+
+### Restore / inspect（適用済みの環境）
 
 The module installs a `backup` CLI for setup, the systemd unit, rclone checks, and
 restic (repo / Bitwarden password command preloaded). `restic-home-setup` remains as
