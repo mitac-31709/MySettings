@@ -402,6 +402,8 @@ in
     opencode
     # Anthropic Claude Code CLI (`claude`).
     claude-code
+    # Google Antigravity CLI (`agy` / `antigravity`; pkgs/antigravity).
+    antigravity
     # ChatGPT desktop (Codex included). App menu: ChatGPT.
     chatgpt
     # Grok Bot desktop agent. App menu: Grok Bot (`grok-bot`).

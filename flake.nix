@@ -122,6 +122,8 @@
                   jquake = final.callPackage ./pkgs/jquake { jquake = prev.jquake; };
                   # OpenCode 2 CLI (nixpkgs still ships 1.x; pin npm linux-x64 binary).
                   opencode = final.callPackage ./pkgs/opencode { };
+                  # Google Antigravity CLI (`agy`; binary from antigravity-public).
+                  antigravity = final.callPackage ./pkgs/antigravity { };
                 }
               )
             ];

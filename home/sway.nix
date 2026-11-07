@@ -507,6 +507,12 @@ let
     }
     {
       section = "開発";
+      label = "Antigravity";
+      run = "agy";
+      mode = "term";
+    }
+    {
+      section = "開発";
       label = "dsh-TUI";
       run = "dsh-tui";
       mode = "term";
