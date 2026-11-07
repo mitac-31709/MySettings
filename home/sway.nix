@@ -501,6 +501,24 @@ let
     }
     {
       section = "開発";
+      label = "Claude Code";
+      run = "claude";
+      mode = "term";
+    }
+    {
+      section = "開発";
+      label = "dsh-TUI";
+      run = "dsh-tui";
+      mode = "term";
+    }
+    {
+      section = "開発";
+      label = "dsh-TUI 更新";
+      run = "npm i -g @deepseek-ai/dsh @deepseek-harness-tui/dsh-tui";
+      mode = "term";
+    }
+    {
+      section = "開発";
       label = "pnpm / node";
       run = "pnpm --version; node --version";
       mode = "term";

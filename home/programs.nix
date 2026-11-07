@@ -1,5 +1,5 @@
 # Shared user programs and packages (Sway session).
-{ lib, pkgs, ... }:
+{ lib, pkgs, config, ... }:
 
 let
   email = "mitac31709@gmail.com";
@@ -316,6 +316,18 @@ in
     fi
   '';
 
+  # Writable npm global prefix (store node/npm cannot install -g into itself).
+  # Used for dsh / dsh-tui (`npm i -g @deepseek-ai/dsh @deepseek-harness-tui/dsh-tui`).
+  # allow-scripts: native helpers (node-pty / koffi / spawn helper) needed at runtime.
+  home.file.".npmrc".text = ''
+    prefix=${config.home.homeDirectory}/.npm-global
+    allow-scripts=@deepseek-ai/dsh-subprocess-local,koffi,node-pty,@google/genai,protobufjs
+  '';
+
+  home.sessionPath = [
+    "${config.home.homeDirectory}/.npm-global/bin"
+  ];
+
   # Keep XDG dirs in English even with ja_JP.UTF-8 locale.
   xdg.userDirs = {
     enable = true;
@@ -388,6 +400,8 @@ in
     cursor-cli
     # OpenCode 2 terminal agent (`opencode`; pkgs/opencode overrides nixpkgs 1.x).
     opencode
+    # Anthropic Claude Code CLI (`claude`).
+    claude-code
     # ChatGPT desktop (Codex included). App menu: ChatGPT.
     chatgpt
     # Grok Bot desktop agent. App menu: Grok Bot (`grok-bot`).
