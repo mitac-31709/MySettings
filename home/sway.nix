@@ -87,6 +87,12 @@ let
     }
     {
       section = "起動・終了";
+      label = "Zed エディタ";
+      run = "zeditor";
+      mode = "exec";
+    }
+    {
+      section = "起動・終了";
       label = "ウィンドウを閉じる";
       keys = "Super+q";
     }

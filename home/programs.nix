@@ -382,6 +382,8 @@ in
     # Archive manager GUI (7z / Zstd / zip / tar / …). Desktop: PeaZip.
     peazip
     code-cursor
+    # Zed code editor (CLI: zeditor).
+    zed-editor
     # Terminal Agent CLI (`cursor-agent`; also aliased as `agent`).
     cursor-cli
     # OpenCode 2 terminal agent (`opencode`; pkgs/opencode overrides nixpkgs 1.x).

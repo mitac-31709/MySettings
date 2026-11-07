@@ -80,6 +80,7 @@ passwd mitac
 
 - **Neovim** — **LazyVim**（`home/nvim`）。**lazy.nvim** 自体は nixpkgs から同梱、それ以外のプラグインは lazy が管理
 - **Cursor** — `code-cursor`（GUI）／`cursor-cli`（ターミナル Agent: `cursor-agent` / `agent`）
+- **Zed** — `zed-editor`（起動: `zeditor`、アプリメニュー: Zed）
 - **OpenCode** — ターミナル AI コーディングエージェント（`opencode`、`pkgs/opencode` で V2 をピン留め。nixpkgs の 1.x は使わない）
 - **ChatGPT** — 公式 Linux デスクトップ（Codex 含む、`pkgs/chatgpt`、`.deb`）。アプリメニュー / `chatgpt`。起動時に Vivaldi 等向け Native Messaging（`com.openai.codexextension`）を入れ、ブラウザ拡張の Browser Use を有効化する
 - **Vivaldi × ChatGPT 拡張** — Vivaldi は `chrome.sidePanel.setOptions` を無視するため、Web Store 版は side panel が真っ白になる（VB-120826）。`vivaldi-chatgpt-extension-patch` が `~/.local/share/vivaldi-chatgpt-extension` に `default_path=codex-work-sidepanel.html` の unpacked 版を作る。初回だけ `vivaldi://extensions` で Store 版を無効化し、Developer mode → Load unpacked でそのディレクトリを読み込む
