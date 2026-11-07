@@ -165,7 +165,7 @@ let
     }
     {
       section = "ウィンドウ・WS";
-      label = "WS1 Cursor+GPT / WS2 Vivaldi";
+      label = "WS1 Cursor+Grok / WS2 Vivaldi";
       keys = "起動時";
     }
     {
@@ -1070,13 +1070,13 @@ in
       terminal = ghosttyBin;
       menu = rofiLauncher;
 
-      # Fixed autostart apps: place by criteria (ChatGPT is native Wayland).
+      # Fixed autostart apps: place by criteria (Grok Bot is Electron/ozone).
       assigns = {
         "1" = [
           { app_id = "cursor"; }
-          { app_id = "chatgpt"; }
+          { app_id = "grok-bot"; }
           # Pre-Wayland launches (ozone x11 / XWayland).
-          { class = "ChatGPT"; }
+          { class = "grok-bot"; }
         ];
         "2" = [
           { app_id = "vivaldi-stable"; }
@@ -1199,11 +1199,11 @@ in
         { command = polkitAgent; }
         { command = "fcitx5 -d --replace"; }
         # cliphist store: home/clipboard.nix systemd user units
-        # Fixed session apps (assigns: WS1 cursor/ChatGPT, WS2 vivaldi).
+        # Fixed session apps (assigns: WS1 cursor/Grok Bot, WS2 vivaldi).
         # NIXOS_OZONE_WL enables Cursor's --enable-wayland-ime (Meltype/fcitx5).
         { command = "env NIXOS_OZONE_WL=1 cursor"; }
         { command = "vivaldi"; }
-        { command = "chatgpt"; }
+        { command = "grok-bot"; }
         { command = "swaymsg 'workspace number 1'"; }
         # waybar: programs.waybar.systemd (MemoryMax / Restart)
         {
