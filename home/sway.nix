@@ -165,12 +165,12 @@ let
     }
     {
       section = "ウィンドウ・WS";
-      label = "WS1 Cursor+Grok / WS2 Vivaldi";
+      label = "WS2 Cursor+Grok / WS3 Vivaldi（WS1 空き）";
       keys = "起動時";
     }
     {
       section = "ウィンドウ・WS";
-      label = "外部リンク → Vivaldi(WS2)へフォーカス";
+      label = "外部リンク → Vivaldi(WS3)へフォーカス";
     }
     {
       section = "ウィンドウ・WS";
@@ -1075,14 +1075,15 @@ in
       menu = rofiLauncher;
 
       # Fixed autostart apps: place by criteria (Grok Bot is Electron/ozone).
+      # Leave WS1 empty for ad-hoc windows; session apps land on 2/3.
       assigns = {
-        "1" = [
+        "2" = [
           { app_id = "cursor"; }
           { app_id = "grok-bot"; }
           # Pre-Wayland launches (ozone x11 / XWayland).
           { class = "grok-bot"; }
         ];
-        "2" = [
+        "3" = [
           { app_id = "vivaldi-stable"; }
         ];
       };
@@ -1203,7 +1204,7 @@ in
         { command = polkitAgent; }
         { command = "fcitx5 -d --replace"; }
         # cliphist store: home/clipboard.nix systemd user units
-        # Fixed session apps (assigns: WS1 cursor/Grok Bot, WS2 vivaldi).
+        # Fixed session apps (assigns: WS2 cursor/Grok Bot, WS3 vivaldi; WS1 empty).
         # NIXOS_OZONE_WL enables Cursor's --enable-wayland-ime (Meltype/fcitx5).
         { command = "env NIXOS_OZONE_WL=1 cursor"; }
         { command = "vivaldi"; }
@@ -1227,7 +1228,7 @@ in
       for_window [app_id="showmethekey-gtk"] floating enable, sticky enable, border none
       for_window [app_id="one.alynx.showmethekey"] floating enable, sticky enable, border none
       # External http(s) opens (xdg-open → existing Vivaldi) set urgent but do not
-      # activate across workspaces (focus_on_window_activation is smart). Raise WS2.
+      # activate across workspaces (focus_on_window_activation is smart). Raise WS3.
       for_window [app_id="vivaldi-stable" urgent=latest] focus
       # Layout-independent cheatsheet (rofi; same as waybar ?)
       # --inhibited: work even when Cursor/Electron inhibit compositor shortcuts.
