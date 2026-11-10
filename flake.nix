@@ -18,17 +18,17 @@
     # Vendor .debs (flake update re-fetches; see scripts/flake-update.sh).
     # Keep URL version in sync with uniclipboardVersion below (flake-update.sh).
     uniclipboard-deb = {
-      url = "https://github.com/UniClipboard/UniClipboard/releases/download/v1.5.0/UniClipboard_1.5.0_amd64.deb";
+      url = "https://github.com/UniClipboard/UniClipboard/releases/download/v1.6.1/UniClipboard_1.6.1_amd64.deb";
       flake = false;
     };
     # Keep URL version in sync with chatgptVersion below (flake-update.sh).
     chatgpt-deb = {
-      url = "https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.1021.22027_amd64.deb";
+      url = "https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.1103.32239_amd64.deb";
       flake = false;
     };
     # Keep URL version in sync with grokBotVersion below (flake-update.sh).
     grok-bot-deb = {
-      url = "https://downloads.cursor.com/grokbot/stable/039d88c52f45f8af72fbe7379bc426c171edf62b/linux/x64/grok-bot_0.75.8_amd64.deb";
+      url = "https://downloads.cursor.com/grokbot/stable/676f0815a4013954f4c8e3f4ac413acfbac0376c/linux/x64/grok-bot_0.79.2_amd64.deb";
       flake = false;
     };
     # Proprietary Hiragino OTFs (local; not committed). Prepare with:
@@ -50,11 +50,11 @@
     let
       system = "x86_64-linux";
       # Must match inputs.uniclipboard-deb URL (updated by scripts/flake-update.sh).
-      uniclipboardVersion = "1.5.0";
+      uniclipboardVersion = "1.6.1";
       # Must match inputs.chatgpt-deb URL (updated by scripts/flake-update.sh).
-      chatgptVersion = "26.1021.22027";
+      chatgptVersion = "26.1103.32239";
       # Must match inputs.grok-bot-deb URL (updated by scripts/flake-update.sh).
-      grokBotVersion = "0.75.8";
+      grokBotVersion = "0.79.2";
     in
     {
       nixosConfigurations.mitac = nixpkgs.lib.nixosSystem {
