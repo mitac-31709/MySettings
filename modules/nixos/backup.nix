@@ -8,11 +8,11 @@
 #               `rbw get`, so no key material lives on disk or in the Nix store.
 #
 # Paths:
-#   - /home/mitac (with excludes for regenerable bulky trees)
+#   - /home/mitac (with excludes for regenerable bulky trees; includes ~/MySettings)
 #   - Root-only system state staged into the unit RuntimeDirectory:
 #       NetworkManager Wi-Fi profiles, Bluetooth pairings, Cloudflare WARP,
 #       Tailscale node state.
-#     (/etc/shadow and ~/MySettings are intentionally not backed up.)
+#     (/etc/shadow is intentionally not backed up.)
 #
 # What is declarative (this file) vs. manual (secrets, kept out of the store):
 #   declarative : which paths, excludes, schedule, retention, the Google Drive
@@ -618,8 +618,9 @@ in
     ];
 
     # Skip regenerable bulk (Steam client/runtime, Cursor agent binaries, browser
-    # caches/extensions, Firefox storage), HM/Nix links, and MySettings (git).
+    # caches/extensions, Firefox storage) and HM/Nix links.
     # Login password (/etc/shadow) is intentionally not staged.
+    # ~/MySettings (flake checkout, including .git / uncommitted work) is kept.
     exclude = [
       "/home/${user}/.cache"
       "/home/${user}/.local/share/Trash"
@@ -679,7 +680,6 @@ in
       "/home/${user}/.config/vivaldi/GPUPersistentCache"
       "/home/${user}/.config/vivaldi/GraphiteDawnCache"
 
-      "/home/${user}/MySettings"
       "/home/${user}/.bash_history"
       "/home/${user}/.bash_profile"
       "/home/${user}/.bashrc"

@@ -904,6 +904,10 @@ let
       section = "バックアップ";
       label = "注: --target なしは /home/mitac を上書き（危険）";
     }
+    {
+      section = "バックアップ";
+      label = "注: ~/MySettings 含む（復元先 …/home/mitac/MySettings）";
+    }
     # 電源・Type-C
     {
       section = "電源・Type-C";

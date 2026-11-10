@@ -325,8 +325,10 @@ restic restore latest \
   (`backup unlock-key`) and start with `backup run`.
 - Root-only trees (Wi-Fi, Bluetooth, Cloudflare WARP, Tailscale) are staged by a
   root `ExecStartPre` into `/run/restic-backups-home/system/…`, then cleared on
-  stop. `/etc/shadow` (login password) and `~/MySettings` (git) are **not**
-  backed up.
+  stop. `/etc/shadow` (login password) is **not** backed up. `~/MySettings`
+  (flake checkout, including `.git` and uncommitted work) **is** included with
+  the rest of `/home/mitac`; after restore it lands under
+  `/tmp/restore/home/mitac/MySettings`.
 - Excluded regenerable bulk includes Steam client/runtime + game installs (saves in
   `userdata` / `compatdata` stay), Cursor agent-worker binaries and caches, Vivaldi
   caches / extensions / WebStorage, and Firefox `storage`.
