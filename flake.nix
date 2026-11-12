@@ -31,12 +31,6 @@
       url = "https://downloads.cursor.com/grokbot/stable/676f0815a4013954f4c8e3f4ac413acfbac0376c/linux/x64/grok-bot_0.79.2_amd64.deb";
       flake = false;
     };
-    # Proprietary Hiragino OTFs (local; not committed). Prepare with:
-    #   extract ~/Documents/ヒラギノ.zip → ~/Documents/hiragino-otf/*.otf (ASCII names)
-    hiragino-fonts-src = {
-      url = "path:/home/mitac/Documents/hiragino-otf";
-      flake = false;
-    };
   };
 
   outputs =
@@ -97,9 +91,6 @@
                   uniclipboard = final.callPackage ./pkgs/uniclipboard {
                     src = inputs.uniclipboard-deb;
                     version = uniclipboardVersion;
-                  };
-                  hiragino-fonts = final.callPackage ./pkgs/hiragino {
-                    src = inputs.hiragino-fonts-src;
                   };
                   # Meltype Linux preview as Fcitx5 addon (not in nixpkgs).
                   meltype = final.callPackage ./pkgs/meltype { };

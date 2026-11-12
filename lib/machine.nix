@@ -5,4 +5,7 @@
   repoPath = "/home/mitac/MySettings";
   # nixosConfigurations.<flakeHost>
   flakeHost = "mitac";
+  # Proprietary Hiragino OTFs (not in git). Included only with --impure
+  # when this directory exists; otherwise fontconfig uses Noto CJK.
+  hiraginoDir = "/home/mitac/Documents/hiragino-otf";
 }

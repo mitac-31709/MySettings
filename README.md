@@ -143,10 +143,22 @@ nix flake update nixpkgs-cursor
 
 ## フォント
 
-- システムの比例フォント既定: sans `Hiragino Kaku Gothic ProN` / serif `Hiragino Mincho ProN`（ローカル `~/Documents/hiragino-otf` → flake input `hiragino-fonts-src`）
-- 等幅フォント既定: `JetBrainsMono Nerd Font`（日本語フォールバックにヒラギノ角ゴ ProN）
-- Ghostty も JetBrainsMono（12pt）
-- Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行し、ログアウトして再ログイン
+比例フォントの第一候補はヒラギノです。fontconfig の既定は家族名のリストで、入っていない名前は飛ばします。ヒラギノが無い評価（他のマシン、`nix flake check`、`--impure` なし）では次のフォントが使われます。
+
+- sans / 等幅の日本語: `Noto Sans CJK JP`（`noto-fonts-cjk-sans`）
+- serif: `Noto Serif CJK JP`（`noto-fonts-cjk-serif`）
+- 等幅のラテン: `JetBrainsMono Nerd Font`（Ghostty も 12pt）
+
+ヒラギノは flake input にしていません。`path:` 入力は、そのディレクトリが無いマシンで flake 全体の評価が失敗するためです。
+
+有効にする手順:
+
+1. OTF を ASCII 名で `/home/mitac/Documents/hiragino-otf/` に置く（`~/Documents/ヒラギノ.zip` を展開。パスは `lib/machine.nix` の `hiraginoDir`）
+2. `--impure` でビルドする。`rebuild` はこのディレクトリがあるときだけ `--impure` を付けます
+
+仕組み: `builtins.pathExists` は pure 評価では flake の外の絶対パスを読めず、結果は false です。`--impure` のときだけ実在を見て、ある場合だけ `builtins.path` でストアへコピーし `fonts.packages` に足します。第一候補は sans `Hiragino Kaku Gothic ProN` / serif `Hiragino Mincho ProN` のままです。
+
+Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行し、ログアウトして再ログインします。
 
 ## ターミナル
 
@@ -279,7 +291,7 @@ exit
 - フォント: `復元先/home/mitac/Documents/hiragino-otf/`
 - Wi-Fi / Bluetooth / WARP / Tailscale の保存状態: `復元先/run/restic-backups-home/system/`
 
-実際の `/home` や `/etc` への反映は、復元内容と現在のファイルを確認してから行います。OS ビルド前に、フォントを flake が参照する `/home/mitac/Documents/hiragino-otf` に配置してください。復元対象はバックアップに含まれる範囲で、`MySettings`、キャッシュ、ゲーム本体などの除外対象や `/etc/shadow` は含まれません。使い方は `./scripts/restore-on-nixos.sh --help` でも確認できます。
+実際の `/home` や `/etc` への反映は、復元内容と現在のファイルを確認してから行います。ヒラギノを使うなら、OS ビルド前に OTF を `/home/mitac/Documents/hiragino-otf` に置き、`rebuild`（ディレクトリがあるとき `--impure`）してください。置かない場合の既定は Noto CJK です。復元対象はバックアップに含まれる範囲で、`MySettings`、キャッシュ、ゲーム本体などの除外対象や `/etc/shadow` は含まれません。使い方は `./scripts/restore-on-nixos.sh --help` でも確認できます。
 
 ### Restore / inspect（適用済みの環境）
 

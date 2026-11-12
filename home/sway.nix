@@ -479,6 +479,10 @@ let
     }
     {
       section = "NixOS";
+      label = "注: hiragino-otf があるとき rebuild は --impure";
+    }
+    {
+      section = "NixOS";
       label = "世代一覧";
       run = "generations";
       mode = "term";

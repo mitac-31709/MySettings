@@ -6,7 +6,8 @@
 
 stdenvNoCC.mkDerivation {
   pname = "hiragino-fonts";
-  # Local proprietary dump; content hash lives in flake.lock (hiragino-fonts-src).
+  # Local proprietary OTFs. Not a flake input: modules/nixos/common.nix passes
+  # src only when the directory exists under an impure eval.
   version = "local";
 
   inherit src;

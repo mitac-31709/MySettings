@@ -9,6 +9,7 @@ let
   # One option (default lib/machine.nix). Works from any cwd, not only inside
   # the checkout. The flake-update* commands are store paths.
   flakeUri = "${config.mitac.repoPath}#${config.mitac.flakeHost}";
+  hiraginoDir = (import ../lib/machine.nix).hiraginoDir;
 in
 {
   programs.bash = {
@@ -70,7 +71,13 @@ in
           return 127
         }
         # Human-readable mode: pass-through eval/activation; ETA only while building.
-        sudo nixos-rebuild switch --flake ${lib.escapeShellArg flakeUri} |& "$nom"
+        # pathExists of the Hiragino directory is false in pure eval. Pass
+        # --impure only when the OTFs are actually on disk.
+        local -a rebuildArgs=(--flake ${lib.escapeShellArg flakeUri})
+        if [ -d ${lib.escapeShellArg hiraginoDir} ]; then
+          rebuildArgs+=(--impure)
+        fi
+        sudo nixos-rebuild switch "''${rebuildArgs[@]}" |& "$nom"
         return "''${PIPESTATUS[0]}"
       }
 

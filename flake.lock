@@ -41,19 +41,6 @@
         "url": "https://downloads.cursor.com/grokbot/stable/676f0815a4013954f4c8e3f4ac413acfbac0376c/linux/x64/grok-bot_0.79.2_amd64.deb"
       }
     },
-    "hiragino-fonts-src": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1791091266,
-        "narHash": "sha256-sF9RVSYPVS638j9UBNPifxa6ZAp8EsqbMX84HLmh1Gw=",
-        "path": "/home/mitac/Documents/hiragino-otf",
-        "type": "path"
-      },
-      "original": {
-        "path": "/home/mitac/Documents/hiragino-otf",
-        "type": "path"
-      }
-    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -111,7 +98,6 @@
         "alsa-ucm-conf-cros": "alsa-ucm-conf-cros",
         "chatgpt-deb": "chatgpt-deb",
         "grok-bot-deb": "grok-bot-deb",
-        "hiragino-fonts-src": "hiragino-fonts-src",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs_4",
         "nixpkgs-cursor": "nixpkgs-cursor",
