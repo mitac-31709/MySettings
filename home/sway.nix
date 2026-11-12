@@ -21,6 +21,20 @@ let
   yaziBin = "${pkgs.yazi}/bin/yazi";
   polkitAgent = "${pkgs.kdePackages.polkit-kde-agent-1}/libexec/polkit-kde-authentication-agent-1";
   pactl = "${pkgs.pulseaudio}/bin/pactl";
+  # pactl +N% has no ceiling; PulseAudio happily goes past 100% (soft boost).
+  volumeUp = pkgs.writeShellScript "volume-up" ''
+    out="$(${pactl} get-sink-volume @DEFAULT_SINK@)" || exit 1
+    if [[ "$out" =~ ([0-9]+)% ]]; then
+      vol="''${BASH_REMATCH[1]}"
+    else
+      exit 1
+    fi
+    new=$((vol + 5))
+    if [ "$new" -gt 100 ]; then
+      new=100
+    fi
+    exec ${pactl} set-sink-volume @DEFAULT_SINK@ "''${new}%"
+  '';
   brightnessctl = "${pkgs.brightnessctl}/bin/brightnessctl";
   btopBin = "${pkgs.btop}/bin/btop";
   nmtuiBin = "${pkgs.networkmanager}/bin/nmtui";
@@ -194,7 +208,7 @@ let
     }
     {
       section = "スクショ・音量・輝度";
-      label = "± / ミュート / 輝度 ±5%";
+      label = "±5%（音量は最大100%） / ミュート / 輝度";
       keys = "音量 / MicMute / 輝度キー";
     }
     # 入力・Chromebook
@@ -1177,7 +1191,7 @@ in
 
           "${mod}+v" = "exec clipboard-history";
           # Volume / mic (PulseAudio on sof-rt5682 Chromebook).
-          "XF86AudioRaiseVolume" = "exec ${pactl} set-sink-volume @DEFAULT_SINK@ +5%";
+          "XF86AudioRaiseVolume" = "exec ${volumeUp}";
           "XF86AudioLowerVolume" = "exec ${pactl} set-sink-volume @DEFAULT_SINK@ -5%";
           "XF86AudioMute" = "exec ${pactl} set-sink-mute @DEFAULT_SINK@ toggle";
           "XF86AudioMicMute" = "exec ${pactl} set-source-mute @DEFAULT_SOURCE@ toggle";
@@ -1391,6 +1405,7 @@ in
         pulseaudio = {
           format = "vol {volume}%";
           format-muted = "mute";
+          max-volume = 100;
           on-click = "${pactl} set-sink-mute @DEFAULT_SINK@ toggle";
         };
         clock = {
