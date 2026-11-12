@@ -120,10 +120,10 @@
       "nix-command"
       "flakes"
     ];
-    # Affinity omitted (home/programs.nix): do not hard-depend on
-    # cache.forall.systems — a wrong RTC before NTP makes every fetch fail
-    # with SSL "certificate is not yet valid", and misses also stall rebuild.
-    # When re-enabling affinity-v3, restore:
+    # Affinity is not installed (input and overlay removed; see README).
+    # Do not hard-depend on cache.forall.systems — a wrong RTC before NTP
+    # makes every fetch fail with SSL "certificate is not yet valid", and
+    # misses also stall rebuild. When re-enabling affinity-v3, restore:
     #   extra-substituters = [ "https://cache.forall.systems" ];
     #   extra-trusted-public-keys = [
     #     "cache.forall.systems:5PmD7QO4MSF8YgyRZtkSGXRDo96H3bybIf2SsQh8ScI="

@@ -12,8 +12,7 @@
       url = "github:WeirdTreeThing/alsa-ucm-conf-cros/standalone";
       flake = false;
     };
-    # Affinity Photo/Designer/Publisher (Wine; Canva Affinity v3)
-    affinity-nix.url = "github:mrshmllow/affinity-nix"; # Fresher nixpkgs solely for Cursor packages (avoid bumping the whole system).
+    # Fresher nixpkgs solely for Cursor packages (avoid bumping the whole system).
     nixpkgs-cursor.url = "github:NixOS/nixpkgs/nixos-unstable";
     # Vendor .debs (flake update re-fetches; see scripts/flake-update.sh).
     # Keep URL version in sync with uniclipboardVersion below (flake-update.sh).
@@ -71,7 +70,6 @@
 
             nixpkgs.config.allowUnfree = true;
             nixpkgs.overlays = [
-              inputs.affinity-nix.overlays.default
               (
                 final: prev:
                 let
