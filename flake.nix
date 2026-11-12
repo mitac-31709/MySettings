@@ -13,6 +13,7 @@
       flake = false;
     };
     # Fresher nixpkgs solely for Cursor packages (avoid bumping the whole system).
+    # flake-update does not move this input; flake-update-cursor does.
     nixpkgs-cursor.url = "github:NixOS/nixpkgs/nixos-unstable";
     # Vendor .debs (flake update re-fetches; see scripts/flake-update.sh).
     # Keep URL version in sync with uniclipboardVersion below (flake-update.sh).

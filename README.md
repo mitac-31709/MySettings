@@ -68,13 +68,28 @@ sudo nixos-generate-config --show-hardware-config > hosts/mitac/hardware-configu
 sudo nixos-rebuild switch --flake .#mitac
 # または（Home Manager 適用後）どのディレクトリからでも:
 #   rebuild
-# → sudo nixos-rebuild switch --flake ~/MySettings#mitac
+# → sudo nixos-rebuild switch --flake /home/mitac/MySettings#mitac
 
 # 必要なら:
 passwd mitac
 ```
 
-`flake.lock` はリポジトリに含まれます。シェル関数 `rebuild`（先に `sudo` 認証、通常表示のままビルド中だけ `nom` ETA）とエイリアス `generations` は `home/shell.nix` で定義され、flake パスは `~/MySettings` 固定です（ホーム直下など、リポジトリ外からも実行可）。
+`flake.lock` はリポジトリに含まれます。シェル関数 `rebuild`（先に `sudo` 認証、通常表示のままビルド中だけ `nom` ETA）とエイリアス `generations` は `home/shell.nix` で定義されます。flake の作業コピーは `lib/machine.nix` の `repoPath`（既定 `/home/mitac/MySettings`）だけです。Home Manager の `mitac.repoPath` で上書きできます。`rebuild` / `flake-update` はそのパスの `flake.nix` を使います。スクリプト本体は Nix ストアのコマンドで、チェックアウトの `scripts/` を直接実行しません。
+
+## flake の更新
+
+`nixpkgs` と `nixpkgs-cursor` はどちらも `nixos-unstable` を追います。`nix flake update` を引数なしで走らせると両方が同じコミットになり、Cursor だけ新しい nixpkgs を使う意味がなくなります。
+
+`flake-update` は UniClipboard / ChatGPT / Grok Bot の .deb URL を `flake.nix` に書いたあと、lock に載っている入力のうち `nixpkgs-cursor` 以外を `nix flake update` します。システムの nixpkgs は動き、Cursor のピンは残ります。
+
+Cursor（`code-cursor` / `cursor-cli`）だけ新しい nixpkgs にするときは、作業コピーで次のどちらかです。
+
+```bash
+flake-update-cursor
+nix flake update nixpkgs-cursor
+```
+
+どちらも `nixpkgs-cursor` だけを取り直します。差分を見てコミットしてから `rebuild` します。
 
 ## 同梱ソフトウェア
 
