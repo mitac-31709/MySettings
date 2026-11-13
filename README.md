@@ -53,9 +53,124 @@ NixOS の世代番号はマシン固有です。コミットとの対応はビ�
 - 非フリーパッケージ（`code-cursor`、`cursor-cli`、`jquake`、`parsec-bin`、`steam`、`vivaldi`）は `flake.nix` で許可済み。`affinity-v3` は未導入（戻し方は下記）
 - Chromebook: MrChromebox（または同等）の UEFI／WP 無効を想定。ファームウェアの書き込みはこのリポジトリの範囲外
 
+## USB からの新規インストールと初回設定
+
+新しい PC や空の SSD へ NixOS Live USB から導入する手順です。この flake は `systemd-boot`（UEFI 専用、`modules/nixos/common.nix`）と `zramSwap`（RAM 100% / `zstd`、`modules/nixos/laptop/power.nix`）を使うため、**UEFI ブート有効（セキュアブート無効）**・GPT（ESP + root、swap パーティション不要）を前提とします。
+
+### 0. USB メディアの作成と起動
+
+1. [NixOS ダウンロードページ](https://nixos.org/download/) から **Graphical ISO**（GUI インストーラ付き・推奨）または **Minimal ISO**（CLI のみ）を取得し、USB メモリへ書き込む。
+2. 対象機の UEFI 設定で Secure Boot を無効にし、USB から **UEFI モード**で起動する（Chromebook は事前に MrChromebox 等の UEFI ファームウェアを導入しておく）。
+
+### 1. NixOS の導入（2 パターン）
+
+#### パターン A: Graphical ISO の GUI インストーラで最小導入してから適用（推奨）
+
+既存バックアップを `./scripts/restore-on-nixos.sh` で復元する場合（`mitac` ユーザーで実機 NixOS 上から実行する設計）は、この手順が最も安全です。
+
+1. Live 環境で Wi-Fi 等へ接続し、**Install NixOS**（Calamares）を起動する。
+2. インストーラで以下を設定してインストールする：
+   - ユーザー名: **`mitac`**（`lib/machine.nix` の `/home/mitac/MySettings`・各種設定と一致させる）＋ 任意のパスワード
+   - デスクトップ環境: **No desktop**（後の flake 適用で Sway 環境一式が入るため最小構成でよい）
+   - パーティション: ディスク消去（UEFI / GPT）を選択。swap は **No swap**（`zramSwap` を使用）でも問題ない
+3. 完了後に USB を抜いて再起動し、`mitac` でログインする。
+4. 作業コピーを `~/MySettings` へ取得する（初回は最小環境のため `nix-shell` で `git` を一時利用）：
+   ```bash
+   nix-shell -p git --run \
+     'git clone -b main https://github.com/mitac31709/MySettings.git ~/MySettings'
+   cd ~/MySettings
+   ```
+5. **（既存バックアップからデータを戻す場合）** OS ビルドの前に「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」の手順で `./scripts/restore-on-nixos.sh` を実行し、必要なホームデータ・システム状態・ヒラギノフォント（`/home/mitac/Documents/hiragino-otf/`）を配置しておく（スクリプトは `/var/tmp/restore-mitac-日時/` へ展開するため `~/MySettings` は上書きされません）。
+6. 実機の `hardware-configuration.nix` を生成し、flake を適用する（対象は `vaio` または `chromebook`）：
+   ```bash
+   # VAIO の場合（Chromebook は hosts/chromebook/hardware-configuration.nix と .#chromebook）
+   sudo nixos-generate-config --show-hardware-config > hosts/vaio/hardware-configuration.nix
+
+   # 適用（~/Documents/hiragino-otf が既にある場合は `--impure` を追加）
+   sudo NIX_CONFIG='experimental-features = nix-command flakes' \
+     nixos-rebuild switch --flake .#vaio
+   ```
+7. 完了後、カーネル／bootvine／greetd／Sway セッションをクリーンに反映するため `sudo reboot` する。
+
+#### パターン B: Minimal ISO（CLI）から `nixos-install --flake` で直接導入
+
+GUI インストーラを経由せず、USB から直接この flake の環境を書き込む手順です（Live 環境上には `/home/mitac/Documents/hiragino-otf` が無いため、初回は Noto CJK でビルドされます）。
+
+1. 必要なら日本語配列とネットワークを設定する：
+   ```bash
+   loadkeys jp106
+   nmtui                        # Wi-Fi / 有線ネットワーク接続
+   ```
+2. `lsblk` で対象ディスクを確認し、GPT パーティション作成・フォーマット・マウントを行う（**対象ディスクの全データが消去されます**。例: NVMe の `/dev/nvme0n1` — eMMC なら `/dev/mmcblk0`、SATA なら `/dev/sda` に読み替え）：
+   ```bash
+   sudo parted /dev/nvme0n1 -- mklabel gpt
+   sudo parted /dev/nvme0n1 -- mkpart ESP fat32 1MiB 1GiB
+   sudo parted /dev/nvme0n1 -- set 1 esp on
+   sudo parted /dev/nvme0n1 -- mkpart root ext4 1GiB 100%
+
+   sudo mkfs.fat -F 32 -n boot /dev/nvme0n1p1
+   sudo mkfs.ext4 -L nixos /dev/nvme0n1p2
+
+   sudo mount /dev/nvme0n1p2 /mnt
+   sudo mkdir -p /mnt/boot
+   sudo mount -o umask=0077 /dev/nvme0n1p1 /mnt/boot
+   ```
+3. ハードウェア設定生成と作業用リポジトリの用意を行う（`/mnt/home/mitac` は `nixos-install` 時に正しい所有者で作成させるため、ここでは `/tmp/MySettings` へ clone します）：
+   ```bash
+   sudo nixos-generate-config --root /mnt
+
+   nix-shell -p git --run '
+     sudo git clone -b main https://github.com/mitac31709/MySettings.git /tmp/MySettings
+   '
+
+   # 生成した実機構成を対象ホストへコピー（Chromebook の場合は chromebook に読み替え）
+   sudo cp /mnt/etc/nixos/hardware-configuration.nix \
+     /tmp/MySettings/hosts/vaio/hardware-configuration.nix
+   ```
+4. flake でインストールする（対象は `#vaio` または `#chromebook`）：
+   ```bash
+   sudo NIX_CONFIG='experimental-features = nix-command flakes' \
+     nixos-install --flake /tmp/MySettings#vaio
+   ```
+   プロンプトに従って `root` パスワードを設定する。
+5. **【必須】再起動前に作業コピーの配置・`mitac` のパスワード設定・所有者変更を行う**（`modules/nixos/common.nix` に初期パスワードが無いため、未設定だと `tuigreet` でログインできません）：
+   ```bash
+   sudo cp -a /tmp/MySettings /mnt/home/mitac/MySettings
+   sudo nixos-enter --root /mnt
+   passwd mitac
+   chown -R mitac:users /home/mitac/MySettings
+   exit
+   ```
+6. アンマウントして USB を抜き、再起動する：
+   ```bash
+   sudo umount -R /mnt
+   sudo reboot
+   ```
+
+### 2. 初回ログイン後の設定チェックリスト
+
+再起動後の `tuigreet` でユーザー `mitac` を選んでログインすると **Sway** が起動します（端末: **Ctrl+Alt+T** / **Super+Return**、IME トグル: **Super+Space**、英数⇔日本語: **半角/全角**、ランチャー: **Super+D** / **Alt+Space**）。秘密情報・認証・機体固有ファイルはリポジトリに含まれないため、実機で一度だけ次を設定します。
+
+1. **GitHub 認証（`gh`）**:
+   `gh auth login` を実行する（`programs.gh` の `gitCredentialHelper` が有効なため、以降の `~/MySettings` での `git push` / `pull` にも使われます）。
+2. **VPN（Tailscale / Cloudflare WARP）**（※ バックアップから `/var/lib/{tailscale,cloudflare-warp}` を復元しなかった場合）：
+   - Tailscale: `sudo tailscale up --operator=mitac`（自宅外でのみ必要な場合は `ts-home-routes off` のまま維持）
+   - Cloudflare WARP: `warp-cli registration new` → `warp-cli connect`
+3. **暗号化バックアップの復元または新規設定**:
+   - **別機体の既存バックアップから復元する場合**: 「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」および「復元・確認（適用済みの環境）」を参照し、`rclone config`（`gdrive`）と `rbw` ログインを行って復元する（**新しい鍵を作らないこと**）。
+   - **新規でバックアップを初期構築する場合**: 「`/home の暗号化バックアップ` → `初回セットアップ`」に従い、GCP OAuth クライアント作成 → `backup setup` → `rbw login && backup unlock-key` → `rbw generate 40 restic-home` → `backup run` を実行する。
+4. **ヒラギノフォント（任意）**:
+   `/home/mitac/Documents/hiragino-otf/` に OTF ファイルを配置し、`rebuild` を実行する（ディレクトリが存在すると `rebuild` が自動で `--impure` を付けて同梱します）。
+5. **Vivaldi × ChatGPT 拡張（利用する場合）**:
+   Vivaldi で Web Store 版を入れた後、`vivaldi-chatgpt-extension-patch` が `~/.local/share/vivaldi-chatgpt-extension` を生成するため、`vivaldi://extensions` で Store 版を無効化し、Developer mode → Load unpacked で同ディレクトリを読み込む。
+6. **その他の任意設定と実機確認**:
+   - **リモートビルダー**（`modules/nixos/remote-builder.nix`）: 利用する場合は `/home/mitac/.ssh/id_wsl_builder`（パスフレーズなし）を配置し、公開鍵を `galleria-mitac` 側へ登録する（未配置でもタイムアウト後にローカルビルドへフォールバック。待ち時間を省くなら `sudo nixos-rebuild switch --flake .#vaio --option builders ""` を実行）。
+   - **dsh-TUI**: `npm i -g @deepseek-ai/dsh @deepseek-harness-tui/dsh-tui`
+   - **ハードウェア確認**: 下記「VAIO オーディオ確認」「Chromebook オーディオ確認」「VA-API / Parsec 確認」を実行する。
+
 ## 適用手順
 
-既存バックアップからデータを戻す場合は、先に「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」を実行してください。
+新しく USB から環境を構築する場合は、先に「[USB からの新規インストールと初回設定](#usb-からの新規インストールと初回設定)」を参照してください。既存バックアップからデータを戻す場合は、先に「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」を実行してください。
 
 ```bash
 # NixOS マシン上で、このリポジトリから:
