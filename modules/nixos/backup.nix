@@ -38,7 +38,8 @@ let
   # store, readable by the backup user. Created with `rclone config`.
   rcloneConfigFile = "/home/${user}/.config/rclone/rclone.conf";
 
-  # Bitwarden item whose password field holds the restic encryption key.
+  # Bitwarden item whose password field holds the restic encryption key
+  # (and where client_id / client_secret / refresh_token are saved manually).
   bitwardenItem = "restic-home";
 
   # Matches RuntimeDirectory from the nixpkgs restic module for this unit.
@@ -290,6 +291,40 @@ let
     # Final label + clear are handled by backupCleanupCommand (avoids racing partOf stop).
   '';
 
+  # Print client_id / client_secret / refresh_token from rclone config so the
+  # user can save or update them manually in Bitwarden item "restic-home".
+  printRcloneBitwardenFields = pkgs.writeShellScript "restic-home-show-oauth" ''
+    set -eu
+    export PATH="${
+      lib.makeBinPath [
+        pkgs.coreutils
+        pkgs.jq
+        pkgs.rclone
+      ]
+    }:$PATH"
+    remote="$1"
+    bw_item="$2"
+    dump_json="$(rclone config dump 2>/dev/null || true)"
+    client_id=""
+    client_secret=""
+    refresh_token=""
+    if [ -n "$dump_json" ]; then
+      client_id="$(printf '%s\n' "$dump_json" | jq -r --arg r "$remote" '.[$r].client_id // empty' 2>/dev/null || true)"
+      client_secret="$(printf '%s\n' "$dump_json" | jq -r --arg r "$remote" '.[$r].client_secret // empty' 2>/dev/null || true)"
+      refresh_token="$(
+        printf '%s\n' "$dump_json" | jq -r --arg r "$remote" '
+          (try ((.[$r].token // "") | fromjson) catch null)
+          | if type == "object" then (.refresh_token // empty) else empty end
+        ' 2>/dev/null || true
+      )"
+    fi
+    printf '\nBitwarden item (%s) - save/update these values manually for pre-build restore:\n' "$bw_item"
+    printf '  client_id:     %s\n' "''${client_id:-(not set)}"
+    printf '  client_secret: %s\n' "''${client_secret:-(not set)}"
+    printf '  refresh_token: %s\n' "''${refresh_token:-(not set)}"
+    printf '  (Fixed values not needed in Bitwarden: remote=%s, type=drive, scope=drive)\n' "$remote"
+  '';
+
   # Single entrypoint for home backup ops (systemd / rclone / rbw / restic).
   # NixOS names its auto-wrapper `restic-<name>`; we disable that and ship `backup`.
   # Meta subcommands are handled here; everything else is passed to restic.
@@ -306,6 +341,7 @@ let
       lib.makeBinPath [
         pkgs.rbw
         pkgs.rclone
+        pkgs.jq
         pkgs.openssh
         pkgs.systemd
         pkgs.coreutils
@@ -378,7 +414,13 @@ EOF
       reconnect)
         shift
         export RCLONE_CONFIG="$rclone_conf"
-        exec rclone config reconnect "''${remote_name}:" "$@"
+        rclone config reconnect "''${remote_name}:" "$@"
+        for arg in "$@"; do
+          case "$arg" in
+            -h|--help|--help=*) exit 0 ;;
+          esac
+        done
+        ${printRcloneBitwardenFields} "$remote_name" "${bitwardenItem}"
         ;;
       about)
         shift
@@ -409,6 +451,7 @@ EOF
     runtimeInputs = [
       pkgs.coreutils
       pkgs.gnugrep
+      pkgs.jq
       pkgs.rbw
       pkgs.rclone
       pkgs.restic
@@ -558,6 +601,8 @@ EOF
         fi
         say "Key stored in Bitwarden as '$bw_item'."
       fi
+
+      "${printRcloneBitwardenFields}" "$remote_name" "$bw_item"
 
       # Smoke-check: restic can decrypt the password command path via wrapper.
       if command -v backup >/dev/null 2>&1; then

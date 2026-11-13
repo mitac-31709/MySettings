@@ -953,6 +953,12 @@ let
     }
     {
       section = "バックアップ";
+      label = "全体復元（home+システム・上書き・要注意）";
+      run = "cd ~/MySettings && ./scripts/restore-on-nixos.sh";
+      mode = "show";
+    }
+    {
+      section = "バックアップ";
       label = "backup reconnect";
       run = "backup reconnect";
       mode = "term";
@@ -970,6 +976,10 @@ let
     {
       section = "バックアップ";
       label = "注: ~/MySettings 含む（復元先 …/home/mitac/MySettings）";
+    }
+    {
+      section = "バックアップ";
+      label = "注: restic-home に鍵と rclone ID/secret/token を手動保存";
     }
     # 電源（Chromebook: 電源・Type-C / VAIO: 電源・省電力）
     {

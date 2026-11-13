@@ -57,7 +57,7 @@ NixOS の世代番号はマシン固有です。コミットとの対応はビ�
 
 新しい PC や空の SSD へ NixOS Live USB から導入する手順です。この flake は `systemd-boot`（UEFI 専用、`modules/nixos/common.nix`）と `zramSwap`（RAM 100% / `zstd`、`modules/nixos/laptop/power.nix`）を使うため、**UEFI ブート有効（セキュアブート無効）**・GPT（ESP + root、swap パーティション不要）を前提とします。
 
-> **初期設定（Live USB・TTY）は英語設定で行う**: 初期状態の NixOS コンソール TTY には日本語フォント（CJK グリフ）が含まれず、日本語ロケールでは文字化けします（`modules/nixos/greetd.nix` も同理由で ASCII 時刻表示）。そのため、Live USB 起動時・Calamares インストーラの言語／ロケールは **English**（`en_US.UTF-8`）のまま進め、キーボード配列のみ日本語（**Japanese** / `jp106`）に設定してください。初期設定で使うスクリプト（`./scripts/restore-on-nixos.sh`・`backup setup`・`backup --help`）も TTY 上で読めるよう英語表示にしてあります。flake 適用・再起動後は `modules/nixos/common.nix` により自動的に `ja_JP.UTF-8` と日本語 Sway 環境へ切り替わります。
+> **初期設定（Live USB・TTY）は英語設定で行う**: 初期状態の NixOS コンソール TTY には日本語フォント（CJK グリフ）が含まれず、日本語ロケールでは文字化けします（`modules/nixos/greetd.nix` も同理由で ASCII 時刻表示）。そのため、Live USB 起動時・Calamares インストーラの言語／ロケールは **English**（`en_US.UTF-8`）のまま進め、キーボード配列のみ日本語（**Japanese** / `jp106`）に設定してください。初期設定で使うスクリプト（`./scripts/restore-on-nixos.sh`・`backup setup`・`backup reconnect`・`backup --help`）も TTY 上で読めるよう英語表示にしてあります。flake 適用・再起動後は `modules/nixos/common.nix` により自動的に `ja_JP.UTF-8` と日本語 Sway 環境へ切り替わります。
 
 ### 0. USB メディアの作成と起動
 
@@ -84,7 +84,7 @@ NixOS の世代番号はマシン固有です。コミットとの対応はビ�
      'git clone -b main https://github.com/mitac31709/MySettings.git ~/MySettings'
    cd ~/MySettings
    ```
-5. **（既存バックアップからデータを戻す場合）** OS ビルドの前に「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」の手順で `./scripts/restore-on-nixos.sh` を実行し（出力は TTY 向けに英語表示）、必要なホームデータ・システム状態・ヒラギノフォント（`/home/mitac/Documents/hiragino-otf/`）を配置しておく（スクリプトは `/var/tmp/restore-mitac-YYYYMMDD-HHMMSS/` へ展開するため `~/MySettings` は上書きされません）。
+5. **（既存バックアップからデータを戻す場合）** OS ビルドの前に「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」の手順で `./scripts/restore-on-nixos.sh` を実行する（出力は TTY 向けに英語表示）。バックアップ内の `/home/mitac`（`~/MySettings` や `/home/mitac/Documents/hiragino-otf/` を含む）およびシステム状態（Wi-Fi / Bluetooth / WARP / Tailscale）が**そのまま元の位置へ上書き復元**されます（システム状態の反映時のみ `sudo` パスワード入力が必要。その場で OAuth を新規入力／再接続した `~/.config/rclone/rclone.conf` のみ保持）。再ビルド前に展開内容だけ確認したい場合や別パスへ取り出したい場合は、`./scripts/restore-on-nixos.sh /var/tmp/restore-check` のように保存先ディレクトリを引数に指定してください。
 6. 実機の `hardware-configuration.nix` を生成し、flake を適用する（対象は `vaio` または `chromebook`）：
    ```bash
    # VAIO の場合（Chromebook は hosts/chromebook/hardware-configuration.nix と .#chromebook）
@@ -161,8 +161,8 @@ GUI インストーラを経由せず、USB から直接この flake の環境�
    - Tailscale: `sudo tailscale up --operator=mitac`（自宅外でのみ必要な場合は `ts-home-routes off` のまま維持）
    - Cloudflare WARP: `warp-cli registration new` → `warp-cli connect`
 3. **暗号化バックアップの復元または新規設定**:
-   - **別機体の既存バックアップから復元する場合**: 「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」および「復元・確認（適用済みの環境）」を参照し、`rclone config`（`gdrive`）と `rbw` ログインを行って復元する（**新しい鍵を作らないこと**）。
-   - **新規でバックアップを初期構築する場合**: 「`/home の暗号化バックアップ` → `初回セットアップ`」に従い、GCP OAuth クライアント作成 → `backup setup` → `rbw login && backup unlock-key` → `rbw generate 40 restic-home` → `backup run` を実行する。
+   - **別機体の既存バックアップから復元する場合**: 「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」のとおり `./scripts/restore-on-nixos.sh` を実行し（別端末で Bitwarden の `restic-home` を確認して入力するため、実機での `rbw` ログインは不要・**新しい鍵を作らないこと**）、すべてのファイルを元の位置（`/home/mitac` および `/etc`・`/var/lib`）へ復元する。継続して自動バックアップを使う場合は、`rbw login && backup unlock-key` を実行する。
+   - **新規でバックアップを初期構築する場合**: 「`/home の暗号化バックアップ` → `初回セットアップ`」に従い、GCP OAuth クライアント作成 → `backup setup`（`rbw login && backup unlock-key`・`rbw generate 40 restic-home` を含む）を実行し、表示された `client_id` / `client_secret` / `refresh_token` を Bitwarden の `restic-home` へ手動保存してから `backup run` を実行する。
 4. **ヒラギノフォント（任意）**:
    `/home/mitac/Documents/hiragino-otf/` に OTF ファイルを配置し、`rebuild` を実行する（ディレクトリが存在すると `rebuild` が自動で `--impure` を付けて同梱します）。
 5. **Vivaldi × ChatGPT 拡張（利用する場合）**:
@@ -185,8 +185,8 @@ Chromebook（delbin）を既存の `ext4` から `btrfs`（`compress=zstd:1`）�
    backup snapshots
    ```
 2. `~/MySettings` に未プッシュの変更があれば確認して GitHub へプッシュする（`git status`）。
-3. 再インストール後にすぐ復元できるよう、**別の USB メモリ等へ秘密ファイルを退避**し、Bitwarden のログイン情報も手元に控えておく（Git には絶対に含めない）：
-   - `~/.config/rclone/rclone.conf`（OAuth `client_id` / `client_secret`・トークン入り。これを戻せば `rclone config` のやり直しを省けます）
+3. 再インストール後にすぐ復元できるよう、別端末の Bitwarden 上で **`restic-home`**（暗号化パスワードと `client_id` / `client_secret` / `refresh_token`）を確認できる状態にしておく。あわせて、必要に応じて **別の USB メモリ等へ秘密ファイルを退避**しておく（Git には絶対に含めない）：
+   - `~/.config/rclone/rclone.conf`（OAuth `client_id` / `client_secret`・トークン入り。これを戻せば `./scripts/restore-on-nixos.sh` の OAuth 入力を省略できます）
    - 利用している場合は `~/.ssh/id_wsl_builder`
 
 #### Live USB からの `btrfs` 導入（CLI 手順）
@@ -254,8 +254,8 @@ Calamares（Graphical ISO）で `btrfs` を選ぶと初回導入時は `compress
 #### 再起動後の復元と圧縮確認
 
 1. `tuigreet` で `mitac` にログインする（Sway 起動）。
-2. 退避した `~/.config/rclone/rclone.conf` を戻す（`chmod 600 ~/.config/rclone/rclone.conf`）か「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」の `rclone config` 手順を実行し、続けて `rbw login && rbw unlock` を実行する（期限切れ時は `rclone config reconnect gdrive:`）。
-3. `./scripts/restore-on-nixos.sh`（TTY 互換のため英語出力）を実行し、`/var/tmp/restore-mitac-YYYYMMDD-HHMMSS/` へ復元された `/home/mitac`・`/home/mitac/Documents/hiragino-otf/`・システム状態（Wi-Fi / Bluetooth / WARP / Tailscale）を実機へ反映する（確認後に `/var/tmp/restore-mitac-YYYYMMDD-HHMMSS/` を削除）。
+2. USB へ退避した `~/.config/rclone/rclone.conf` がある場合は戻し（`chmod 600 ~/.config/rclone/rclone.conf`）、`./scripts/restore-on-nixos.sh`（TTY 互換のため英語出力）を実行する。`rclone.conf` を戻していない場合や暗号化パスワード入力が求められる場合は、別端末で Bitwarden の `restic-home` を確認してそのまま入力する。
+3. 上記コマンドにより `/home/mitac`（`/home/mitac/Documents/hiragino-otf/` 含む）とシステム状態（Wi-Fi / Bluetooth / WARP / Tailscale。反映時のみ `sudo` が自動実行されます）がすべて元の位置へ復元される（その場で新規入力／再接続した `rclone.conf` は保持）。継続バックアップ用に `rbw login && backup unlock-key` を実行する。
 4. ヒラギノ等を戻した場合は `rebuild` を実行し、圧縮率と scrub タイマーを確認する：
    ```bash
    sudo compsize / /nix/store /home
@@ -396,7 +396,7 @@ Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行�
 
 - **restic** — `/home/mitac` に加え、NetworkManager の Wi-Fi プロファイル・Bluetooth ペアリング・Cloudflare WARP 状態・Tailscale ノード状態の一時コピー（staged）を暗号化・重複排除してスナップショット保存します。
 - **rclone** — Google Drive バックエンド（restic リポジトリ: `rclone:gdrive:restic/mitac-home`）。
-- **Bitwarden (`rbw`)** — restic の暗号化鍵を保持します。実行時に `RESTIC_PASSWORD_COMMAND=rbw get restic-home` 経由で鍵を取得するため、**鍵データはディスク上にも Nix ストアにも書き込まれません**。`rbw` 自体の宣言的設定は `home/programs.nix`（`programs.rbw`）にあります。
+- **Bitwarden (`rbw`)** — restic の暗号化鍵を保持します。実行時に `RESTIC_PASSWORD_COMMAND=rbw get restic-home` 経由で鍵を取得するため、**鍵データはディスク上にも Nix ストアにも書き込まれません**。あわせて同じ `restic-home` 項目のカスタムフィールドまたはメモ欄に Google OAuth の `client_id` / `client_secret` / `refresh_token` を手動で控えておくと、再構築時の復元もその 1 項目を見るだけで完結します。`rbw` 自体の宣言的設定は `home/programs.nix`（`programs.rbw`）にあります。
 
 日次の `systemd` タイマー（`restic-backups-home.timer`）がバックアップを実行し、古いスナップショットを整理します（`--keep-daily 7 --keep-weekly 5 --keep-monthly 12`）。グラフィカルセッションへのログイン中は **Sway の waybar** に進捗（`バックアップ N%`、`$XDG_RUNTIME_DIR/restic-home-status` 経由）が表示され、開始・完了（または失敗）が mako 通知で知らされます。
 
@@ -446,7 +446,9 @@ Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行�
    backup reconnect
    # または: rclone config → e (edit) → gdrive → client_id/secret を設定 → replace token (Y)
    ```
-   続いて Bitwarden の解錠と初回バックアップを実行します。
+   `backup setup`（ステップ 2 後）および `backup reconnect` の完了時に、`client_id`・`client_secret`・`refresh_token` が画面へ表示されます。別機体での事前復元に備え、Bitwarden の **`restic-home`**（カスタムフィールドまたはメモ欄）へこの 3 項目を**手動で保存／更新**してください（`rbw edit` の暗号化破損リスクを避けるため自動書込みは行いません。また固定値 `gdrive` / `type = drive` / `scope = drive` の保存は不要です）。
+
+   手動で Bitwarden の解錠と初回バックアップを実行する場合は次のとおりです。
    ```bash
    rbw login && backup unlock-key
    rbw generate 40 restic-home   # パスワード欄 = restic 暗号化鍵
@@ -456,43 +458,41 @@ Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行�
 
 ### OS ビルド前に実機へ復元
 
-既存バックアップを実機の NixOS へ戻すときは、`mitac` ユーザーでこのリポジトリから実行します。OS の再ビルドは不要です。
+既存バックアップを実機の NixOS へ戻すときは、`mitac` ユーザー（`sudo` を付けず）でこのリポジトリから次を実行します。OS の再ビルドも、実機での Bitwarden（`rbw`）ログインも不要です。
 
 ```bash
+# すべてのファイルを元の位置へ復元（/home/mitac + システム状態）:
 ./scripts/restore-on-nixos.sh
-# 別ディスクに復元する場合（親ディレクトリは作成済み、復元先自体は未作成）:
+
+# 中身の事前確認や別ディスクへの取り出しのみ行う場合（親は作成済み・展開先自体は未作成）:
 ./scripts/restore-on-nixos.sh /mnt/restore-disk/mitac-restored
 ```
 
-不足するツールは `nix shell` で取得します。既存の `gdrive` 接続設定と Bitwarden に保存済みの **`restic-home` 鍵**を利用します。認証設定がまだない実機では、先に次のシェル内で準備してください。
+不足するツール（`restic` / `rclone` / `jq`）は自動で `nix shell` から取得します。`gdrive:` リモートや暗号化パスワードが未設定の場合は、実機のプロンプトで順番に入力を求めます。スマホや別 PC などで Bitwarden の **`restic-home`** を確認して入力してください。
 
-```bash
-nix --extra-experimental-features 'nix-command flakes' shell \
-  nixpkgs#rclone nixpkgs#rbw nixpkgs#pinentry-curses --command bash
-rclone config                   # リモート名 gdrive、種類 Google Drive、自分の OAuth client_id/secret
-rbw config set email YOUR_BITWARDEN_EMAIL
-rbw config set base_url https://api.bitwarden.eu
-rbw config set identity_url https://identity.bitwarden.eu
-rbw config set pinentry pinentry-curses
-rbw login
-rbw unlock
-exit
-./scripts/restore-on-nixos.sh
-```
+1. **`client_id`**（Google OAuth クライアント ID）
+2. **`client_secret`**（Google OAuth クライアント シークレット）
+3. **`refresh_token`**（または 1 行の `token` JSON。空欄のまま Enter にすると、その場で対話 OAuth `rclone config reconnect gdrive:` を開始します。ブラウザーのない TTY では `Use auto config?` に `n` と答え、別端末で URL 認証した結果を貼り付けてください）
+4. **暗号化パスワード**（`restic-home` のパスワード欄。画面には表示されません）
 
-既存の設定・ログインがある場合は再設定不要です。上の例はこのリポジトリと同じ Bitwarden EU 向けです。`RCLONE_CONFIG` があればその設定を使い、未指定なら `~/.config/rclone/rclone.conf`、それもなければ rclone の既定設定を使います。鍵は `rbw get restic-home` で取得し、`RESTIC_PASSWORD_FILE` / `RESTIC_PASSWORD_COMMAND` などが設定済みならそれを優先します。復元には**元の鍵**が必要です。新しい鍵の生成や `backup setup` は行わないでください。Google が `invalid_grant` を返す場合は、上のシェルで `rclone config reconnect gdrive:` を実行します。
+固定値（リモート名 `gdrive`、`type = drive`、`scope = drive`、リポジトリ `rclone:gdrive:restic/mitac-home`）の入力は不要です。入力した OAuth 設定は `~/.config/rclone/rclone.conf`（権限 `0600`）へ保存されるため、ビルド後の `backup` でもそのまま再利用できます。
 
-スクリプトは非 CJK の TTY コンソールでも文字化けしないようすべて英語でメッセージを出力します。最新スナップショットを固定し、必要容量と空き容量を確認して、全体を `/var/tmp/restore-mitac-YYYYMMDD-HHMMSS/` へ復元します。`restic restore --verify` の成功後に `Restore and verification completed.` を表示します。既存ディレクトリへの上書きはせず、中断・失敗時のファイルも残します。
+`RCLONE_CONFIG`（または既存の `~/.config/rclone/rclone.conf` / `~/.rclone.conf`）に有効な `gdrive:` がある場合や、`RESTIC_PASSWORD` / `RESTIC_PASSWORD_FILE` / `RESTIC_PASSWORD_COMMAND` が設定済みの場合はプロンプトを省略します。復元には**元の暗号化パスワード**が必要です。新しい鍵の生成や `backup setup` は行わないでください。Google Drive への接続で `invalid_grant` 等が出た場合も、その場のメニュー（`[r]` 値の再入力 / `[o]` OAuth 再接続 / `[t]` 再試行）でやり直せます。
 
-- ホーム: `復元先/home/mitac/`
-- フォント: `復元先/home/mitac/Documents/hiragino-otf/`
-- Wi-Fi / Bluetooth / WARP / Tailscale の保存状態: `復元先/run/restic-backups-home/system/`
+スクリプトは非 CJK の TTY コンソールでも文字化けしないようすべて英語でメッセージを出力します。最新スナップショットを固定し、必要容量と空き容量を確認してから、`restic restore --verify` で検証後に次のとおり復元します（検証が失敗した場合は元のファイルを変更せず一時展開先を保持して終了します）。
 
-実際の `/home` や `/etc` への反映は、復元内容と現在のファイルを確認してから行います。ヒラギノを使うなら、OS ビルド前に OTF を `/home/mitac/Documents/hiragino-otf` に置き、`rebuild`（ディレクトリがあるとき `--impure`）してください。置かない場合の既定は Noto CJK です。復元対象はバックアップに含まれる範囲で、`MySettings`、キャッシュ、ゲーム本体などの除外対象や `/etc/shadow` は含まれません。使い方は `./scripts/restore-on-nixos.sh --help` でも確認できます。
+- **引数なし（既定）**: `/var/tmp/restore-mitac-XXXXXXXX` で検証後、すべてのバックアップ対象を**元の位置へ直接上書き復元**し、成功時に一時ディレクトリを削除します（`Restore and verification completed.` を表示）。
+  - ホーム: `/home/mitac/`（`~/MySettings`・`/home/mitac/Documents/hiragino-otf/`・`~/.config/rclone/rclone.conf` を含む全バックアップ済みファイルを上書き。ただし今回の実行中に OAuth を新規設定／再接続した場合は、その新しい `$RCLONE_CONFIG` を保持）
+  - システム状態（空でないディレクトリのみ自動で `sudo` 実行）: `/etc/NetworkManager/system-connections`（ファイル権限 `0600`）・`/var/lib/bluetooth`・`/var/lib/cloudflare-warp`・`/var/lib/tailscale`（`root:root` 所有に変更し、稼働中のサービス／`nmcli` を再読み込み）
+- **引数 `[EXTRACT_DIR]` 指定時**: `/home`・`/etc`・`/var/lib` には一切触れず、`EXTRACT_DIR`（`home/mitac/`・`run/restic-backups-home/system/`・`.restored-snapshot-id`）へ展開と検証のみを行います。
+
+バックアップ対象には `~/MySettings`（`.git` や未コミットの作業を含む）も含まれますが、再生成可能な大容量キャッシュ／ゲーム本体（Steam `common` 等）および `/etc/shadow` は含まれません。ヒラギノ（`/home/mitac/Documents/hiragino-otf`）が復元された場合は、直後の OS ビルドで `--impure`（`rebuild` 導入後は自動付与）を指定してください（未配置時の既定は Noto CJK）。使い方は `./scripts/restore-on-nixos.sh --help` でも確認できます。
 
 ### 復元・確認（適用済みの環境）
 
-このモジュールはセットアップ、systemd ユニット、rclone 確認、および restic（リポジトリ／Bitwarden パスワードコマンド設定済み）をまとめて扱う `backup` CLI（`backup --help`・`backup setup` の対話出力は TTY 互換のため英語表示）を導入します。`restic-home-setup` も `backup setup` のエイリアスとして残っています。
+このモジュールはセットアップ、systemd ユニット、rclone 確認、および restic（リポジトリ／Bitwarden パスワードコマンド設定済み）をまとめて扱う `backup` CLI（`backup --help`・`backup setup`・`backup reconnect` の出力は TTY 互換のため英語表示）を導入します。`restic-home-setup` も `backup setup` のエイリアスとして残っています。
+
+すべてのファイルを元の位置へ一括復元する場合は `cd ~/MySettings && ./scripts/restore-on-nixos.sh` を実行します。一部ファイルだけ別ディレクトリへ取り出して確認・手動反映する場合は `backup restore latest --target /tmp/restore` を使います。
 
 ```bash
 backup                 # 使い方
@@ -502,7 +502,7 @@ backup snapshots
 backup restore latest --target /tmp/restore
 ```
 
-システム状態は `/tmp/restore/run/restic-backups-home/system/` 配下に展開されます。
+`--target /tmp/restore` で抽出した場合、システム状態は `/tmp/restore/run/restic-backups-home/system/` 配下に展開されます。
 
 ```bash
 # Wi-Fi
@@ -545,7 +545,7 @@ restic restore latest \
 ### 注意事項
 
 - バックアップはユーザー `mitac` で実行されるため、成功させるには `rbw` が**ロック解除済み／到達可能**である必要があります。グラフィカルセッション内で `rbw-agent` をアンロック状態に保っておくのが推奨です。タイマー実行時に Vault がロックされている場合、パスワードコマンドはセッションの D-Bus / Wayland（または X11）を取り込んで `pinentry-qt` で入力を促します。セッションがない環境では先に `backup unlock-key` でアンロックしてから `backup run` を実行してください。
-- root のみ読める領域（Wi-Fi、Bluetooth、Cloudflare WARP、Tailscale）は root 権限の `ExecStartPre` で `/run/restic-backups-home/system/…` へ一時コピーされ、停止時に削除されます。`/etc/shadow`（ログインパスワード）は**バックアップされません**。`~/MySettings`（`.git` や未コミットの作業を含む flake チェックアウト一式）は `/home/mitac` の他のファイルと**一緒に含まれ**、復元後は `/tmp/restore/home/mitac/MySettings` に展開されます。
+- root のみ読める領域（Wi-Fi、Bluetooth、Cloudflare WARP、Tailscale）は root 権限の `ExecStartPre` で `/run/restic-backups-home/system/…` へ一時コピーされ、停止時に削除されます。`/etc/shadow`（ログインパスワード）は**バックアップされません**。`~/MySettings`（`.git` や未コミットの作業を含む flake チェックアウト一式）は `/home/mitac` の他のファイルと**一緒に含まれ**、`./scripts/restore-on-nixos.sh` では `~/MySettings` へそのまま上書き復元されます（`backup restore … --target /tmp/restore` 時は `/tmp/restore/home/mitac/MySettings`）。
 - 再生成可能な大容量データは除外されます（Steam クライアント／ランタイムとゲーム本体 ※ `userdata` / `compatdata` のセーブデータは保持、Cursor の agent-worker バイナリとキャッシュ、Vivaldi のキャッシュ／拡張機能／WebStorage、Firefox の `storage`）。
 - `/home` **全体**（複数ユーザー）をバックアップしたい場合は、サービスの実行ユーザーを `root` に変更し、`root` 側の `rclone` / `rbw` を設定してください。
 - rclone の OAuth トークンと Bitwarden ログイン情報は `~/.config` 配下に保存され、このリポジトリには一切含まれません。
