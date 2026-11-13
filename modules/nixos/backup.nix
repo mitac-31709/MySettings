@@ -18,7 +18,7 @@
 #   declarative : which paths, excludes, schedule, retention, the Google Drive
 #                 target, and that the key comes from Bitwarden.
 #   manual      : the rclone OAuth token for Google Drive and the Bitwarden login.
-# See README.md → "Encrypted /home backup" for the one-time setup.
+# See README.md → "/home の暗号化バックアップ" for the one-time setup.
 {
   config,
   lib,
