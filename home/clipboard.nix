@@ -48,6 +48,7 @@ in
   home.packages = [
     clipboardHistory
     pkgs.cliphist
+    pkgs.wl-clipboard
     pkgs.wtype
   ];
 

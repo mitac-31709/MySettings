@@ -14,6 +14,10 @@ let
   flakeUpdateCheck = lib.getExe config.mitac.scripts.flakeUpdateCheck;
   flakeUpdate = lib.getExe config.mitac.scripts.flakeUpdate;
   waybarAiStatus = lib.getExe config.mitac.scripts.waybarAiStatus;
+  # Family string from nerd-fonts.jetbrains-mono (same as Ghostty).
+  # CSS does not name a CJK face. Missing glyphs go through fontconfig's
+  # defaultFonts (Hiragino, then Noto Sans CJK JP).
+  waybarFont = "JetBrainsMono Nerd Font";
   ghosttyBin = "${pkgs.ghostty}/bin/ghostty";
   openFlakeUpdate = "${ghosttyBin} -e ${flakeUpdate}";
   swaylockBin = "${pkgs.swaylock}/bin/swaylock";
@@ -1089,6 +1093,16 @@ let
   '';
 in
 {
+  # On PATH once. programs.sway.extraPackages no longer links these.
+  # Binds still call the store paths above, which are the same packages.
+  home.packages = [
+    pkgs.swayidle
+    pkgs.grim
+    pkgs.slurp
+    pkgs.brightnessctl
+    pkgs.jq
+  ];
+
   wayland.windowManager.sway = {
     enable = true;
     package = null; # use system programs.sway
@@ -1471,8 +1485,9 @@ in
       * {
         border: none;
         border-radius: 0;
-        /* CJK fallback: JetBrains Mono alone metrics-clip Japanese in a short bar. */
-        font-family: "JetBrainsMono Nerd Font", "Noto Sans CJK JP", sans-serif;
+        /* Latin and icons: nerd-fonts.jetbrains-mono. CJK is fontconfig
+           (defaultFonts: Hiragino, then Noto), not a second family here. */
+        font-family: "${waybarFont}", sans-serif;
         font-size: 11px;
         min-height: 0;
       }
@@ -1559,7 +1574,7 @@ in
         background: transparent;
       }
       window.side #custom-updates {
-        font-family: "JetBrainsMono Nerd Font", "Noto Sans CJK JP", sans-serif;
+        font-family: "${waybarFont}", sans-serif;
         font-size: 13px;
         min-width: 34px;
         padding: 8px 0;
@@ -1574,7 +1589,7 @@ in
         border-top: 2px solid #33c5c5;
       }
       window.side #custom-ai {
-        font-family: "JetBrainsMono Nerd Font", "Noto Sans CJK JP", sans-serif;
+        font-family: "${waybarFont}", sans-serif;
         font-size: 13px;
         min-width: 34px;
         padding: 8px 0;

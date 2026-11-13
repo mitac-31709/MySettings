@@ -176,6 +176,10 @@ in
   };
 
   environment.systemPackages = with pkgs; [
+    # git and vim stay on the system profile for root and recovery shells.
+    # sudo's secure_path is /run/current-system/sw/bin and does not include
+    # the user Home Manager profile. programs.git (home/programs.nix) is the
+    # user's git, with name and email; this package is the unconfigured one.
     vim
     git
     wget

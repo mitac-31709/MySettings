@@ -93,7 +93,7 @@ nix flake update nixpkgs-cursor
 
 ## 同梱ソフトウェア
 
-- **Neovim** — **LazyVim**（`home/nvim`）。**lazy.nvim** 自体は nixpkgs から同梱、それ以外のプラグインは lazy が管理
+- **Neovim** — **LazyVim**（`home/nvim`）。コアプラグインと treesitter のパーサは nixpkgs から同梱し、起動時に git clone しない
 - **Cursor** — `code-cursor`（GUI）／`cursor-cli`（ターミナル Agent: `cursor-agent` / `agent`）
 - **Zed** — `zed-editor`（起動: `zeditor`、アプリメニュー: Zed）
 - **OpenCode** — ターミナル AI コーディングエージェント（`opencode`、`pkgs/opencode` で V2 をピン留め。nixpkgs の 1.x は使わない）
@@ -118,7 +118,7 @@ nix flake update nixpkgs-cursor
   Wine ビルドはキャッシュが外れると数時間かかることがあります。RTC が NTP より遅れていると、このキャッシュの証明書エラーで他の取得まで止まります
 - **LocalSend** — LAN ファイル転送（`programs.localsend`、ファイアウォール 53317）
 - **RQuickShare** — Google Quick Share / Nearby Share の Linux クライアント（`rquickshare`）
-- **wol-pc** — Wake-on-LAN クライアント（`~/Projects/wol-pc`）。依存: `sshpass` / `zenity`（`home.packages`）。設定は同ディレクトリの `config.env`
+- **wol-pc** — Wake-on-LAN クライアント（`~/Projects/wol-pc`）。依存: `sshpass` / `zenity`（`home.packages`）。設定は同ディレクトリの `config.env`。ソースはこのリポジトリの外なので、ここではパッケージ化していない。TODO: ソースをこの flake に置く（`pkgs/wol-pc` にスクリプトを追加するか、公開リポジトリなら `fetchFromGitHub`）→ `callPackage` で `home.packages` に足す。`config.env` のホスト名やパスワードは秘密なのでストアに入れず、今どおりリポジトリ外のファイルのまま読む
 - **7-Zip** — `_7zip-zstd`（コマンド `7z` / `7zz`、Zstd ほか対応）+ GUI `peazip`（PeaZip）
 - **tmux** — `runbtop <cmd>` で上部に実行出力（約 10 行）、下部に `btop`
 - **Meltype** — Fcitx5 エンジン（日本語／英語の自動打ち分け。Linux プレビュー。IME は Meltype のみ）
@@ -137,7 +137,7 @@ nix flake update nixpkgs-cursor
 - **z + 記号 / hjkl**: `zl`→`→`、`zh`→`←`、`zj`→`↓`、`zk`→`↑`、`z/`→`・`、`z.`→`…` など（Meltype 1.4+、既定 ON）
 - 学習・設定: `~/.local/share/Meltype`
 - 詳細設定: **Fcitx5 設定**（`fcitx5-configtool`）
-- プロファイル／config: Home Manager が `/etc/xdg/fcitx5/{profile,config}` を `~/.config/fcitx5/` に同期（古い `mozc` / `keyboard-jp` + 半角/全角 Trigger を上書きしないように）
+- プロファイル／config: NixOS モジュールが生成する INI を、Home Manager が `~/.config/fcitx5/{profile,config}` へシンボリックリンクする。Fcitx は `~/.config` を `/etc/xdg` より先に読むので、古いユーザコピー（`keyboard-jp` や半角/全角 Trigger）が勝たない。リンク先はストアで読み取り専用。変更は `modules/nixos/common.nix` の `i18n.inputMethod.fcitx5.settings`
 - **Cursor / ChatGPT** など Electron: `NIXOS_OZONE_WL=1` と Wayland IME フラグ。`ShareInputState=All` でフォーカス間の active/inactive ずれを抑える。適用後はアプリを**完全終了**してから開き直す
 - 適用後: `rebuild` してから **fcitx5 再起動**（例: `fcitx5 -d --replace`）かセッション再ログイン
 
@@ -157,6 +157,8 @@ nix flake update nixpkgs-cursor
 2. `--impure` でビルドする。`rebuild` はこのディレクトリがあるときだけ `--impure` を付けます
 
 仕組み: `builtins.pathExists` は pure 評価では flake の外の絶対パスを読めず、結果は false です。`--impure` のときだけ実在を見て、ある場合だけ `builtins.path` でストアへコピーし `fonts.packages` に足します。第一候補は sans `Hiragino Kaku Gothic ProN` / serif `Hiragino Mincho ProN` のままです。
+
+waybar の CSS が名指しするのは `JetBrainsMono Nerd Font` だけです。日本語の字形は CSS では指定せず、fontconfig の既定（ヒラギノ、無ければ `Noto Sans CJK JP`）が埋めます。waybar のためだけに CJK フォントは足していません。
 
 Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行し、ログアウトして再ログインします。
 
@@ -377,10 +379,10 @@ restic restore latest \
 | `home/nvim/lua/config/` | options / keymaps / autocmds / lazy セットアップ |
 | `home/nvim/lua/plugins/` | 追加・上書き用のプラグイン仕様（`nix.lua` で Mason 無効化） |
 
-- **lazy.nvim** 自体は Home Manager が `pkgs.vimPlugins.lazy-nvim` からインストール（git clone 不要）
-- **LazyVim 本体と依存プラグイン**は初回起動時に lazy がクローン（要ネットワーク）
-- `lazy-lock.json` は読み取り専用の `~/.config/nvim` ではなく `~/.local/state/nvim/lazy-lock.json`
-- LSP / formatter 等は Mason ではなく `programs.neovim.extraPackages`（`home/programs.nix`）
+- **lazy.nvim** と LazyVim のコアプラグインは `pkgs.vimPlugins` を `linkFarm` したディレクトリ（`home/lazy-plugins.nix`）。lazy の `dev.path` がそこを見る。`dev.fallback` はオフ、`install.missing` もオフなので、起動時に git clone しない
+- バージョンは nixpkgs のピン（`flake.lock`）で決まる。`lazy-lock.json` はローカルプラグインを記録しない。パスは読み取り専用の `~/.config/nvim` を避けて `~/.local/state/nvim/lazy-lock.json` のまま
+- treesitter のパーサは `nvim-treesitter.withPlugins` の `parser/*.so` を `install_dir`（`~/.local/share/nvim/nix/treesitter`）に置く。LazyVim はそこにある言語を `TS.install` しない。言語を足すときは `home/lazy-plugins.nix` のリストを変える
+- LSP / formatter は Mason ではなく `programs.neovim.extraPackages`（`lua-language-server`、`stylua`、`ripgrep`、`fd`）。Mason は無効のまま
 
 ## Chromebook — ASUS CX5500FE / delbin
 
