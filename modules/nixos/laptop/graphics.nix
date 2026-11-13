@@ -1,12 +1,12 @@
-# Chromebook firmware + Intel Tiger Lake VA-API (Parsec etc.).
+# Shared Intel laptop firmware + VA-API (8th+ gen iGPU / SOF).
 { pkgs, ... }:
 
 {
-  # volteer / delbin uses SOF for audio; keep redistributable firmware from
-  # modules/nixos/common.nix and add SOF + iHD here.
+  # SOF DSP firmware (Tiger Lake Chromebook + 10th+ gen Intel VAIO).
+  # Keep redistributable firmware from modules/nixos/common.nix and add SOF here.
   hardware.firmware = [ pkgs.sof-firmware ];
 
-  # Intel Tiger Lake iGPU (i3-1115G4 / device 0x9a78): VA-API for Parsec's
+  # Intel iGPU (8th+ gen / Iris Xe / Core Ultra): VA-API for Parsec's
   # FFMPEG hardware encode/decode. Without intel-media-driver there is no
   # iHD_drv_video.so under /run/opengl-driver and Parsec falls back to software.
   hardware.graphics = {

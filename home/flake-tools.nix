@@ -5,6 +5,7 @@
   config,
   lib,
   pkgs,
+  flakeTarget ? null,
   ...
 }:
 let
@@ -65,7 +66,7 @@ in
 
   options.mitac.flakeHost = lib.mkOption {
     type = lib.types.str;
-    default = machine.flakeHost;
+    default = if flakeTarget != null then flakeTarget else machine.flakeHost;
     description = "nixosConfigurations name appended by rebuild.";
   };
 

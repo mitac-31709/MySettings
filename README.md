@@ -1,12 +1,12 @@
 # MySettings — NixOS flake（mitac）
 
-ホスト／ユーザー `mitac` 向けの Flakes + Home Manager 構成。ログインは **greetd + tuigreet**、デスクトップは **Sway のみ**。
+ホスト／ユーザー `mitac` 向けの Flakes + Home Manager 構成。ログインは **greetd + tuigreet**、デスクトップは **Sway のみ**。**VAIO（Intel 第8世代以降）** と **Chromebook（ASUS CX5500FE / delbin）** の両対応です。
 
 ## ブランチ
 
 | ブランチ | 用途 |
 |----------|------|
-| `main` | **作業・適用の既定**。汎用デスクトップ／ノート、および delbin Chromebook 向け設定を含む |
+| `main` | **作業・適用の既定**。VAIO（`.#vaio`）および delbin Chromebook（`.#chromebook`、レガシー別名 `.#mitac`）向け設定を含む |
 | `chromebook` | レガシー。新規作業には使わない |
 
 ## セッション（greetd + tuigreet）
@@ -31,9 +31,9 @@
 | スクショ | **Print** / **Super+Shift+S** | **grim**（全画面）/ grim+**slurp**（範囲）→ クリップボード |
 | タッチパッド | — | 自然スクロール off・タップクリック on・入力中もポインタ有効 |
 
-電源ボタン（`chromebook-power-chords`）: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+Back=強制ログアウト** / **電源+Refresh=再起動**。
+電源ボタン（`power-chords`）: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+F1（Chromebook は 電源+Back）=強制ログアウト** / **電源+F2（Chromebook は 電源+Refresh）=再起動**。
 
-Polkit / Fcitx5 / cliphist（systemd user）を起動時に起動。音量・輝度は PulseAudio / brightnessctl 経由。通知は mako、ステータスバーは waybar。
+Polkit / Fcitx5 / cliphist（systemd user）を起動時に起動。音量は PulseAudio（Chromebook）または PipeWire / `pipewire-pulse`（VAIO）経由で `pactl` 操作、輝度は `brightnessctl` 経由。通知は mako、ステータスバーは waybar。
 
 ## 世代とコミットの対応
 
@@ -49,7 +49,7 @@ NixOS の世代番号はマシン固有です。コミットとの対応はビ�
 ## 前提条件
 
 - Flakes が有効な NixOS マシン（この flake でも有効化します）
-- 初回 rebuild の**前に**、`hosts/mitac/hardware-configuration.nix` を自分のマシンで生成したファイルに差し替えること
+- 初回 rebuild の**前に**、対象ホストの `hosts/<target>/hardware-configuration.nix` を実機で生成したファイルに差し替えること（`hosts/vaio/hardware-configuration.nix` は汎用テンプレート、`hosts/chromebook/hardware-configuration.nix` は delbin 実機設定）
 - 非フリーパッケージ（`code-cursor`、`cursor-cli`、`jquake`、`parsec-bin`、`steam`、`vivaldi`）は `flake.nix` で許可済み。`affinity-v3` は未導入（戻し方は下記）
 - Chromebook: MrChromebox（または同等）の UEFI／WP 無効を想定。ファームウェアの書き込みはこのリポジトリの範囲外
 
@@ -61,20 +61,24 @@ NixOS の世代番号はマシン固有です。コミットとの対応はビ�
 # NixOS マシン上で、このリポジトリから:
 git checkout main
 
-# ハードウェア設定を差し替え（必須）:
-sudo nixos-generate-config --show-hardware-config > hosts/mitac/hardware-configuration.nix
+# 1) VAIO（Intel 第8世代以降）の場合 — 初回はハードウェア設定の差し替えが必須:
+sudo nixos-generate-config --show-hardware-config > hosts/vaio/hardware-configuration.nix
+sudo nixos-rebuild switch --flake .#vaio
 
-# ビルドして切り替え:
-sudo nixos-rebuild switch --flake .#mitac
-# または（Home Manager 適用後）どのディレクトリからでも:
-#   rebuild
-# → sudo nixos-rebuild switch --flake /home/mitac/MySettings#mitac
+# 2) Chromebook（ASUS CX5500FE / delbin）の場合（別個体では再生成）:
+# sudo nixos-generate-config --show-hardware-config > hosts/chromebook/hardware-configuration.nix
+sudo nixos-rebuild switch --flake .#chromebook
+# ※ 後方互換エイリアス `.#mitac` も `.#chromebook` を指します
+
+# Home Manager 適用後は、どのディレクトリからでも:
+#   rebuild          # 現在のホストターゲット（vaio / chromebook）を再ビルド
+#   rebuild vaio     # 引数でターゲット明示も可能
 
 # 必要なら:
 passwd mitac
 ```
 
-`flake.lock` はリポジトリに含まれます。シェル関数 `rebuild`（先に `sudo` 認証、通常表示のままビルド中だけ `nom` ETA）とエイリアス `generations` は `home/shell.nix` で定義されます。flake の作業コピーは `lib/machine.nix` の `repoPath`（既定 `/home/mitac/MySettings`）だけです。Home Manager の `mitac.repoPath` で上書きできます。`rebuild` / `flake-update` はそのパスの `flake.nix` を使います。スクリプト本体は Nix ストアのコマンドで、チェックアウトの `scripts/` を直接実行しません。
+`flake.lock` はリポジトリに含まれます。シェル関数 `rebuild`（既定ターゲットは各ホストの `flakeTarget`／未指定時のフォールバックは `lib/machine.nix` の `flakeHost`、引数で `.#vaio` / `.#chromebook` の切り替え可。先に `sudo` 認証、通常表示のままビルド中だけ `nom` ETA）とエイリアス `generations` は `home/shell.nix` で定義されます。flake の作業コピーは `lib/machine.nix` の `repoPath`（既定 `/home/mitac/MySettings`）だけです。Home Manager の `mitac.repoPath` / `mitac.flakeHost` で上書きできます。`rebuild` / `flake-update` はそのパスの `flake.nix` を使います。スクリプト本体は Nix ストアのコマンドで、チェックアウトの `scripts/` を直接実行しません。
 
 ## flake の更新
 
@@ -201,7 +205,7 @@ session is logged in, **Sway waybar** shows live progress (`バックアップ N
 1. **Edit your identifiers** before rebuilding:
    - `home/programs.nix`: `programs.rbw.settings.email` → your Bitwarden email.
    - `modules/nixos/backup.nix` (optional): `repository`, `bitwardenItem`, `paths`.
-2. **Rebuild**: `sudo nixos-rebuild switch --flake .#mitac`.
+2. **Rebuild**: `sudo nixos-rebuild switch --flake .#vaio` (or `.#chromebook`).
 3. **Create your own Google Drive OAuth client** (required: rclone's shared client_id is being retired in 2026, and the shared quota is what makes restore crawl). See [Making your own client_id](https://rclone.org/drive/#making-your-own-client-id):
    1. [Google Cloud Console](https://console.cloud.google.com/) → new project (e.g. `rclone-mitac`).
    2. **APIs & Services → Library** → enable **Google Drive API**.
@@ -385,19 +389,44 @@ restic restore latest \
 - treesitter のパーサは `nvim-treesitter.withPlugins` の `parser/*.so` を `install_dir`（`~/.local/share/nvim/nix/treesitter`）に置く。LazyVim はそこにある言語を `TS.install` しない。言語を足すときは `home/lazy-plugins.nix` のリストを変える
 - LSP / formatter は Mason ではなく `programs.neovim.extraPackages`（`lua-language-server`、`stylua`、`ripgrep`、`fd`）。Mason は無効のまま
 
+## VAIO（Intel 第8世代以降）
+
+| 項目 | 詳細 |
+|------|------|
+| Flake ターゲット | `.#vaio`（`hosts/vaio/default.nix`） |
+| CPU / GPU | Intel 第8世代以降（Core i / Core Ultra iGPU）。`intel-media-driver` + `LIBVA_DRIVER_NAME=iHD` + `sof-firmware`（`modules/nixos/laptop/graphics.nix`） |
+| オーディオ | **PipeWire + WirePlumber**（ALSA / 32bit ALSA / `pipewire-pulse` / JACK 互換）+ Bluetooth（`modules/nixos/vaio/audio.nix`）。Chromebook 用の PulseAudio / `hw:0,0` 固定・`max98373` ミキサは不使用 |
+| キーボード・OOM | `keyd` により **Ctrl+Alt+Del**（**Ctrl+Alt+Backspace** も可）で手動 OOM killer（SysRq-f）＋ libinput 内部キーボード扱い。Chromebook 用 `cros` 最上段変換は適用しないため、`F1`–`F12` は通常のファンクションキーとして動作（`modules/nixos/laptop/input.nix`） |
+| 電源・コード | `zram`（100% / zstd）・`thermald`・`auto-cpufreq`・`power-chords`（全 `"Power Button"` ACPI ノードを監視: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+F1=強制ログアウト** / **電源+F2=再起動**）。Chromebook 専用 `/dev/cros_ec` Type-C 制御はロードしない |
+| バックライト | Waybar `backlight` はデバイス名固定なし（`intel_backlight` 等を自動検出） |
+
+### VAIO オーディオ確認
+
+```bash
+pactl info | grep 'Server Name'
+# "Server Name: PulseAudio (on PipeWire ...)" を期待
+
+pactl list short sinks
+# スピーカー／HDMI／Bluetooth シンクが見えること
+
+# 緊急停止（ミュート + PipeWire / WirePlumber 再起動）:
+audio-panic
+```
+
 ## Chromebook — ASUS CX5500FE / delbin
 
 | 項目 | 詳細 |
 |------|------|
+| Flake ターゲット | `.#chromebook`（`hosts/chromebook/default.nix`。後方互換エイリアス `.#mitac` も同一） |
 | ボード | `delbin`（`DELBIN_XHVI`） |
 | プラットフォーム | `volteer`（Intel Tiger Lake） |
-| GPU | Iris Xe（i3-1115G4）。`intel-media-driver` + `LIBVA_DRIVER_NAME=iHD`（Parsec 等の VA-API） |
+| GPU | Iris Xe（i3-1115G4）。`intel-media-driver` + `LIBVA_DRIVER_NAME=iHD`（`modules/nixos/laptop/graphics.nix`） |
 | オーディオ | SOF + `sof-rt5682` / `max98373`（`alsa-ucm-conf-cros` + `sof-firmware`） |
-| キーボード | [cros-keyboard-map](https://github.com/WeirdTreeThing/cros-keyboard-map) 相当の `keyd`（delbin physmap）。最上段は ChromeOS キー。**Search+最上段**で F1–F10。tuigreet セッション一覧は **Search+3つ目のキー（zoom/全画面）**。**Ctrl+Alt+Del**（内蔵は **Ctrl+Alt+Backspace**）で手動 OOM killer。電源コード: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+Back=強制ログアウト** / **電源+Refresh=再起動**（`chromebook-power-chords`） |
+| キーボード | [cros-keyboard-map](https://github.com/WeirdTreeThing/cros-keyboard-map) 相当の `keyd`（delbin physmap）。最上段は ChromeOS キー。**Search+最上段**で F1–F10。tuigreet セッション一覧は **Search+3つ目のキー（zoom/全画面）**。**Ctrl+Alt+Del**（内蔵は **Ctrl+Alt+Backspace**）で手動 OOM killer。電源コード: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+Back=強制ログアウト** / **電源+Refresh=再起動**（`power-chords`） |
 | Flip | タブレットモード向け libinput quirk `ModelTabletModeNoSuspend=1` |
 | USB-C 電力 | `chromebook-typec-prefer-sink`: 空きポートは FORCE_SINK（壁充電器／モババッ受電）、スマホ(UFP)→ source、AC給電中の他ポート→ source。udev は partner 追加時のみ（typec CHANGE はループ防止で除外） |
 
-### オーディオ確認
+### Chromebook オーディオ確認
 
 ```bash
 aplay -l
@@ -425,7 +454,11 @@ speaker-test -c 2 -t wav -l 1
 
 dmesg の `DMIC16kHz` IPC `-22` は NHLT に DMIC が無い場合の既知ノイズで、スピーカー不具合とは別件です。
 
-### VA-API / Parsec 確認
+### Chromebook キーボード確認
+
+最上段キーは Back / Forward / Refresh / Fullscreen / Brightness / Volume として動作するはずです（単なる F1–F10 ではありません）。
+
+## VA-API / Parsec 確認（Chromebook / VAIO 共通）
 
 ```bash
 vainfo
@@ -461,31 +494,31 @@ ts-home-routes off        # 帰宅後は必ず off（オンのまま自宅 Wi-Fi
 
 常時 `--accept-routes` は入れない（自宅で同じ `192.168.1.0/24` を受けて Wi-Fi が死ぬため）。
 
-### キーボード確認
-
-最上段キーは Back / Forward / Refresh / Fullscreen / Brightness / Volume として動作するはずです（単なる F1–F10 ではありません）。
-
-### モジュール
-
-`modules/nixos/chromebook.nix` は `hosts/mitac/default.nix` から import され、`modules/nixos/chromebook/` 配下の audio / power / graphics / input を束ねます。
-
 ## 構成
 
 ```
 flake.nix
-hosts/mitac/
+lib/machine.nix                   # 作業コピー・フォールバックホスト・ヒラギノパス設定
+hosts/chromebook/                 # delbin Chromebook エントリ + hardware-configuration.nix
+hosts/vaio/                       # VAIO エントリ + hardware-configuration.nix（要実機生成）
 modules/nixos/common.nix          # locale、ユーザー、Meltype/Fcitx5、フォント
 modules/nixos/desktop.nix         # sway + greetd + console-gui + portals + XKB/印刷
-modules/nixos/sway.nix            # Sway（waybar/mako 等）
+modules/nixos/sway.nix            # Sway システム側（greetd 既定セッション等）
 modules/nixos/greetd.nix          # tuigreet（Sway のみ）
 modules/nixos/console-gui.nix     # gui / apps（Sway ランチャー等）
-modules/nixos/chromebook.nix      # delbin 集約（./chromebook/*）
-modules/nixos/chromebook/         # audio / power / graphics / input
+modules/nixos/laptop.nix          # ノート PC 共通ハードウェア集約（./laptop/*）
+modules/nixos/laptop/             # graphics（Intel iHD + SOF）/ input（keyd OOM）/ power（zram + thermald + auto-cpufreq + power-chords）
+modules/nixos/vaio.nix            # VAIO 固有集約（./vaio/*）
+modules/nixos/vaio/               # audio（PipeWire + WirePlumber + Bluetooth）
+modules/nixos/chromebook.nix      # delbin Chromebook 固有集約（./chromebook/*）
+modules/nixos/chromebook/         # audio（PulseAudio + UCM）/ power（Type-C EC）/ input（cros keyd + Flip）
 modules/nixos/backup.nix          # encrypted /home → Google Drive (restic/rclone/rbw)
 modules/nixos/release.nix         # system.nixos.tags（世代ラベルのスラッグ）
 home/mitac.nix                    # HM エントリ（identity + imports）
-home/shell.nix                    # bash エイリアス / runbtop
+home/flake-tools.nix              # repoPath / flakeHost / scripts（ストア経由）
+home/shell.nix                    # bash エイリアス / rebuild / audio-panic / runbtop
 home/programs.nix                 # git / rbw / neovim / mime / 起動音 / 共通パッケージ
+home/lazy-plugins.nix             # nixpkgs 由来 LazyVim プラグイン + treesitter パーサ
 home/clipboard.nix                # cliphist + clipboard-history
 home/sway.nix                     # Sway（waybar/mako/swayidle・rofi・jp・チートシート）
 home/nvim/

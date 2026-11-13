@@ -3,8 +3,8 @@
 # The script bodies are copied into the Nix store; they are not run from this tree.
 {
   repoPath = "/home/mitac/MySettings";
-  # nixosConfigurations.<flakeHost>
-  flakeHost = "mitac";
+  # Fallback nixosConfigurations.<flakeHost> when flakeTarget is not passed.
+  flakeHost = "chromebook";
   # Proprietary Hiragino OTFs (not in git). Included only with --impure
   # when this directory exists; otherwise fontconfig uses Noto CJK.
   hiraginoDir = "/home/mitac/Documents/hiragino-otf";

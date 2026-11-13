@@ -3,12 +3,23 @@
   lib,
   pkgs,
   config,
-  osConfig,
+  osConfig ? null,
   ...
 }:
 
 let
   email = "mitac31709@gmail.com";
+  isPipewirePulse = osConfig != null && (osConfig.services.pipewire.pulse.enable or false);
+  audioServiceAfter =
+    if isPipewirePulse then
+      [
+        "pipewire-pulse.service"
+        "wireplumber.service"
+      ]
+    else
+      [ "pulseaudio.service" ];
+  audioServiceRequires =
+    if isPipewirePulse then [ "pipewire-pulse.service" ] else [ "pulseaudio.service" ];
   # Rasi unquoted value (same shape as config.lib.formats.rasi.mkLiteral).
   mkLiteral = value: {
     _type = "literal";
@@ -199,25 +210,31 @@ in
   };
 
   # Stub: leftover light colors.css @import breaks waybar module chrome.
-  xdg.configFile."gtk-3.0/gtk.css".text = ''
-    /* keep empty — light GTK sync breaks waybar module backgrounds */
-  '';
-  xdg.configFile."gtk-4.0/gtk.css".text = ''
-    /* keep empty — light GTK sync breaks waybar module backgrounds */
-  '';
-
-  # Fcitx reads ~/.config/fcitx5 before /etc/xdg/fcitx5. These symlinks are the
-  # same INI the NixOS module writes to /etc, so an old user copy (keyboard-jp,
-  # Zenkaku as Trigger) cannot win. The store file is read-only: change the
-  # input method in modules/nixos/common.nix, not in fcitx5-configtool.
-  xdg.configFile."fcitx5/profile" = {
-    text = osConfig.environment.etc."xdg/fcitx5/profile".text;
-    force = true;
-  };
-  xdg.configFile."fcitx5/config" = {
-    text = osConfig.environment.etc."xdg/fcitx5/config".text;
-    force = true;
-  };
+  xdg.configFile = lib.mkMerge [
+    {
+      "gtk-3.0/gtk.css".text = ''
+        /* keep empty — light GTK sync breaks waybar module backgrounds */
+      '';
+      "gtk-4.0/gtk.css".text = ''
+        /* keep empty — light GTK sync breaks waybar module backgrounds */
+      '';
+      "nvim".source = ./nvim;
+    }
+    (lib.mkIf (osConfig != null) {
+      # Fcitx reads ~/.config/fcitx5 before /etc/xdg/fcitx5. These symlinks are the
+      # same INI the NixOS module writes to /etc, so an old user copy (keyboard-jp,
+      # Zenkaku as Trigger) cannot win. The store file is read-only: change the
+      # input method in modules/nixos/common.nix, not in fcitx5-configtool.
+      "fcitx5/profile" = {
+        text = osConfig.environment.etc."xdg/fcitx5/profile".text;
+        force = true;
+      };
+      "fcitx5/config" = {
+        text = osConfig.environment.etc."xdg/fcitx5/config".text;
+        force = true;
+      };
+    })
+  ];
 
   # Bitwarden client (rbw). Holds the restic backup encryption key; see
   # modules/nixos/backup.nix. Log in once with `rbw login` after first switch.
@@ -308,11 +325,8 @@ in
   systemd.user.services.windows-7-startup-sound = {
     Unit = {
       Description = "Windows 7 startup sound";
-      After = [
-        "pulseaudio.service"
-        "graphical-session.target"
-      ];
-      Requires = [ "pulseaudio.service" ];
+      After = audioServiceAfter ++ [ "graphical-session.target" ];
+      Requires = audioServiceRequires;
     };
     Service = {
       Type = "oneshot";
@@ -353,7 +367,7 @@ in
     };
   };
 
-  xdg.configFile."nvim".source = ./nvim;
+  # xdg.configFile."nvim".source is merged in xdg.configFile above.
   # Keep outside lazy's plugin root (~/.local/share/nvim/lazy/): a HM symlink
   # there is seen as uninstalled (Util.ls reports "link"), so lazy tries to
   # re-clone and fails with "should be a directory!". dev.path below is a

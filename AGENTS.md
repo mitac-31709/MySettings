@@ -2,12 +2,13 @@
 
 ## Cursor Cloud specific instructions
 
-This repo is a **NixOS system-configuration flake** (host/user `mitac`, greetd +
-Sway desktop, with ASUS CX5500FE "delbin" Chromebook support on `main`). It is
-**not** a long-running app/server: "running" it means evaluating and building the
-system configuration with Nix. Applying it for real
-(`sudo nixos-rebuild switch --flake .#mitac`) only works on the actual target NixOS
-machine — see `README.md`.
+This repo is a **NixOS system-configuration flake** (user `mitac`, greetd + Sway
+desktop, supporting ASUS CX5500FE "delbin" Chromebook as `.#chromebook` and Intel
+8th+ gen VAIO laptops as `.#vaio` on `main`; `.#mitac` is kept as a legacy alias
+for `.#chromebook`). It is **not** a long-running app/server: "running" it means
+evaluating and building the system configuration with Nix. Applying it for real
+(`sudo nixos-rebuild switch --flake .#chromebook` or `.#vaio`) only works on the
+actual target NixOS machine — see `README.md`.
 
 ### Using Nix in the cloud VM (non-obvious)
 
@@ -26,28 +27,32 @@ the daemon is not running — do step 1.
 ### Develop / lint / build / eval
 
 - Evaluate composed config (fast sanity check that all modules load):
-  `nix eval .#nixosConfigurations.mitac.config.networking.hostName`
-- **Do not** eval `.#nixosConfigurations.mitac.options…` (especially
+  `nix eval .#nixosConfigurations.chromebook.config.networking.hostName`
+  `nix eval .#nixosConfigurations.vaio.config.networking.hostName`
+- **Do not** eval `.#nixosConfigurations.<host>.options…` (especially
   `options.home-manager.users`) — it forces the full options tree and stalls the
   machine. Prefer narrow `config.…` paths, or read HM/nixpkgs module sources with
   `rg` / file read. If an options attr is unavoidable, use a leaf path only and
   run under low priority:
   `nice -n 19 ionice -c3 nix eval '…'` (interactive: `nix-eval-low`).
 - Build a repo-declared package end-to-end (headline "included software"):
-  `nix build .#nixosConfigurations.mitac.config.home-manager.users.mitac.programs.neovim.finalPackage`
-- Full configuration check / toplevel (works when hardware-configuration.nix is real):
+  `nix build .#nixosConfigurations.vaio.config.home-manager.users.mitac.programs.neovim.finalPackage`
+- Full configuration check / toplevel (works when `hardware-configuration.nix` matches the target):
   `nix flake check`
-  `nix build .#nixosConfigurations.mitac.config.system.build.toplevel`
+  `nix build .#nixosConfigurations.chromebook.config.system.build.toplevel`
+  `nix build .#nixosConfigurations.vaio.config.system.build.toplevel`
 - Lint / format (this repo follows nixfmt RFC style):
-  `nix run nixpkgs#nixfmt -- --check flake.nix hosts/mitac/*.nix modules/nixos/*.nix modules/nixos/chromebook/*.nix home/*.nix`
+  `nix run nixpkgs#nixfmt -- --check flake.nix hosts/*/*.nix modules/nixos/*.nix modules/nixos/*/*.nix home/*.nix`
   (includes `modules/nixos/release.nix` for optional generation labels)
   (drop `--check` to reformat in place).
 
 ### Known gotchas (durable)
 
-- `hosts/mitac/hardware-configuration.nix` in this repo is the **delbin machine's generated
-  config** (real `fileSystems` / boot modules). Cloning onto another machine still requires
-  regenerating and replacing that file before `nixos-rebuild switch` (see `README.md`).
+- `hosts/chromebook/hardware-configuration.nix` in this repo is the **delbin machine's generated
+  config** (real `fileSystems` / boot modules), while `hosts/vaio/hardware-configuration.nix`
+  is a generic `lib.mkDefault` placeholder. Before `nixos-rebuild switch` on real VAIO (or
+  other) hardware, regenerate and replace the target `hosts/<host>/hardware-configuration.nix`
+  (see `README.md`).
 - Chromebook ALSA UCM merge in `modules/nixos/chromebook/audio.nix` copies from read-only
   `/nix/store` inputs with `cp -a --no-preserve=mode` so the tree stays writable.
 - Graphify CLI (`graphify`) is optional for agents; install with

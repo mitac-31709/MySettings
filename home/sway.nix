@@ -5,10 +5,14 @@
   config,
   pkgs,
   lib,
+  flakeTarget ? "chromebook",
   ...
 }:
 
 let
+  isChromebook = flakeTarget == "chromebook";
+  inputSection = if isChromebook then "入力・Chromebook" else "入力・VAIO";
+  powerSection = if isChromebook then "電源・Type-C" else "電源・省電力";
   # Checkout for the waybar timer's ConditionPathExists. Scripts are store paths.
   repoPath = config.mitac.repoPath;
   flakeUpdateCheck = lib.getExe config.mitac.scripts.flakeUpdateCheck;
@@ -92,7 +96,7 @@ let
   # - run + mode=term → Ghostty interactive shell
   # - run + mode=exec → swaymsg exec (one-shot)
   # - run + mode=show → Ghostty shows command; does not run (dangerous)
-  cheatsheetEntries = [
+  cheatsheetEntries = lib.flatten [
     # 起動・終了
     {
       section = "起動・終了";
@@ -216,69 +220,97 @@ let
       label = "±5%（音量は最大100%） / ミュート / 輝度";
       keys = "音量 / MicMute / 輝度キー";
     }
-    # 入力・Chromebook
+    # 入力（Chromebook / VAIO）
     {
-      section = "入力・Chromebook";
+      section = inputSection;
       label = "IME 有効/無効（Meltype）";
       keys = "Super+Space";
     }
     {
-      section = "入力・Chromebook";
+      section = inputSection;
       label = "Meltype 内: 英数 ⇔ 日本語";
       keys = "半角/全角";
     }
     {
-      section = "入力・Chromebook";
+      section = inputSection;
       label = "←↓↑→ ・ … など";
       keys = "zh/zj/zk/zl / z/ z.";
     }
     {
-      section = "入力・Chromebook";
+      section = inputSection;
       label = "ChatGPT で英語のまま戻らない → 再起動";
       keys = "ShareInputState + Meltype先頭";
     }
     {
-      section = "入力・Chromebook";
+      section = inputSection;
       label = "Cursor で Meltype → 終了して開き直す";
       keys = "Wayland IME フラグ";
     }
     {
-      section = "入力・Chromebook";
+      section = inputSection;
       label = "~/.local/share/Meltype";
       keys = "学習データ";
     }
+    (
+      if isChromebook then
+        [
+          {
+            section = inputSection;
+            label = "右クリック（Chromebook）";
+            keys = "2本指タップ・押下";
+          }
+          {
+            section = inputSection;
+            label = "F1–F10（3つ目=セッション）";
+            keys = "Search+最上段";
+          }
+          {
+            section = inputSection;
+            label = "手動 OOM（内蔵=C-A-Bksp）";
+            keys = "Ctrl+Alt+Del";
+          }
+          {
+            section = inputSection;
+            label = "suspend / poweroff";
+            keys = "電源 短/長押し";
+          }
+          {
+            section = inputSection;
+            label = "強制ログアウト / 再起動";
+            keys = "電源+Back / +Refresh";
+          }
+        ]
+      else
+        [
+          {
+            section = inputSection;
+            label = "右クリック（タッチパッド）";
+            keys = "2本指タップ・押下";
+          }
+          {
+            section = inputSection;
+            label = "手動 OOM（C-A-Bksp も可）";
+            keys = "Ctrl+Alt+Del";
+          }
+          {
+            section = inputSection;
+            label = "suspend / poweroff";
+            keys = "電源 短/長押し";
+          }
+          {
+            section = inputSection;
+            label = "強制ログアウト / 再起動";
+            keys = "電源+F1 / +F2";
+          }
+        ]
+    )
     {
-      section = "入力・Chromebook";
-      label = "右クリック（Chromebook）";
-      keys = "2本指タップ・押下";
-    }
-    {
-      section = "入力・Chromebook";
-      label = "F1–F10（3つ目=セッション）";
-      keys = "Search+最上段";
-    }
-    {
-      section = "入力・Chromebook";
-      label = "手動 OOM（内蔵=C-A-Bksp）";
-      keys = "Ctrl+Alt+Del";
-    }
-    {
-      section = "入力・Chromebook";
-      label = "suspend / poweroff";
-      keys = "電源 短/長押し";
-    }
-    {
-      section = "入力・Chromebook";
-      label = "強制ログアウト / 再起動";
-      keys = "電源+Back / +Refresh";
-    }
-    {
-      section = "入力・Chromebook";
+      section = inputSection;
       label = "Windows / Mac モード";
       keys = "ELECOM Fn+Q / Fn+W";
     }
     {
-      section = "入力・Chromebook";
+      section = inputSection;
       label = "注: ELECOM を Mac のままにすると Ctrl↔Win が入れ替わる";
     }
     # Yazi / Neovim
@@ -683,10 +715,12 @@ let
       run = "d=~/.config/Cursor/User/globalStorage/anysphere.cursor-agent-worker/agent-cli/.local/share/cursor-agent/versions; keep=$(ls -1 \"$d\" | sort | tail -1); for x in \"$d\"/*; do [ \"$(basename \"$x\")\" = \"$keep\" ] || rm -rf \"$x\"; done; rm -rf ~/.local/share/cursor-agent/versions/*; ls \"$d\"";
       mode = "show";
     }
-    {
-      section = "ディスク容量";
-      label = "注: ChromeOS残骸(p1/p3/p5)は root の前。拡大は LiveUSB";
-    }
+    (lib.optionals isChromebook [
+      {
+        section = "ディスク容量";
+        label = "注: ChromeOS残骸(p1/p3/p5)は root の前。拡大は LiveUSB";
+      }
+    ])
     # ネット・BT・WARP
     {
       section = "ネット・BT・WARP";
@@ -764,7 +798,7 @@ let
     }
     {
       section = "ネット・BT・WARP";
-      label = "注: BT 音声は接続後 Pulse で出力シンクを選ぶことあり";
+      label = "注: BT 音声は接続後 出力シンク選択が要ることあり";
     }
     {
       section = "ネット・BT・WARP";
@@ -937,35 +971,37 @@ let
       section = "バックアップ";
       label = "注: ~/MySettings 含む（復元先 …/home/mitac/MySettings）";
     }
-    # 電源・Type-C
+    # 電源（Chromebook: 電源・Type-C / VAIO: 電源・省電力）
     {
-      section = "電源・Type-C";
+      section = powerSection;
       label = "輝度 40%（消費の主因を下げる）";
       run = "${brightnessctl} set 40%";
       mode = "exec";
     }
     {
-      section = "電源・Type-C";
+      section = powerSection;
       label = "warp disconnect";
       run = "warp-cli disconnect";
       mode = "exec";
     }
     {
-      section = "電源・Type-C";
+      section = powerSection;
       label = "bt power off";
       run = "bluetoothctl power off";
       mode = "exec";
     }
-    {
-      section = "電源・Type-C";
-      label = "受電優先を再適用";
-      run = "sudo chromebook-typec-prefer-sink";
-      mode = "show";
-    }
-    {
-      section = "電源・Type-C";
-      label = "充電不可時: 抜く→mask→FORCE_SINK→挿す";
-    }
+    (lib.optionals isChromebook [
+      {
+        section = powerSection;
+        label = "受電優先を再適用";
+        run = "sudo chromebook-typec-prefer-sink";
+        mode = "show";
+      }
+      {
+        section = powerSection;
+        label = "充電不可時: 抜く→mask→FORCE_SINK→挿す";
+      }
+    ])
     # 周辺
     {
       section = "周辺";
@@ -1189,7 +1225,7 @@ in
         };
         "type:touchpad" = {
           natural_scroll = "disabled";
-          # Chromebook-style: 1/2/3 finger press = L/R/M;
+          # Clickfinger: 1/2/3 finger press = L/R/M;
           # tap (lrm default) already maps 2-finger tap to right click.
           tap = "enabled";
           click_method = "clickfinger";
@@ -1215,7 +1251,7 @@ in
           # Clipboard history (cliphist store runs in startup).
 
           "${mod}+v" = "exec clipboard-history";
-          # Volume / mic (PulseAudio on sof-rt5682 Chromebook).
+          # Volume / mic (PulseAudio on Chromebook, pipewire-pulse on VAIO via pactl).
           "XF86AudioRaiseVolume" = "exec ${volumeUp}";
           "XF86AudioLowerVolume" = "exec ${pactl} set-sink-volume @DEFAULT_SINK@ -5%";
           "XF86AudioMute" = "exec ${pactl} set-sink-mute @DEFAULT_SINK@ toggle";
@@ -1424,7 +1460,6 @@ in
           on-click = openNmtui;
         };
         backlight = {
-          device = "intel_backlight";
           format = "bri {percent}%";
         };
         pulseaudio = {

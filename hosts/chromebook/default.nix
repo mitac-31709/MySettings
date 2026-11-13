@@ -1,3 +1,4 @@
+# ASUS CX5500FE / delbin Chromebook host configuration.
 { ... }:
 
 {
@@ -5,6 +6,7 @@
     ./hardware-configuration.nix
     ../../modules/nixos/common.nix
     ../../modules/nixos/desktop.nix
+    ../../modules/nixos/laptop.nix
     ../../modules/nixos/chromebook.nix
     ../../modules/nixos/backup.nix
     ../../modules/nixos/remote-builder.nix
