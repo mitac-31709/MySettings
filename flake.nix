@@ -7,6 +7,12 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Live systemd job tree on the boot console.
+    # https://codeberg.org/wvhulle/bootvine/src/branch/main/docs/install.md
+    bootvine = {
+      url = "git+https://codeberg.org/wvhulle/bootvine";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     # ChromeOS ALSA UCM overlays (sof-rt5682 etc. for volteer/delbin)
     alsa-ucm-conf-cros = {
       url = "github:WeirdTreeThing/alsa-ucm-conf-cros/standalone";
@@ -39,6 +45,7 @@
       nixpkgs,
       home-manager,
       alsa-ucm-conf-cros,
+      bootvine,
       ...
     }@inputs:
     let
@@ -57,6 +64,7 @@
         modules = [
           ./hosts/mitac
           home-manager.nixosModules.home-manager
+          bootvine.nixosModules.default
           {
             # Links this generation to a git commit (shows in
             # `nixos-rebuild list-generations` / `nixos-version --json`).

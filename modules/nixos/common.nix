@@ -17,6 +17,11 @@ in
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
+  # Live systemd job tree on the boot console (flake input `bootvine`).
+  # This nixpkgs pin is NixOS 26.11, where the initrd is systemd-only, so the
+  # module covers the initrd without boot.initrd.systemd.enable (removed).
+  services.bootvine.enable = true;
+
   networking.hostName = "NixOS";
   networking.networkmanager.enable = true;
 
