@@ -617,6 +617,7 @@ class RestorePromptTest(unittest.TestCase):
             '      printf "RCLONE_CONFIG=%s\\n" "${RCLONE_CONFIG:-}"\n'
             '      printf "PW_LEN=%s\\n" "${#RESTIC_PASSWORD}"\n'
             '      printf "PW=%s\\n" "${RESTIC_PASSWORD:-}"\n'
+            '      printf "STAGE_DIR=%s\\n" "${4:-}"\n'
             '    } > "$CAPTURE_FILE"\n'
             '    if [[ -n ${FIXTURE_STAGE_TREE:-} ]]; then\n'
             '      cp -a -- "${FIXTURE_STAGE_TREE}/." "$4/"\n'
@@ -1926,6 +1927,406 @@ class RestorePromptTest(unittest.TestCase):
         self.assertEqual(rc, 0, output)
         self.assertIn(SUCCESS, output)
         self.assertNotIn("Bitwarden (rbw) から項目", output)
+
+    def _run_move_tree_case(self, *, func_name, force_exdev="0", extra_env=None, case_id=""):
+        suffix = f"{func_name}-{force_exdev}" + (f"-{case_id}" if case_id else "")
+        src = self.root / f"move-src-{suffix}"
+        dst = self.root / f"move-dst-{suffix}"
+        outside = self.root / f"move-outside-{suffix}"
+        src.mkdir()
+        dst.mkdir()
+        outside.mkdir()
+        self.addCleanup(self.make_writable_tree, src)
+        self.addCleanup(self.make_writable_tree, dst)
+
+        # Unbacked destination files & protected active staging directory must survive.
+        (dst / "keep.txt").write_bytes(b"keep-me\n")
+        protected = dst / ".restore-mitac-KEEP"
+        protected.mkdir()
+        (protected / "sentinel.txt").write_bytes(b"active-stage\n")
+
+        # Symlink in dst must be replaced by real directory without touching symlink target.
+        (outside / "store.txt").write_bytes(b"from-outside\n")
+        (dst / "linked-dir").symlink_to(outside)
+
+        # Read-only nested directory in dst being replaced by a single file in src.
+        old_dir = dst / "dir-becomes-file"
+        (old_dir / "nested").mkdir(parents=True)
+        (old_dir / "nested" / "old.txt").write_bytes(b"stale\n")
+        (old_dir / "nested" / "old.txt").chmod(0o400)
+        (old_dir / "nested").chmod(0o500)
+        old_dir.chmod(0o500)
+
+        # Populate src with challenging filesystem objects.
+        (src / "linked-dir").mkdir()
+        (src / "linked-dir" / "new.txt").write_bytes(b"real-dir-content\n")
+        (src / "dir-becomes-file").write_bytes(b"replaced-with-file\n")
+
+        (src / "space name.txt").write_bytes(b"spaces\n")
+        (src / "-leading-hyphen.txt").write_bytes(b"hyphen\n")
+        (src / "line1\nline2.txt").write_bytes(b"newline-name\n")
+
+        (src / "zero-mode.bin").write_bytes(b"zero-mode-secret\n")
+        (src / "zero-mode.bin").chmod(0o000)
+
+        ro_dir = src / "ro-dir"
+        ro_dir.mkdir()
+        (ro_dir / "inner.txt").write_bytes(b"inner-secret\n")
+        (ro_dir / "inner.txt").chmod(0o400)
+        fixed_mtime = 1746100000
+        os.utime(ro_dir, (fixed_mtime, fixed_mtime))
+        ro_dir.chmod(0o500)
+
+        if func_name != "move_tree_bash":
+            noperm_dir = src / "noperm-dir"
+            noperm_dir.mkdir()
+            (noperm_dir / "hidden.txt").write_bytes(b"inside-000\n")
+            os.utime(noperm_dir, (fixed_mtime, fixed_mtime))
+            noperm_dir.chmod(0o000)
+
+            (src / "hard_a").write_bytes(b"hardlink-payload\n")
+            os.link(src / "hard_a", src / "hard_b")
+            os.mkfifo(src / "pipe.fifo", 0o600)
+
+        (src / "valid-link").symlink_to("space name.txt")
+        (src / "dangling-link").symlink_to("/nonexistent/target/path")
+
+        # Colliding entry inside src matching protect_path must NOT clobber protected dir.
+        collide = src / ".restore-mitac-KEEP"
+        collide.mkdir()
+        (collide / "stale.txt").write_bytes(b"must-not-overwrite\n")
+
+        env = dict(self.environment, _RESTORE_TEST_FORCE_EXDEV=force_exdev)
+        if extra_env:
+            env.update(extra_env)
+
+        result = subprocess.run(
+            [
+                "bash",
+                "-c",
+                f'set -euo pipefail; source "$1"; {func_name} "$2" "$3" "$4"',
+                "move-test",
+                str(SCRIPT),
+                str(src),
+                str(dst),
+                str(protected),
+            ],
+            cwd=self.root,
+            env=env,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            timeout=30,
+        )
+        stderr_text = result.stderr.decode("utf-8", errors="replace")
+        stdout_text = result.stdout.decode("utf-8", errors="replace")
+        self.assertEqual(result.returncode, 0, stdout_text + stderr_text)
+        self.assertIn("移動完了:", stderr_text)
+        self.assertFalse(src.exists())
+
+        self.assertEqual((dst / "keep.txt").read_bytes(), b"keep-me\n")
+        self.assertEqual((protected / "sentinel.txt").read_bytes(), b"active-stage\n")
+        self.assertFalse((protected / "stale.txt").exists())
+
+        self.assertFalse((dst / "linked-dir").is_symlink())
+        self.assertEqual((dst / "linked-dir" / "new.txt").read_bytes(), b"real-dir-content\n")
+        self.assertEqual((outside / "store.txt").read_bytes(), b"from-outside\n")
+
+        self.assertTrue((dst / "dir-becomes-file").is_file())
+        self.assertEqual((dst / "dir-becomes-file").read_bytes(), b"replaced-with-file\n")
+
+        self.assertEqual((dst / "space name.txt").read_bytes(), b"spaces\n")
+        self.assertEqual((dst / "-leading-hyphen.txt").read_bytes(), b"hyphen\n")
+        self.assertEqual((dst / "line1\nline2.txt").read_bytes(), b"newline-name\n")
+
+        z = dst / "zero-mode.bin"
+        self.assertEqual(stat.S_IMODE(z.stat().st_mode), 0o000)
+        z.chmod(0o400)
+        self.assertEqual(z.read_bytes(), b"zero-mode-secret\n")
+
+        dst_ro = dst / "ro-dir"
+        self.assertEqual(stat.S_IMODE(dst_ro.stat().st_mode), 0o500)
+        self.assertEqual(int(dst_ro.stat().st_mtime), fixed_mtime)
+        self.assertEqual((dst_ro / "inner.txt").read_bytes(), b"inner-secret\n")
+        self.assertEqual(stat.S_IMODE((dst_ro / "inner.txt").stat().st_mode), 0o400)
+
+        self.assertEqual(os.readlink(dst / "valid-link"), "space name.txt")
+        self.assertEqual(os.readlink(dst / "dangling-link"), "/nonexistent/target/path")
+
+        if func_name != "move_tree_bash":
+            dst_noperm = dst / "noperm-dir"
+            self.assertEqual(stat.S_IMODE(dst_noperm.stat().st_mode), 0o000)
+            self.assertEqual(int(dst_noperm.stat().st_mtime), fixed_mtime)
+            dst_noperm.chmod(0o700)
+            self.assertEqual((dst_noperm / "hidden.txt").read_bytes(), b"inside-000\n")
+
+            st_a = os.lstat(dst / "hard_a")
+            st_b = os.lstat(dst / "hard_b")
+            self.assertEqual(st_a.st_ino, st_b.st_ino)
+            self.assertEqual(st_a.st_nlink, 2)
+            self.assertEqual((dst / "hard_a").read_bytes(), b"hardlink-payload\n")
+            self.assertEqual((dst / "hard_b").read_bytes(), b"hardlink-payload\n")
+
+            st_fifo = os.lstat(dst / "pipe.fifo")
+            self.assertTrue(stat.S_ISFIFO(st_fifo.st_mode))
+
+    def test_move_tree_python_same_fs_cross_fs_and_c_locale(self):
+        for force_exdev in ("0", "1"):
+            with self.subTest(force_exdev=force_exdev):
+                self._run_move_tree_case(
+                    func_name="move_tree_python",
+                    force_exdev=force_exdev,
+                )
+        with self.subTest(locale="C"):
+            self._run_move_tree_case(
+                func_name="move_tree_python",
+                force_exdev="0",
+                case_id="c-locale",
+                extra_env={
+                    "LC_ALL": "C",
+                    "LANG": "C",
+                    "PYTHONUTF8": "0",
+                    "PYTHONCOERCECLOCALE": "0",
+                },
+            )
+
+    def test_move_tree_bash_fallback_edge_cases(self):
+        self._run_move_tree_case(func_name="move_tree_bash")
+
+    def test_move_tree_python_large_batch_fast_and_reports_counts(self):
+        src = self.root / "bulk-src"
+        dst = self.root / "bulk-dst"
+        src.mkdir()
+        dst.mkdir()
+        for d in range(100):
+            sub = src / f"dir-{d:03d}"
+            sub.mkdir()
+            for f in range(20):
+                (sub / f"file-{f:02d}.dat").write_bytes(b"x")
+
+        start = time.monotonic()
+        result = subprocess.run(
+            [
+                "bash",
+                "-c",
+                'set -euo pipefail; source "$1"; move_tree "$2" "$3"',
+                "move-bulk",
+                str(SCRIPT),
+                str(src),
+                str(dst),
+            ],
+            cwd=self.root,
+            env=self.environment,
+            stdin=subprocess.DEVNULL,
+            text=True,
+            capture_output=True,
+            timeout=15,
+        )
+        elapsed = time.monotonic() - start
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertLess(elapsed, 5.0)
+        self.assertIn("移動完了: ファイル 2000 件・ディレクトリ 101 件", result.stderr)
+        self.assertFalse(src.exists())
+        self.assertEqual((dst / "dir-099" / "file-19.dat").read_bytes(), b"x")
+
+    def test_in_place_auto_stages_inside_target_home_on_separate_fs(self):
+        restore_root = self.root / "auto-fs-root"
+        target_home = restore_root / "home" / "mitac"
+        (target_home / "MySettings").mkdir(parents=True)
+        (target_home / "MySettings" / "old.txt").write_text("old\n", encoding="utf-8")
+        (target_home / "unbacked.txt").write_text("keep-me\n", encoding="utf-8")
+
+        conf = target_home / ".config" / "rclone" / "rclone.conf"
+        conf.parent.mkdir(parents=True)
+        conf.write_text("[gdrive]\ntype = local\n", encoding="utf-8")
+        conf.chmod(0o600)
+
+        fixture = self.root / "auto-fs-fixture"
+        (fixture / "home" / "mitac" / "MySettings").mkdir(parents=True)
+        (fixture / "home" / "mitac" / "MySettings" / "old.txt").write_text(
+            "restored\n", encoding="utf-8"
+        )
+        (fixture / "home" / "mitac" / ".config" / "rclone").mkdir(parents=True)
+        (fixture / "home" / "mitac" / ".config" / "rclone" / "rclone.conf").write_text(
+            "[gdrive]\ntype = local\n", encoding="utf-8"
+        )
+
+        # Simulate /home/mitac sitting on a separate filesystem/Btrfs subvolume (@home vs @).
+        real_stat = shutil.which("stat")
+        self.assertIsNotNone(real_stat)
+        fs_bin = self.root / "fs-bin"
+        fs_bin.mkdir()
+        stat_shim = fs_bin / "stat"
+        stat_shim.write_text(
+            '#!/usr/bin/env bash\n'
+            'if [[ ${1:-} == -Lc && ${2:-} == %d && ${3:-} == -- && ${4:-} == "$SIMULATED_SEPARATE_HOME" ]]; then\n'
+            '  printf "999999\\n"\n'
+            '  exit 0\n'
+            'fi\n'
+            'exec "$REAL_STAT" "$@"\n',
+            encoding="utf-8",
+        )
+        stat_shim.chmod(0o700)
+
+        env = {k: v for k, v in self.environment.items() if k != "RESTORE_STAGE_PARENT"}
+        env.update(
+            HOME=str(target_home),
+            PATH=f"{fs_bin}:{self.environment['PATH']}",
+            RESTORE_ROOT=str(restore_root),
+            _RESTORE_DEFAULT_STAGE_PARENT=str(self.stage_parent),
+            FIXTURE_STAGE_TREE=str(fixture),
+            RESTIC_PASSWORD="correct-pw",
+            REAL_STAT=real_stat,
+            SIMULATED_SEPARATE_HOME=str(target_home),
+        )
+        result = subprocess.run(
+            [
+                "bash",
+                "-c",
+                'source "$1"; check_platform() { :; }; shift; main "$@"',
+                "auto-stage-home",
+                str(SCRIPT),
+            ],
+            cwd=self.root,
+            env=env,
+            stdin=subprocess.DEVNULL,
+            text=True,
+            capture_output=True,
+            timeout=15,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(SUCCESS, result.stdout)
+        self.assertIn(f"一時展開先に {target_home} を選択しました", result.stderr)
+        self.assertIn("別ファイルシステム／サブボリューム", result.stderr)
+        self.assertIn("展開・検証が完了しました。", result.stderr)
+        self.assertIn("移動完了:", result.stderr)
+
+        captured = self.capture.read_text(encoding="utf-8")
+        stage_line = next(
+            line for line in captured.splitlines() if line.startswith("STAGE_DIR=")
+        )
+        stage_dir = Path(stage_line.split("=", 1)[1])
+        self.assertEqual(stage_dir.parent, target_home)
+        self.assertTrue(stage_dir.name.startswith(".restore-mitac-"))
+
+        # Staging dir must be cleaned up and restored/unbacked files must match.
+        self.assertFalse(list(target_home.glob(".restore-mitac-*")))
+        self.assertEqual(
+            (target_home / "MySettings" / "old.txt").read_text(encoding="utf-8"),
+            "restored\n",
+        )
+        self.assertEqual(
+            (target_home / "unbacked.txt").read_text(encoding="utf-8"),
+            "keep-me\n",
+        )
+
+    def test_in_place_auto_stages_in_default_parent_when_same_fs(self):
+        restore_root = self.root / "same-fs-root"
+        target_home = restore_root / "home" / "mitac"
+        (target_home / "MySettings").mkdir(parents=True)
+        conf = target_home / ".config" / "rclone" / "rclone.conf"
+        conf.parent.mkdir(parents=True)
+        conf.write_text("[gdrive]\ntype = local\n", encoding="utf-8")
+        conf.chmod(0o600)
+
+        fixture = self.root / "same-fs-fixture"
+        (fixture / "home" / "mitac" / "MySettings").mkdir(parents=True)
+        (fixture / "home" / "mitac" / "MySettings" / "new.txt").write_text(
+            "same-fs-ok\n", encoding="utf-8"
+        )
+        (fixture / "home" / "mitac" / ".config" / "rclone").mkdir(parents=True)
+        (fixture / "home" / "mitac" / ".config" / "rclone" / "rclone.conf").write_text(
+            "[gdrive]\ntype = local\n", encoding="utf-8"
+        )
+
+        env = {k: v for k, v in self.environment.items() if k != "RESTORE_STAGE_PARENT"}
+        env.update(
+            HOME=str(target_home),
+            RESTORE_ROOT=str(restore_root),
+            _RESTORE_DEFAULT_STAGE_PARENT=str(self.stage_parent),
+            FIXTURE_STAGE_TREE=str(fixture),
+            RESTIC_PASSWORD="correct-pw",
+        )
+        result = subprocess.run(
+            [
+                "bash",
+                "-c",
+                'source "$1"; check_platform() { :; }; shift; main "$@"',
+                "auto-stage-same-fs",
+                str(SCRIPT),
+            ],
+            cwd=self.root,
+            env=env,
+            stdin=subprocess.DEVNULL,
+            text=True,
+            capture_output=True,
+            timeout=15,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(SUCCESS, result.stdout)
+        captured = self.capture.read_text(encoding="utf-8")
+        stage_line = next(
+            line for line in captured.splitlines() if line.startswith("STAGE_DIR=")
+        )
+        stage_dir = Path(stage_line.split("=", 1)[1])
+        self.assertEqual(stage_dir.parent, self.stage_parent)
+        self.assertTrue(stage_dir.name.startswith("restore-mitac-"))
+        self.assertEqual(list(self.stage_parent.iterdir()), [])
+        self.assertEqual(
+            (target_home / "MySettings" / "new.txt").read_text(encoding="utf-8"),
+            "same-fs-ok\n",
+        )
+
+    def test_ensure_tools_requests_python3_when_missing(self):
+        fake_bin = self.root / "nix-only-bin"
+        fake_bin.mkdir()
+        # Provide coreutils/bash/restic/rclone/jq, plus nix, WITHOUT python3/rbw.
+        for tool in ("bash", "dirname", "basename", "grep", "cat", "rm"):
+            resolved = shutil.which(tool)
+            self.assertIsNotNone(resolved)
+            (fake_bin / tool).symlink_to(resolved)
+        for tool in ("rclone", "restic", "jq"):
+            (fake_bin / tool).write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            (fake_bin / tool).chmod(0o700)
+
+        nix_args_file = self.root / "nix-args.txt"
+        nix_shim = fake_bin / "nix"
+        nix_shim.write_text(
+            '#!/usr/bin/env bash\n'
+            'printf "%s\\n" "$@" > "$NIX_ARGS_FILE"\n'
+            'exit 0\n',
+            encoding="utf-8",
+        )
+        nix_shim.chmod(0o700)
+
+        conf = self.home / ".config" / "rclone" / "rclone.conf"
+        conf.parent.mkdir(parents=True)
+        conf.write_text("[gdrive]\ntype = local\n", encoding="utf-8")
+
+        env = dict(
+            self.environment,
+            PATH=str(fake_bin),
+            RESTIC_PASSWORD="pw",
+            NIX_ARGS_FILE=str(nix_args_file),
+        )
+        result = subprocess.run(
+            [
+                str(fake_bin / "bash"),
+                "-c",
+                'source "$1"; ensure_tools',
+                "ensure-tools-test",
+                str(SCRIPT),
+            ],
+            cwd=self.root,
+            env=env,
+            stdin=subprocess.DEVNULL,
+            text=True,
+            capture_output=True,
+            timeout=15,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        args = nix_args_file.read_text(encoding="utf-8").splitlines()
+        self.assertIn("nixpkgs#python3", args)
+        self.assertTrue(any("python3" in line for line in args), args)
 
 
 if __name__ == "__main__":

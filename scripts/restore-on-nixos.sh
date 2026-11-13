@@ -6,12 +6,13 @@ usage() {
 使い方: ./scripts/restore-on-nixos.sh [EXTRACT_DIR]
 
 対象 NixOS マシン上でユーザー mitac として実行します（sudo は付けない）。
-不足ツール（restic / rclone / jq / rbw / pinentry）は nix shell で自動取得します。
+不足ツール（restic / rclone / jq / python3 / rbw / pinentry）は nix shell で自動取得します。
 
 復元元: rclone:gdrive:restic/mitac-home
 既定（引数なし）:
-  /var/tmp の一時領域で restic --verify による検証を完了させた後、
-  バックアップ済みファイルを元の位置へ上書き復元します:
+  一時領域（/home/mitac と同一ファイルシステムを優先: 同一 FS なら /var/tmp、
+  別パーティション／Btrfs 別サブボリューム時は /home/mitac 内の隠し領域）で
+  restic --verify による検証を完了させた後、元の位置へ上書き復元します:
     - ホーム: /home/mitac（既存ファイルを上書き。ただし今回の実行中に
       新規取得・再認証・Bitwarden 反映した rclone.conf のみ保持）
     - システム状態（必要時のみ sudo）: /etc/NetworkManager/system-connections,
@@ -75,8 +76,276 @@ run_sudo() {
   fi
 }
 
-move_tree() {
-  local src=${1%/} dst=${2%/}
+move_tree_python() {
+  local src=$1 dst=$2 protect_path=${3:-}
+  python3 - "$src" "$dst" "$protect_path" <<'PYEOF'
+import errno
+import os
+import shutil
+import stat
+import sys
+import tempfile
+import time
+
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+src_root = os.path.abspath(sys.argv[1])
+dst_root = os.path.abspath(sys.argv[2])
+protect_abs = os.path.abspath(sys.argv[3]) if len(sys.argv) > 3 and sys.argv[3] else ""
+force_exdev = os.environ.get("_RESTORE_TEST_FORCE_EXDEV") == "1"
+
+if not os.path.isdir(src_root) or os.path.islink(src_root):
+    sys.exit(0)
+
+
+def chmod_min_u_rwx(path, mode):
+    if (mode & 0o700) != 0o700:
+        os.chmod(path, mode | 0o700)
+
+
+def rmtree_force(path):
+    stack = [path]
+    dirs = []
+    while stack:
+        cur = stack.pop()
+        try:
+            st = os.lstat(cur)
+        except FileNotFoundError:
+            continue
+        if not stat.S_ISDIR(st.st_mode):
+            os.unlink(cur)
+            continue
+        chmod_min_u_rwx(cur, stat.S_IMODE(st.st_mode))
+        dirs.append(cur)
+        with os.scandir(cur) as it:
+            for entry in it:
+                if entry.is_dir(follow_symlinks=False):
+                    stack.append(entry.path)
+                else:
+                    try:
+                        os.unlink(entry.path)
+                    except PermissionError:
+                        os.chmod(cur, 0o700)
+                        os.unlink(entry.path)
+    for d in reversed(dirs):
+        os.rmdir(d)
+
+
+def remove_existing_non_dir_target(path):
+    try:
+        st = os.lstat(path)
+    except FileNotFoundError:
+        return
+    if stat.S_ISDIR(st.st_mode):
+        rmtree_force(path)
+    else:
+        os.unlink(path)
+
+
+def copy_xattrs_best_effort(src_path, dst_path):
+    if not hasattr(os, "listxattr"):
+        return
+    try:
+        names = os.listxattr(src_path, follow_symlinks=False)
+    except OSError:
+        return
+    for name in names:
+        try:
+            val = os.getxattr(src_path, name, follow_symlinks=False)
+            os.setxattr(dst_path, name, val, follow_symlinks=False)
+        except OSError:
+            pass
+
+
+def move_cross_fs(src_path, dst_path, link_map):
+    st = os.lstat(src_path)
+    mode = stat.S_IMODE(st.st_mode)
+    times = (st.st_atime_ns, st.st_mtime_ns)
+    remove_existing_non_dir_target(dst_path)
+
+    if stat.S_ISLNK(st.st_mode):
+        os.symlink(os.readlink(src_path), dst_path)
+        try:
+            os.utime(dst_path, ns=times, follow_symlinks=False)
+        except (NotImplementedError, OSError):
+            pass
+        os.unlink(src_path)
+        return
+
+    ino_key = (st.st_dev, st.st_ino)
+    prev = link_map.get(ino_key)
+    if prev is not None:
+        try:
+            os.link(prev, dst_path)
+            os.unlink(src_path)
+            return
+        except OSError:
+            pass
+
+    if stat.S_ISREG(st.st_mode):
+        dst_parent = os.path.dirname(dst_path) or "."
+        fd, tmp_path = tempfile.mkstemp(prefix=".restore-tmp-", dir=dst_parent)
+        os.close(fd)
+        try:
+            try:
+                shutil.copyfile(src_path, tmp_path)
+            except PermissionError:
+                os.chmod(src_path, mode | 0o400)
+                shutil.copyfile(src_path, tmp_path)
+            copy_xattrs_best_effort(src_path, tmp_path)
+            os.utime(tmp_path, ns=times)
+            os.chmod(tmp_path, mode)
+            os.replace(tmp_path, dst_path)
+        except BaseException:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
+        if st.st_nlink > 1:
+            link_map[(st.st_dev, st.st_ino)] = dst_path
+        os.unlink(src_path)
+        return
+
+    if stat.S_ISFIFO(st.st_mode):
+        os.mkfifo(dst_path, mode)
+        os.utime(dst_path, ns=times)
+        os.chmod(dst_path, mode)
+        os.unlink(src_path)
+        return
+
+    # Character/block devices or sockets: replicate node if permitted.
+    try:
+        os.mknod(dst_path, st.st_mode, st.st_rdev)
+        os.utime(dst_path, ns=times)
+        os.chmod(dst_path, mode)
+    except OSError:
+        pass
+    os.unlink(src_path)
+
+
+def move_entry(src_path, dst_path, link_map):
+    if protect_abs and os.path.abspath(dst_path) == protect_abs:
+        remove_existing_non_dir_target(src_path)
+        return
+    if force_exdev:
+        move_cross_fs(src_path, dst_path, link_map)
+        return
+    try:
+        os.replace(src_path, dst_path)
+    except IsADirectoryError:
+        rmtree_force(dst_path)
+        os.replace(src_path, dst_path)
+    except OSError as exc:
+        if exc.errno == errno.EXDEV:
+            move_cross_fs(src_path, dst_path, link_map)
+        else:
+            raise
+
+
+# Ensure root destination exists as a real directory (not a symlink or file).
+try:
+    st_root_dst = os.lstat(dst_root)
+    if not stat.S_ISDIR(st_root_dst.st_mode):
+        os.unlink(dst_root)
+        os.makedirs(dst_root, mode=0o700, exist_ok=True)
+except FileNotFoundError:
+    os.makedirs(dst_root, mode=0o700, exist_ok=True)
+
+is_tty = sys.stderr.isatty()
+last_report = time.monotonic()
+reported_inline = False
+moved_files = 0
+moved_dirs = 0
+dir_records = []
+link_map = {}
+
+
+def maybe_report_progress():
+    global last_report, reported_inline
+    now = time.monotonic()
+    if now - last_report < 1.5:
+        return
+    if is_tty:
+        sys.stderr.write(
+            f"\r  移動中: ファイル {moved_files} 件・ディレクトリ {moved_dirs} 件..."
+        )
+        reported_inline = True
+    else:
+        sys.stderr.write(
+            f"  移動中: ファイル {moved_files} 件・ディレクトリ {moved_dirs} 件...\n"
+        )
+    sys.stderr.flush()
+    last_report = now
+
+
+stack = [(src_root, dst_root)]
+while stack:
+    cur_src, cur_dst = stack.pop()
+    if cur_dst != dst_root and protect_abs and os.path.abspath(cur_dst) == protect_abs:
+        # Never overwrite an active staging directory placed inside dst_root.
+        rmtree_force(cur_src)
+        continue
+
+    st_src = os.lstat(cur_src)
+    orig_mode = stat.S_IMODE(st_src.st_mode)
+    chmod_min_u_rwx(cur_src, orig_mode)
+
+    if cur_dst != dst_root:
+        try:
+            st_dst = os.lstat(cur_dst)
+            if not stat.S_ISDIR(st_dst.st_mode):
+                os.unlink(cur_dst)
+                os.mkdir(cur_dst, 0o700)
+            else:
+                chmod_min_u_rwx(cur_dst, stat.S_IMODE(st_dst.st_mode))
+        except FileNotFoundError:
+            os.mkdir(cur_dst, 0o700)
+    else:
+        st_dst = os.lstat(cur_dst)
+        chmod_min_u_rwx(cur_dst, stat.S_IMODE(st_dst.st_mode))
+
+    dir_records.append((cur_dst, orig_mode, st_src.st_atime_ns, st_src.st_mtime_ns, cur_src))
+    moved_dirs += 1
+    maybe_report_progress()
+
+    sub_dirs = []
+    non_dirs = []
+    with os.scandir(cur_src) as it:
+        for entry in it:
+            if entry.is_dir(follow_symlinks=False):
+                sub_dirs.append(entry.name)
+            else:
+                non_dirs.append(entry.name)
+
+    for name in non_dirs:
+        move_entry(os.path.join(cur_src, name), os.path.join(cur_dst, name), link_map)
+        moved_files += 1
+        maybe_report_progress()
+
+    for name in reversed(sub_dirs):
+        stack.append((os.path.join(cur_src, name), os.path.join(cur_dst, name)))
+
+for cur_dst, orig_mode, atime_ns, mtime_ns, cur_src in reversed(dir_records):
+    os.utime(cur_dst, ns=(atime_ns, mtime_ns))
+    os.chmod(cur_dst, orig_mode)
+    os.rmdir(cur_src)
+
+if is_tty and reported_inline:
+    sys.stderr.write(
+        f"\r  移動完了: ファイル {moved_files} 件・ディレクトリ {moved_dirs} 件          \n"
+    )
+else:
+    sys.stderr.write(
+        f"  移動完了: ファイル {moved_files} 件・ディレクトリ {moved_dirs} 件\n"
+    )
+sys.stderr.flush()
+PYEOF
+}
+
+move_tree_bash() {
+  local src=${1%/} dst=${2%/} protect_path=${3:-}
   [[ -d $src ]] || return 0
 
   if [[ -L $dst || ( -e $dst && ! -d $dst ) ]]; then
@@ -84,11 +353,17 @@ move_tree() {
   fi
   mkdir -p -- "$dst"
 
-  local -a dirs=() modes=() mtimes=()
-  local dir rel target mode mtime
+  local -a dirs=() modes=() mtimes=() skipped_dirs=()
+  local dir rel target mode mtime count=0
   while IFS= read -r -d '' dir; do
     rel=${dir#"$src"}
     target="${dst}${rel}"
+    if [[ -n $protect_path && ( $target == "$protect_path" || $target == "$protect_path"/* ) ]]; then
+      if [[ $target == "$protect_path" ]]; then
+        skipped_dirs+=("$dir")
+      fi
+      continue
+    fi
     mode=$(stat -c '%a' -- "$dir")
     mtime=$(stat -c '%y' -- "$dir")
     dirs+=("$rel")
@@ -106,12 +381,28 @@ move_tree() {
   while IFS= read -r -d '' entry; do
     rel=${entry#"$src"}
     target="${dst}${rel}"
+    if [[ -n $protect_path && ( $target == "$protect_path" || $target == "$protect_path"/* ) ]]; then
+      rm -f -- "$entry"
+      continue
+    fi
     if [[ -d $target && ! -L $target ]]; then
       chmod -R u+rwx -- "$target" 2>/dev/null || true
       rm -rf -- "$target"
     fi
     mv -fT -- "$entry" "$target"
+    count=$((count + 1))
+    if (( count % 500 == 0 )); then
+      printf '  移動中: %d 件...\n' "$count" >&2
+    fi
   done < <(find "$src" -mindepth 1 ! -type d -print0)
+
+  if (( ${#skipped_dirs[@]} > 0 )); then
+    local sdir
+    for sdir in "${skipped_dirs[@]}"; do
+      chmod -R u+rwx -- "$sdir" 2>/dev/null || true
+      rm -rf -- "$sdir"
+    done
+  fi
 
   local i
   for (( i = ${#dirs[@]} - 1; i >= 0; i-- )); do
@@ -123,6 +414,17 @@ move_tree() {
     touch -d "$mtime" -- "$target"
     rmdir -- "${src}${rel}"
   done
+  printf '  移動完了: ファイル %d 件・ディレクトリ %d 件\n' "$count" "${#dirs[@]}" >&2
+}
+
+move_tree() {
+  local src=${1%/} dst=${2%/} protect_path=${3:-}
+  [[ -d $src ]] || return 0
+  if command -v python3 >/dev/null 2>&1; then
+    move_tree_python "$src" "$dst" "$protect_path"
+  else
+    move_tree_bash "$src" "$dst" "$protect_path"
+  fi
 }
 
 dir_has_entries() {
@@ -760,6 +1062,11 @@ ensure_tools() {
     fi
   done
 
+  local need_python=0
+  if ! command -v python3 >/dev/null 2>&1; then
+    need_python=1
+  fi
+
   local need_rbw=0 need_pinentry=0
   if need_rbw_upfront; then
     if ! command -v rbw >/dev/null 2>&1; then
@@ -776,7 +1083,7 @@ ensure_tools() {
   if (( need_core == 1 )); then
     command -v nix >/dev/null 2>&1 || fail '不足しているツール（restic / rclone / jq）の取得に nix コマンドが必要です。'
     run_nix=1
-  elif (( need_rbw == 1 || need_pinentry == 1 )) && command -v nix >/dev/null 2>&1; then
+  elif (( need_python == 1 || need_rbw == 1 || need_pinentry == 1 )) && command -v nix >/dev/null 2>&1; then
     run_nix=1
   fi
 
@@ -785,6 +1092,10 @@ ensure_tools() {
     script="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/$(basename -- "${BASH_SOURCE[0]}")"
     local -a nix_pkgs=(nixpkgs#restic nixpkgs#rclone nixpkgs#jq)
     local -a verify_cmds=(restic rclone jq)
+    if (( need_python == 1 )) || ! command -v python3 >/dev/null 2>&1; then
+      nix_pkgs+=(nixpkgs#python3)
+      verify_cmds+=(python3)
+    fi
     if [[ ${RESTORE_NO_RBW:-0} != 1 ]] && { (( need_rbw == 1 )) || ! command -v rbw >/dev/null 2>&1; }; then
       nix_pkgs+=(nixpkgs#rbw)
       verify_cmds+=(rbw)
@@ -811,6 +1122,13 @@ ensure_tools() {
   fi
 }
 
+available_bytes_for() {
+  local val=""
+  val=$(df --output=avail -B1 -- "$1" 2>/dev/null | awk 'NR==2 {print $1}') || return 1
+  [[ $val =~ ^[0-9]+$ ]] || return 1
+  printf '%s' "$val"
+}
+
 main() {
   set -euo pipefail
   umask 077
@@ -822,8 +1140,10 @@ main() {
   local explicit_target=${1:-}
   local root_prefix=${RESTORE_ROOT:-/}
   root_prefix=${root_prefix%/}
-  local stage_parent=${RESTORE_STAGE_PARENT:-/var/tmp}
-  local target="" parent=""
+  local target_home="${root_prefix}/home/mitac"
+  local stage_parent_override=${RESTORE_STAGE_PARENT:-}
+  local default_stage_parent=${_RESTORE_DEFAULT_STAGE_PARENT:-/var/tmp}
+  local target="" parent="" stage_prefix="restore-mitac"
 
   if [[ -n $explicit_target ]]; then
     target=$explicit_target
@@ -831,9 +1151,12 @@ main() {
     [[ ! -e $target && ! -L $target ]] || fail "指定された展開先は既に存在します。新しいディレクトリを指定してください: $target"
     parent=$(dirname -- "$target")
     [[ -d $parent && -w $parent ]] || fail "親ディレクトリに書き込み権限がありません: $parent"
-  else
-    parent=$stage_parent
+  elif [[ -n $stage_parent_override ]]; then
+    parent=$stage_parent_override
     [[ -d $parent && -w $parent ]] || fail "一時ステージ用の親ディレクトリに書き込み権限がありません: $parent"
+  else
+    [[ ( -d $default_stage_parent && -w $default_stage_parent ) || ( -d $target_home && -w $target_home ) ]] ||
+      fail "一時ステージ用の親ディレクトリ（${default_stage_parent} または ${target_home}）に書き込み権限がありません。"
   fi
 
   check_platform
@@ -940,13 +1263,62 @@ main() {
   stats=$(restic stats "$snapshot_id" --mode restore-size --json)
   required_bytes=$(jq -er '.total_size | select(type == "number" and . >= 0) | floor' <<<"$stats")
   printf '復元に必要なサイズ: %s バイト\n' "$required_bytes"
+
+  if [[ -z $explicit_target && -z $stage_parent_override ]]; then
+    local vartmp_ok=0 home_ok=0 dev_vartmp="" dev_home="" avail_vartmp=0 avail_home=0
+    if [[ -d $default_stage_parent && -w $default_stage_parent ]]; then
+      vartmp_ok=1
+      dev_vartmp=$(stat -Lc '%d' -- "$default_stage_parent" 2>/dev/null || true)
+      avail_vartmp=$(available_bytes_for "$default_stage_parent" || printf '0')
+    fi
+    if [[ -d $target_home && -w $target_home ]]; then
+      home_ok=1
+      dev_home=$(stat -Lc '%d' -- "$target_home" 2>/dev/null || true)
+      avail_home=$(available_bytes_for "$target_home" || printf '0')
+    fi
+
+    if (( home_ok == 1 && vartmp_ok == 1 )); then
+      if [[ -n $dev_home && -n $dev_vartmp && $dev_home != "$dev_vartmp" ]]; then
+        if (( avail_home >= required_bytes )); then
+          parent=$target_home
+          stage_prefix=.restore-mitac
+          printf '一時展開先に %s を選択しました（%s とは別ファイルシステム／サブボリュームのため同一 FS 上で高速反映します）。\n' "$target_home" "$default_stage_parent" >&2
+        elif (( avail_vartmp >= required_bytes )); then
+          parent=$default_stage_parent
+          stage_prefix=restore-mitac
+          printf '注意: %s の空き容量が不足しているため %s を一時展開先に使います（反映時のコピーに時間がかかります）。\n' "$target_home" "$default_stage_parent" >&2
+        else
+          parent=$target_home
+          stage_prefix=.restore-mitac
+        fi
+      elif (( avail_vartmp >= required_bytes )); then
+        parent=$default_stage_parent
+        stage_prefix=restore-mitac
+      elif (( avail_home >= required_bytes )); then
+        parent=$target_home
+        stage_prefix=.restore-mitac
+      else
+        parent=$default_stage_parent
+        stage_prefix=restore-mitac
+      fi
+    elif (( home_ok == 1 )); then
+      parent=$target_home
+      stage_prefix=.restore-mitac
+      printf '一時展開先に %s を選択しました（%s が利用できないためホーム内で展開・反映します）。\n' "$target_home" "$default_stage_parent" >&2
+    else
+      parent=$default_stage_parent
+      stage_prefix=restore-mitac
+    fi
+  fi
+
   df -h -- "$parent"
-  available_bytes=$(df --output=avail -B1 -- "$parent" | tail -n 1)
+  available_bytes=$(available_bytes_for "$parent") || fail "空き容量を取得できませんでした: $parent"
   (( available_bytes >= required_bytes )) || fail '空き容量が不足しています。別のディスク上の新しい展開先ディレクトリを指定してください。'
 
   if [[ -n $explicit_target ]]; then
     # 指定ディレクトリへ展開・検証のみ行い、/home や /etc は変更しない。
     mkdir -m 700 -- "$target"
+    printf '展開先 (%s) へ検証付きで復元しています...\n' "$target" >&2
     restic restore "$snapshot_id" --target "$target" --verify
     printf '%s\n' "$snapshot_id" > "$target/.restored-snapshot-id"
     printf '\n復元と検証が完了しました。\n'
@@ -958,8 +1330,9 @@ main() {
   fi
 
   local stage_dir
-  stage_dir=$(mktemp -d "${stage_parent%/}/restore-mitac-XXXXXXXX")
+  stage_dir=$(mktemp -d "${parent%/}/${stage_prefix}-XXXXXXXX")
   chmod 700 -- "$stage_dir"
+  printf '一時展開先 (%s) へ検証付きで展開しています...\n' "$stage_dir" >&2
   restic restore "$snapshot_id" --target "$stage_dir" --verify
 
   local preserved_rclone=""
@@ -969,10 +1342,17 @@ main() {
     chmod 600 -- "$preserved_rclone"
   fi
 
-  local target_home="${root_prefix}/home/mitac"
   if [[ -d "${stage_dir}/home/mitac" ]]; then
-    move_tree "${stage_dir}/home/mitac" "$target_home"
+    printf '展開・検証が完了しました。%s へ反映しています...\n' "$target_home" >&2
+    move_tree "${stage_dir}/home/mitac" "$target_home" "$stage_dir"
   fi
+
+  local restore_home_mode=""
+  if [[ ( -n $preserved_rclone || $stage_dir == "$target_home"/* ) && -d $target_home && ! -w $target_home ]]; then
+    restore_home_mode=$(stat -c '%a' -- "$target_home")
+    chmod u+rwx -- "$target_home"
+  fi
+
   if [[ -n $preserved_rclone && -f $preserved_rclone ]]; then
     mkdir -p -- "$(dirname -- "$RCLONE_CONFIG")"
     cp -f --remove-destination -- "$preserved_rclone" "$RCLONE_CONFIG"
@@ -982,6 +1362,9 @@ main() {
 
   restore_system_state "${stage_dir}/run/restic-backups-home/system" "$root_prefix"
   rm -rf -- "$stage_dir"
+  if [[ -n $restore_home_mode ]]; then
+    chmod "$restore_home_mode" -- "$target_home"
+  fi
 
   printf '\n復元と検証が完了しました。\n'
   printf 'スナップショット: %s\n' "$snapshot_id"

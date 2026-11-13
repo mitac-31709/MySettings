@@ -84,7 +84,7 @@ NixOS の世代番号はマシン固有です。コミットとの対応はビ�
      'git clone -b main https://github.com/mitac31709/MySettings.git ~/MySettings'
    cd ~/MySettings
    ```
-5. **（既存バックアップからデータを戻す場合）** OS ビルドの前に「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」の手順で `./scripts/restore-on-nixos.sh` を実行する。不足ツール（`restic` / `rclone` / `jq` / `rbw` / `pinentry-qt`）を自動取得し、**`rbw` で Bitwarden（`restic-home`）を自動読込**して Google OAuth と暗号化パスワードを自動入力します（初回は `rbw` 設定・ログインのみ案内に従う／未登録なら対話入力・ブラウザー OAuth へフォールバック）。バックアップ内の `/home/mitac`（`~/MySettings` や `/home/mitac/Documents/hiragino-otf/` を含む）およびシステム状態（Wi-Fi / Bluetooth / WARP / Tailscale）が**元の位置へ上書き復元**されます（システム状態の反映時のみ `sudo` パスワード入力が必要。今回新規取得・更新した `~/.config/rclone/rclone.conf` は上書きせず保持）。展開確認のみしたい場合は `./scripts/restore-on-nixos.sh /var/tmp/restore-check` のように展開先を引数指定します。
+5. **（既存バックアップからデータを戻す場合）** OS ビルドの前に「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」の手順で `./scripts/restore-on-nixos.sh` を実行する。不足ツール（`restic` / `rclone` / `jq` / `python3` / `rbw` / `pinentry-qt`）を自動取得し、**`rbw` で Bitwarden（`restic-home`）を自動読込**して Google OAuth と暗号化パスワードを自動入力します（初回は `rbw` 設定・ログインのみ案内に従う／未登録なら対話入力・ブラウザー OAuth へフォールバック）。バックアップ内の `/home/mitac`（`~/MySettings` や `/home/mitac/Documents/hiragino-otf/` を含む）およびシステム状態（Wi-Fi / Bluetooth / WARP / Tailscale）が**元の位置へ上書き復元**されます（システム状態の反映時のみ `sudo` パスワード入力が必要。今回新規取得・更新した `~/.config/rclone/rclone.conf` は上書きせず保持）。展開確認のみしたい場合は `./scripts/restore-on-nixos.sh /var/tmp/restore-check` のように展開先を引数指定します。
 6. 実機の `hardware-configuration.nix` を生成し、flake を適用する（対象は `vaio` または `chromebook`）：
    ```bash
    # VAIO の場合（Chromebook は hosts/chromebook/hardware-configuration.nix と .#chromebook）
@@ -469,7 +469,7 @@ Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行�
 ./scripts/restore-on-nixos.sh /mnt/restore-disk/mitac-restored
 ```
 
-不足するツール（`restic` / `rclone` / `jq` / `rbw`、`pinentry` 未導入時は GUI で `pinentry-qt`・非 GUI で `pinentry-curses`）は自動で `nix shell` から取得します。
+不足するツール（`restic` / `rclone` / `jq` / `python3` / `rbw`、`pinentry` 未導入時は GUI で `pinentry-qt`・非 GUI で `pinentry-curses`）は自動で `nix shell` から取得します。
 
 `gdrive:` リモートまたは暗号化パスワードが未設定の場合は、対話確認（`[Y/n]`）のうえで **Bitwarden（`rbw`）からの自動取得**を行います（`RESTORE_NO_RBW=1` で `rbw` を使わず最初から手動入力にすることもできます）。
 
@@ -488,7 +488,7 @@ Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行�
 
 メッセージ・プロンプトは日本語で表示されます（GUI 端末・LXQt・Sway 上での利用を想定。非 CJK TTY コンソールでは表示できない文字があります）。最新スナップショットを固定し、必要容量と空き容量を確認してから、`restic restore --verify` で検証後に次のとおり復元します（検証が失敗した場合は元のファイルを変更せず一時展開先を保持して終了します）。
 
-- **引数なし（既定）**: `/var/tmp/restore-mitac-XXXXXXXX` で検証後、すべてのバックアップ対象を**元の位置へ直接上書き復元**し、成功時に一時ディレクトリを削除します（`復元と検証が完了しました。` を表示）。
+- **引数なし（既定）**: `/home/mitac` と同一ファイルシステム上の一時領域（`/var/tmp` が同一 FS なら `/var/tmp/restore-mitac-XXXXXXXX`、`/home/mitac` が別パーティションまたは Btrfs 別サブボリュームなら `/home/mitac/.restore-mitac-XXXXXXXX`）で検証後、進捗を表示しながらすべてのバックアップ対象を**元の位置へ高速に上書き復元**し、成功時に一時ディレクトリを削除します（`復元と検証が完了しました。` を表示）。
   - ホーム: `/home/mitac/`（`~/MySettings`・`/home/mitac/Documents/hiragino-otf/`・`~/.config/rclone/rclone.conf` を含む全バックアップ済みファイルを上書き。ただし今回の実行中に Bitwarden 反映・手動入力・OAuth 再接続で新規取得／更新した `$RCLONE_CONFIG` は保持）
   - システム状態（空でないディレクトリのみ自動で `sudo` 実行）: `/etc/NetworkManager/system-connections`（ファイル権限 `0600`）・`/var/lib/bluetooth`・`/var/lib/cloudflare-warp`・`/var/lib/tailscale`（`root:root` 所有に変更し、稼働中のサービス／`nmcli` を再読み込み）
 - **引数 `[EXTRACT_DIR]` 指定時**: `/home`・`/etc`・`/var/lib` には一切触れず、`EXTRACT_DIR`（`home/mitac/`・`run/restic-backups-home/system/`・`.restored-snapshot-id`）へ展開と検証のみを行います。
