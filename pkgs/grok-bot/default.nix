@@ -131,7 +131,7 @@ stdenv.mkDerivation {
       --add-flags "\''${NIXOS_OZONE_WL:+\''${WAYLAND_DISPLAY:+--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations --enable-wayland-ime=true}}"
 
     substituteInPlace $out/share/applications/grok-bot.desktop \
-      --replace-fail 'Exec=grok-bot %U' 'Exec=grok-bot %U'
+      --replace-fail 'Exec=grok-bot -- %U' 'Exec=grok-bot %U'
 
     runHook postInstall
   '';
