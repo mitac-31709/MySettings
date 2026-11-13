@@ -50,7 +50,7 @@ NixOS の世代番号はマシン固有です。コミットとの対応はビ�
 
 - Flakes が有効な NixOS マシン（この flake でも有効化します）
 - 初回 rebuild の**前に**、`hosts/mitac/hardware-configuration.nix` を自分のマシンで生成したファイルに差し替えること
-- 非フリーパッケージ（`affinity-v3`、`code-cursor`、`cursor-cli`、`jquake`、`parsec-bin`、`steam`、`vivaldi`）は `flake.nix` で許可済み
+- 非フリーパッケージ（`code-cursor`、`cursor-cli`、`jquake`、`parsec-bin`、`steam`、`vivaldi`）は `flake.nix` で許可済み。`affinity-v3` は未導入（戻し方は下記）
 - Chromebook: MrChromebox（または同等）の UEFI／WP 無効を想定。ファームウェアの書き込みはこのリポジトリの範囲外
 
 ## 適用手順
@@ -68,13 +68,28 @@ sudo nixos-generate-config --show-hardware-config > hosts/mitac/hardware-configu
 sudo nixos-rebuild switch --flake .#mitac
 # または（Home Manager 適用後）どのディレクトリからでも:
 #   rebuild
-# → sudo nixos-rebuild switch --flake ~/MySettings#mitac
+# → sudo nixos-rebuild switch --flake /home/mitac/MySettings#mitac
 
 # 必要なら:
 passwd mitac
 ```
 
-`flake.lock` はリポジトリに含まれます。シェル関数 `rebuild`（先に `sudo` 認証、通常表示のままビルド中だけ `nom` ETA）とエイリアス `generations` は `home/shell.nix` で定義され、flake パスは `~/MySettings` 固定です（ホーム直下など、リポジトリ外からも実行可）。
+`flake.lock` はリポジトリに含まれます。シェル関数 `rebuild`（先に `sudo` 認証、通常表示のままビルド中だけ `nom` ETA）とエイリアス `generations` は `home/shell.nix` で定義されます。flake の作業コピーは `lib/machine.nix` の `repoPath`（既定 `/home/mitac/MySettings`）だけです。Home Manager の `mitac.repoPath` で上書きできます。`rebuild` / `flake-update` はそのパスの `flake.nix` を使います。スクリプト本体は Nix ストアのコマンドで、チェックアウトの `scripts/` を直接実行しません。
+
+## flake の更新
+
+`nixpkgs` と `nixpkgs-cursor` はどちらも `nixos-unstable` を追います。`nix flake update` を引数なしで走らせると両方が同じコミットになり、Cursor だけ新しい nixpkgs を使う意味がなくなります。
+
+`flake-update` は UniClipboard / ChatGPT / Grok Bot の .deb URL を `flake.nix` に書いたあと、lock に載っている入力のうち `nixpkgs-cursor` 以外を `nix flake update` します。システムの nixpkgs は動き、Cursor のピンは残ります。
+
+Cursor（`code-cursor` / `cursor-cli`）だけ新しい nixpkgs にするときは、作業コピーで次のどちらかです。
+
+```bash
+flake-update-cursor
+nix flake update nixpkgs-cursor
+```
+
+どちらも `nixpkgs-cursor` だけを取り直します。差分を見てコミットしてから `rebuild` します。
 
 ## 同梱ソフトウェア
 
@@ -96,7 +111,11 @@ passwd mitac
 - **Tor Browser** — `tor-browser`
 - **JQuake** — `JQuake` / `jquake`（1.8.4 + `pkgs/jquake` ラッパー。Sway AWT 修正・更新ダイアログ無効化）。ログイン時に `jquake.service` で常駐（Sway では offscreen `stalonetray` に吸い込み、waybar には出さない）。警報時は全画面＋`swaylock` 解除（`home/jquake.nix`）
 - **ONLYOFFICE** — `onlyoffice-desktopeditors`（文書・表計算・プレゼン）
-- **Affinity** — 現在オフ（`home/packages` に `affinity-v3` なし）。再有効時は [affinity-nix](https://github.com/mrshmllow/affinity-nix) と `cache.forall.systems`（`modules/nixos/common.nix` のコメント参照）を戻す
+- **Affinity** — 未導入（`affinity-v3` なし。flake 入力も overlay も外してある）。戻すときは次の 3 箇所です。
+  1. `flake.nix` の `inputs` に `affinity-nix.url = "github:mrshmllow/affinity-nix";` を足し、`nixpkgs.overlays` の先頭に `inputs.affinity-nix.overlays.default` を戻す
+  2. `home/programs.nix` の `home.packages` に `affinity-v3` を足す
+  3. `modules/nixos/common.nix` の `nix.settings` に `cache.forall.systems` の substituter と公開鍵を戻す（コメントに残してある）
+  Wine ビルドはキャッシュが外れると数時間かかることがあります。RTC が NTP より遅れていると、このキャッシュの証明書エラーで他の取得まで止まります
 - **LocalSend** — LAN ファイル転送（`programs.localsend`、ファイアウォール 53317）
 - **RQuickShare** — Google Quick Share / Nearby Share の Linux クライアント（`rquickshare`）
 - **wol-pc** — Wake-on-LAN クライアント（`~/Projects/wol-pc`）。依存: `sshpass` / `zenity`（`home.packages`）。設定は同ディレクトリの `config.env`
@@ -124,10 +143,22 @@ passwd mitac
 
 ## フォント
 
-- システムの比例フォント既定: sans `Hiragino Kaku Gothic ProN` / serif `Hiragino Mincho ProN`（ローカル `~/Documents/hiragino-otf` → flake input `hiragino-fonts-src`）
-- 等幅フォント既定: `JetBrainsMono Nerd Font`（日本語フォールバックにヒラギノ角ゴ ProN）
-- Ghostty も JetBrainsMono（12pt）
-- Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行し、ログアウトして再ログイン
+比例フォントの第一候補はヒラギノです。fontconfig の既定は家族名のリストで、入っていない名前は飛ばします。ヒラギノが無い評価（他のマシン、`nix flake check`、`--impure` なし）では次のフォントが使われます。
+
+- sans / 等幅の日本語: `Noto Sans CJK JP`（`noto-fonts-cjk-sans`）
+- serif: `Noto Serif CJK JP`（`noto-fonts-cjk-serif`）
+- 等幅のラテン: `JetBrainsMono Nerd Font`（Ghostty も 12pt）
+
+ヒラギノは flake input にしていません。`path:` 入力は、そのディレクトリが無いマシンで flake 全体の評価が失敗するためです。
+
+有効にする手順:
+
+1. OTF を ASCII 名で `/home/mitac/Documents/hiragino-otf/` に置く（`~/Documents/ヒラギノ.zip` を展開。パスは `lib/machine.nix` の `hiraginoDir`）
+2. `--impure` でビルドする。`rebuild` はこのディレクトリがあるときだけ `--impure` を付けます
+
+仕組み: `builtins.pathExists` は pure 評価では flake の外の絶対パスを読めず、結果は false です。`--impure` のときだけ実在を見て、ある場合だけ `builtins.path` でストアへコピーし `fonts.packages` に足します。第一候補は sans `Hiragino Kaku Gothic ProN` / serif `Hiragino Mincho ProN` のままです。
+
+Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行し、ログアウトして再ログインします。
 
 ## ターミナル
 
@@ -260,7 +291,7 @@ exit
 - フォント: `復元先/home/mitac/Documents/hiragino-otf/`
 - Wi-Fi / Bluetooth / WARP / Tailscale の保存状態: `復元先/run/restic-backups-home/system/`
 
-実際の `/home` や `/etc` への反映は、復元内容と現在のファイルを確認してから行います。OS ビルド前に、フォントを flake が参照する `/home/mitac/Documents/hiragino-otf` に配置してください。復元対象はバックアップに含まれる範囲で、`MySettings`、キャッシュ、ゲーム本体などの除外対象や `/etc/shadow` は含まれません。使い方は `./scripts/restore-on-nixos.sh --help` でも確認できます。
+実際の `/home` や `/etc` への反映は、復元内容と現在のファイルを確認してから行います。ヒラギノを使うなら、OS ビルド前に OTF を `/home/mitac/Documents/hiragino-otf` に置き、`rebuild`（ディレクトリがあるとき `--impure`）してください。置かない場合の既定は Noto CJK です。復元対象はバックアップに含まれる範囲で、`MySettings`、キャッシュ、ゲーム本体などの除外対象や `/etc/shadow` は含まれません。使い方は `./scripts/restore-on-nixos.sh --help` でも確認できます。
 
 ### Restore / inspect（適用済みの環境）
 

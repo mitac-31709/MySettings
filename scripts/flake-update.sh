@@ -1,9 +1,24 @@
 #!/usr/bin/env bash
-# Bump versioned .deb URLs then `nix flake update` so Cursor (nixpkgs-cursor),
-# UniClipboard, ChatGPT, and Grok Bot desktop refresh.
+# Bump versioned .deb URLs, then update every flake input except nixpkgs-cursor.
+# nixpkgs and nixpkgs-cursor both track nixos-unstable; updating them together
+# pins Cursor to the same commit as the system. Move Cursor alone with
+# `flake-update-cursor` / `nix flake update nixpkgs-cursor`.
+#
+# Usage: flake-update [checkout]
+# The packaged command passes the checkout (lib/machine.nix repoPath).
+# Running this file from a checkout with no argument uses that checkout.
 set -euo pipefail
 
-root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [[ $# -ge 1 && -f "${1}/flake.nix" ]]; then
+  root=$1
+  shift
+else
+  root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+fi
+if [[ ! -f "$root/flake.nix" ]]; then
+  echo "flake-update: checkout not found: $root" >&2
+  exit 1
+fi
 cd "$root"
 
 json="$(curl -fsSL https://api.github.com/repos/UniClipboard/UniClipboard/releases/latest)"
@@ -90,5 +105,19 @@ else:
     print(f"Grok Bot already {grok_bot_ver}")
 PY
 
-nix flake update
+# Every locked root input except nixpkgs-cursor. Listing them (instead of a
+# bare `nix flake update`) is what keeps Cursor's nixpkgs pin where it is.
+mapfile -t inputs < <(
+  "${py[@]}" -c '
+import json, sys
+root = json.load(sys.stdin)["locks"]["nodes"]["root"]["inputs"]
+names = [name for name in sorted(root) if name != "nixpkgs-cursor"]
+if not names:
+    sys.exit("flake-update: no inputs besides nixpkgs-cursor")
+print("\n".join(names))
+' < <(nix flake metadata --json)
+)
+echo "nix flake update ${inputs[*]}"
+echo "nixpkgs-cursor は対象外。Cursor だけ上げる: flake-update-cursor"
+nix flake update "${inputs[@]}"
 echo "flake.lock updated. Review, commit, then rebuild."

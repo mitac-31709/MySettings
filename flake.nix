@@ -12,8 +12,8 @@
       url = "github:WeirdTreeThing/alsa-ucm-conf-cros/standalone";
       flake = false;
     };
-    # Affinity Photo/Designer/Publisher (Wine; Canva Affinity v3)
-    affinity-nix.url = "github:mrshmllow/affinity-nix"; # Fresher nixpkgs solely for Cursor packages (avoid bumping the whole system).
+    # Fresher nixpkgs solely for Cursor packages (avoid bumping the whole system).
+    # flake-update does not move this input; flake-update-cursor does.
     nixpkgs-cursor.url = "github:NixOS/nixpkgs/nixos-unstable";
     # Vendor .debs (flake update re-fetches; see scripts/flake-update.sh).
     # Keep URL version in sync with uniclipboardVersion below (flake-update.sh).
@@ -29,12 +29,6 @@
     # Keep URL version in sync with grokBotVersion below (flake-update.sh).
     grok-bot-deb = {
       url = "https://downloads.cursor.com/grokbot/stable/676f0815a4013954f4c8e3f4ac413acfbac0376c/linux/x64/grok-bot_0.79.2_amd64.deb";
-      flake = false;
-    };
-    # Proprietary Hiragino OTFs (local; not committed). Prepare with:
-    #   extract ~/Documents/ヒラギノ.zip → ~/Documents/hiragino-otf/*.otf (ASCII names)
-    hiragino-fonts-src = {
-      url = "path:/home/mitac/Documents/hiragino-otf";
       flake = false;
     };
   };
@@ -71,7 +65,6 @@
 
             nixpkgs.config.allowUnfree = true;
             nixpkgs.overlays = [
-              inputs.affinity-nix.overlays.default
               (
                 final: prev:
                 let
@@ -98,9 +91,6 @@
                   uniclipboard = final.callPackage ./pkgs/uniclipboard {
                     src = inputs.uniclipboard-deb;
                     version = uniclipboardVersion;
-                  };
-                  hiragino-fonts = final.callPackage ./pkgs/hiragino {
-                    src = inputs.hiragino-fonts-src;
                   };
                   # Meltype Linux preview as Fcitx5 addon (not in nixpkgs).
                   meltype = final.callPackage ./pkgs/meltype { };

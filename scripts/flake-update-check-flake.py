@@ -48,7 +48,6 @@ WATCH: dict[str, list[tuple[str, str, str, tuple[str, ...]]]] = {
 
 FLAKE_META = {
     "home-manager": ("\uf015", "hm", "home-manager"),
-    "affinity-nix": ("\uf1fc", "aff", "affinity-nix"),
     "alsa-ucm-conf-cros": ("\uf028", "alsa", "alsa-ucm-conf-cros"),
 }
 

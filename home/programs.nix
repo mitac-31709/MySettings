@@ -1,5 +1,10 @@
 # Shared user programs and packages (Sway session).
-{ lib, pkgs, config, ... }:
+{
+  lib,
+  pkgs,
+  config,
+  ...
+}:
 
 let
   email = "mitac31709@gmail.com";
@@ -413,10 +418,9 @@ in
     onlyoffice-desktopeditors
     # 3D printer slicer (Bambu/Prusa fork). App menu: OrcaSlicer (`orca-slicer`).
     orca-slicer
-    # Affinity v3 omitted: affinity-nix Wine builds often compile for hours
-    # when cache.forall.systems misses (and that cache is not in nix.settings).
-    # Re-enable: add affinity-v3 here and restore cache.forall.systems in
-    # modules/nixos/common.nix (extra-substituters + trusted-public-keys).
+    # Affinity v3 is not installed. The affinity-nix input and overlay were
+    # removed. Re-add steps are in the README (Affinity). Wine builds often
+    # take hours when cache.forall.systems misses.
     parsec-bin
     # Wineprefix manager for Windows apps/games (FHS-wrapped).
     (bottles.override { removeWarningPopup = true; })

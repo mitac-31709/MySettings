@@ -4,13 +4,23 @@
 # Writes $XDG_RUNTIME_DIR/flake-update-status for waybar (does not mutate the flake).
 set -u
 
-root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Packaged command passes the checkout. A direct ./scripts run uses this tree.
+if [[ $# -ge 1 && -f "${1}/flake.nix" ]]; then
+  root=$1
+else
+  root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+fi
+if [[ ! -f "$root/flake.nix" ]]; then
+  echo "flake-update-check: checkout not found: $root" >&2
+  exit 1
+fi
 cd "$root"
 
 status_file="${XDG_RUNTIME_DIR:-/tmp}/flake-update-status"
 flake_nix="$root/flake.nix"
 flake_lock="$root/flake.lock"
-flake_py="$root/scripts/flake-update-check-flake.py"
+# FLAKE_CHECK_PY is the store copy. Fallback keeps ./scripts/... working.
+flake_py="${FLAKE_CHECK_PY:-$root/scripts/flake-update-check-flake.py}"
 
 # Records: icon<TAB>bar_label<TAB>tooltip_line
 outdated=()

@@ -9,10 +9,11 @@
 }:
 
 let
-  flakeRoot = "${config.home.homeDirectory}/MySettings";
-  flakeUpdateCheck = "${flakeRoot}/scripts/flake-update-check.sh";
-  flakeUpdate = "${flakeRoot}/scripts/flake-update.sh";
-  waybarAiStatus = "${pkgs.python3}/bin/python3 ${flakeRoot}/scripts/waybar-ai-status.py";
+  # Checkout for the waybar timer's ConditionPathExists. Scripts are store paths.
+  repoPath = config.mitac.repoPath;
+  flakeUpdateCheck = lib.getExe config.mitac.scripts.flakeUpdateCheck;
+  flakeUpdate = lib.getExe config.mitac.scripts.flakeUpdate;
+  waybarAiStatus = lib.getExe config.mitac.scripts.waybarAiStatus;
   ghosttyBin = "${pkgs.ghostty}/bin/ghostty";
   openFlakeUpdate = "${ghosttyBin} -e ${flakeUpdate}";
   swaylockBin = "${pkgs.swaylock}/bin/swaylock";
@@ -460,8 +461,14 @@ let
     }
     {
       section = "NixOS";
-      label = "入力＋Cursor/ChatGPT 等更新";
+      label = "入力＋.deb 更新（nixpkgs-cursor 以外）";
       run = "flake-update";
+      mode = "term";
+    }
+    {
+      section = "NixOS";
+      label = "Cursor だけ更新（nixpkgs-cursor）";
+      run = "flake-update-cursor";
       mode = "term";
     }
     {
@@ -469,6 +476,10 @@ let
       label = "適用（sudo 後・nom ETA）";
       run = "rebuild";
       mode = "term";
+    }
+    {
+      section = "NixOS";
+      label = "注: hiragino-otf があるとき rebuild は --impure";
     }
     {
       section = "NixOS";
@@ -1279,7 +1290,7 @@ in
   systemd.user.services.flake-update-check = {
     Unit = {
       Description = "Check MySettings flake / pinned .deb updates for waybar";
-      ConditionPathExists = "${flakeRoot}/flake.nix";
+      ConditionPathExists = "${repoPath}/flake.nix";
     };
     Service = {
       Type = "oneshot";
@@ -1289,7 +1300,7 @@ in
   systemd.user.timers.flake-update-check = {
     Unit = {
       Description = "Periodic flake update check for waybar";
-      ConditionPathExists = "${flakeRoot}/flake.nix";
+      ConditionPathExists = "${repoPath}/flake.nix";
     };
     Timer = {
       # Boot+3min often races Wi‑Fi/WARP; fetches then fail spuriously.
