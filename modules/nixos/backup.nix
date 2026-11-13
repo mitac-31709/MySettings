@@ -314,32 +314,32 @@ let
 
     usage() {
       cat <<'EOF'
-backup — home backup CLI (restic / rclone / Bitwarden / systemd)
+backup - home backup CLI (restic / rclone / Bitwarden / systemd)
 
 Usage:
-  backup <command> [args…]
+  backup <command> [args...]
   backup -h | --help | help
 
 Workflow:
-  backup unlock-key              rbw unlock（restic 鍵）
-  backup setup                   初回セットアップ（restic-home-setup）
-  backup reconnect               rclone OAuth 再接続 (gdrive:)
-  backup about                   Google Drive 疎通確認
-  backup run                     フルバックアップ開始 (systemd)
-  backup log                     進捗を journal で追う
-  backup status                  unit / timer の状態
+  backup unlock-key              Unlock Bitwarden vault via rbw (restic key)
+  backup setup                   Interactive first-time setup (restic-home-setup)
+  backup reconnect               Reconnect rclone OAuth remote (gdrive:)
+  backup about                   Check Google Drive connectivity
+  backup run                     Start full backup service (systemd)
+  backup log                     Follow backup logs in journalctl
+  backup status                  Show service and timer status
 
-Inspect / restore (restic, 環境変数込み):
+Inspect / restore (restic with repo & key env loaded):
   backup snapshots
   backup ls latest
   backup find NAME
   backup restore latest --target /tmp/restore
-  backup unlock                  restic のリポジトリロック解除
+  backup unlock                  Remove stale restic repository locks
 
 Notes:
-  - restore は必ず --target を付ける（省略すると /home/mitac を上書き）
-  - restic サブコマンドのヘルプ: backup <command> --help
-  - 未定義の第1引数は restic にそのまま渡す
+  - Always pass --target to restore (omitting it would overwrite /home/mitac)
+  - Help for a restic subcommand: backup <command> --help
+  - Any unrecognized first argument is passed straight through to restic
 EOF
     }
 

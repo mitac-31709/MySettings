@@ -57,6 +57,8 @@ NixOS の世代番号はマシン固有です。コミットとの対応はビ�
 
 新しい PC や空の SSD へ NixOS Live USB から導入する手順です。この flake は `systemd-boot`（UEFI 専用、`modules/nixos/common.nix`）と `zramSwap`（RAM 100% / `zstd`、`modules/nixos/laptop/power.nix`）を使うため、**UEFI ブート有効（セキュアブート無効）**・GPT（ESP + root、swap パーティション不要）を前提とします。
 
+> **初期設定（Live USB・TTY）は英語設定で行う**: 初期状態の NixOS コンソール TTY には日本語フォント（CJK グリフ）が含まれず、日本語ロケールでは文字化けします（`modules/nixos/greetd.nix` も同理由で ASCII 時刻表示）。そのため、Live USB 起動時・Calamares インストーラの言語／ロケールは **English**（`en_US.UTF-8`）のまま進め、キーボード配列のみ日本語（**Japanese** / `jp106`）に設定してください。初期設定で使うスクリプト（`./scripts/restore-on-nixos.sh`・`backup setup`・`backup --help`）も TTY 上で読めるよう英語表示にしてあります。flake 適用・再起動後は `modules/nixos/common.nix` により自動的に `ja_JP.UTF-8` と日本語 Sway 環境へ切り替わります。
+
 ### 0. USB メディアの作成と起動
 
 1. [NixOS ダウンロードページ](https://nixos.org/download/) から **Graphical ISO**（GUI インストーラ付き・推奨）または **Minimal ISO**（CLI のみ）を取得し、USB メモリへ書き込む。
@@ -70,6 +72,8 @@ NixOS の世代番号はマシン固有です。コミットとの対応はビ�
 
 1. Live 環境で Wi-Fi 等へ接続し、**Install NixOS**（Calamares）を起動する。
 2. インストーラで以下を設定してインストールする：
+   - 言語／ロケール（Welcome / Location）: **English**（American English / `en_US.UTF-8`）を選択（TTY での文字化け防止のため初期設定は英語。タイムゾーンは Tokyo を選んでよい。flake 適用後に `ja_JP.UTF-8` へ切り替わります）
+   - キーボード（Keyboard）: **Japanese** を選択
    - ユーザー名: **`mitac`**（`lib/machine.nix` の `/home/mitac/MySettings`・各種設定と一致させる）＋ 任意のパスワード
    - デスクトップ環境: **No desktop**（後の flake 適用で Sway 環境一式が入るため最小構成でよい）
    - パーティション: ディスク消去（UEFI / GPT）を選択。swap は **No swap**（`zramSwap` を使用）でも問題ない
@@ -80,7 +84,7 @@ NixOS の世代番号はマシン固有です。コミットとの対応はビ�
      'git clone -b main https://github.com/mitac31709/MySettings.git ~/MySettings'
    cd ~/MySettings
    ```
-5. **（既存バックアップからデータを戻す場合）** OS ビルドの前に「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」の手順で `./scripts/restore-on-nixos.sh` を実行し、必要なホームデータ・システム状態・ヒラギノフォント（`/home/mitac/Documents/hiragino-otf/`）を配置しておく（スクリプトは `/var/tmp/restore-mitac-日時/` へ展開するため `~/MySettings` は上書きされません）。
+5. **（既存バックアップからデータを戻す場合）** OS ビルドの前に「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」の手順で `./scripts/restore-on-nixos.sh` を実行し（出力は TTY 向けに英語表示）、必要なホームデータ・システム状態・ヒラギノフォント（`/home/mitac/Documents/hiragino-otf/`）を配置しておく（スクリプトは `/var/tmp/restore-mitac-YYYYMMDD-HHMMSS/` へ展開するため `~/MySettings` は上書きされません）。
 6. 実機の `hardware-configuration.nix` を生成し、flake を適用する（対象は `vaio` または `chromebook`）：
    ```bash
    # VAIO の場合（Chromebook は hosts/chromebook/hardware-configuration.nix と .#chromebook）
@@ -96,7 +100,7 @@ NixOS の世代番号はマシン固有です。コミットとの対応はビ�
 
 GUI インストーラを経由せず、USB から直接この flake の環境を書き込む手順です（Live 環境上には `/home/mitac/Documents/hiragino-otf` が無いため、初回は Noto CJK でビルドされます）。
 
-1. 必要なら日本語配列とネットワークを設定する：
+1. ロケールは ISO 既定の英語（`en_US.UTF-8`）のまま（TTY 文字化け防止）、必要なら日本語配列とネットワークを設定する：
    ```bash
    loadkeys jp106
    nmtui                        # Wi-Fi / 有線ネットワーク接続
@@ -167,6 +171,97 @@ GUI インストーラを経由せず、USB から直接この flake の環境�
    - **リモートビルダー**（`modules/nixos/remote-builder.nix`）: 利用する場合は `/home/mitac/.ssh/id_wsl_builder`（パスフレーズなし）を配置し、公開鍵を `galleria-mitac` 側へ登録する（未配置でもタイムアウト後にローカルビルドへフォールバック。待ち時間を省くなら `sudo nixos-rebuild switch --flake .#vaio --option builders ""` を実行）。
    - **dsh-TUI**: `npm i -g @deepseek-ai/dsh @deepseek-harness-tui/dsh-tui`
    - **ハードウェア確認**: 下記「VAIO オーディオ確認」「Chromebook オーディオ確認」「VA-API / Parsec 確認」を実行する。
+
+### Chromebook を btrfs 透過圧縮でクリーン再インストール
+
+Chromebook（delbin）を既存の `ext4` から `btrfs`（`compress=zstd:1`）へ安全に切り替える手順です。`modules/nixos/common.nix` は `fileSystems` 内の `btrfs` を自動検出し、有効化された環境でのみ `compsize` と月次の `services.btrfs.autoScrub` を組み込みます（現在の `hosts/chromebook/hardware-configuration.nix` は `ext4` のままなので、実機を入れ替える前の既存環境にも影響しません）。
+
+#### 事前準備（移行前の現在の Chromebook 上）
+
+1. **最新のバックアップを取得・確認する**：
+   ```bash
+   backup run
+   backup log
+   backup snapshots
+   ```
+2. `~/MySettings` に未プッシュの変更があれば確認して GitHub へプッシュする（`git status`）。
+3. 再インストール後にすぐ復元できるよう、**別の USB メモリ等へ秘密ファイルを退避**し、Bitwarden のログイン情報も手元に控えておく（Git には絶対に含めない）：
+   - `~/.config/rclone/rclone.conf`（OAuth `client_id` / `client_secret`・トークン入り。これを戻せば `rclone config` のやり直しを省けます）
+   - 利用している場合は `~/.ssh/id_wsl_builder`
+
+#### Live USB からの `btrfs` 導入（CLI 手順）
+
+Calamares（Graphical ISO）で `btrfs` を選ぶと初回導入時は `compress=zstd:1` が付かないため、**USB のターミナルから下記手順で最初からマウントオプション付きで導入する**のが確実です（最初の `nixos-install` 時点から `/nix/store` も圧縮されます）。
+
+1. Live USB を UEFI 起動し、ロケールは ISO 既定の英語（`en_US.UTF-8`）のまま（TTY 文字化け防止）、日本語配列・ネットワークを設定する：
+   ```bash
+   loadkeys jp106
+   nmtui
+   ```
+2. `lsblk` で内蔵ストレージを確認し、GPT パーティション作成・フォーマットを行う（delbin は個体により NVMe の `/dev/nvme0n1` または eMMC の `/dev/mmcblk0`。以下は `nvme0n1` の例、eMMC なら `/dev/mmcblk0p1`・`p2` に読み替え。**既存 ext4 データは消去されます**）：
+   ```bash
+   sudo parted /dev/nvme0n1 -- mklabel gpt
+   sudo parted /dev/nvme0n1 -- mkpart ESP fat32 1MiB 1GiB
+   sudo parted /dev/nvme0n1 -- set 1 esp on
+   sudo parted /dev/nvme0n1 -- mkpart root btrfs 1GiB 100%
+
+   sudo mkfs.fat -F 32 -n boot /dev/nvme0n1p1
+   # 既存の ext4 署名を上書きするため -f を指定
+   sudo mkfs.btrfs -f -L nixos /dev/nvme0n1p2
+   ```
+3. サブボリューム（`@` / `@home` / `@nix` / `@log`）を作成し、`compress=zstd:1,noatime` でマウントする（同一プール上のため各領域の空き容量を柔軟に共有できます）：
+   ```bash
+   sudo mount /dev/nvme0n1p2 /mnt
+   sudo btrfs subvolume create /mnt/@
+   sudo btrfs subvolume create /mnt/@home
+   sudo btrfs subvolume create /mnt/@nix
+   sudo btrfs subvolume create /mnt/@log
+   sudo umount /mnt
+
+   sudo mount -o subvol=@,compress=zstd:1,noatime /dev/nvme0n1p2 /mnt
+   sudo mkdir -p /mnt/{home,nix,var/log,boot}
+   sudo mount -o subvol=@home,compress=zstd:1,noatime /dev/nvme0n1p2 /mnt/home
+   sudo mount -o subvol=@nix,compress=zstd:1,noatime /dev/nvme0n1p2 /mnt/nix
+   sudo mount -o subvol=@log,compress=zstd:1,noatime /dev/nvme0n1p2 /mnt/var/log
+   sudo mount -o umask=0077 /dev/nvme0n1p1 /mnt/boot
+   ```
+4. `hardware-configuration.nix` を生成して `#chromebook` をインストールする：
+   ```bash
+   sudo nixos-generate-config --root /mnt
+
+   nix-shell -p git --run '
+     sudo git clone -b main https://github.com/mitac31709/MySettings.git /tmp/MySettings
+   '
+
+   sudo cp /mnt/etc/nixos/hardware-configuration.nix \
+     /tmp/MySettings/hosts/chromebook/hardware-configuration.nix
+
+   sudo NIX_CONFIG='experimental-features = nix-command flakes' \
+     nixos-install --flake /tmp/MySettings#chromebook
+   ```
+5. `MySettings` の配置・`mitac` パスワード設定・所有者変更を行ってから再起動する：
+   ```bash
+   sudo cp -a /tmp/MySettings /mnt/home/mitac/MySettings
+   sudo nixos-enter --root /mnt
+   passwd mitac
+   chown -R mitac:users /home/mitac/MySettings
+   exit
+
+   sudo umount -R /mnt
+   sudo reboot
+   ```
+
+#### 再起動後の復元と圧縮確認
+
+1. `tuigreet` で `mitac` にログインする（Sway 起動）。
+2. 退避した `~/.config/rclone/rclone.conf` を戻す（`chmod 600 ~/.config/rclone/rclone.conf`）か「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」の `rclone config` 手順を実行し、続けて `rbw login && rbw unlock` を実行する（期限切れ時は `rclone config reconnect gdrive:`）。
+3. `./scripts/restore-on-nixos.sh`（TTY 互換のため英語出力）を実行し、`/var/tmp/restore-mitac-YYYYMMDD-HHMMSS/` へ復元された `/home/mitac`・`/home/mitac/Documents/hiragino-otf/`・システム状態（Wi-Fi / Bluetooth / WARP / Tailscale）を実機へ反映する（確認後に `/var/tmp/restore-mitac-YYYYMMDD-HHMMSS/` を削除）。
+4. ヒラギノ等を戻した場合は `rebuild` を実行し、圧縮率と scrub タイマーを確認する：
+   ```bash
+   sudo compsize / /nix/store /home
+   systemctl list-timers 'btrfs-scrub*'
+   ```
+5. 最後に `gh auth login` を行い、`~/MySettings/hosts/chromebook/hardware-configuration.nix`（新しい Btrfs UUID / サブボリューム構成）をコミット・プッシュする。
 
 ## 適用手順
 
@@ -330,7 +425,7 @@ Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行�
       - 承認済みドメイン: `mitac.f5.si`（GCP プロジェクトと同じ Google アカウントで [Search Console](https://search.google.com/search-console) のドメインプロパティとして所有権を確認）
       保存後、所有権確認直後の場合は最大 24 時間待ち、ブランディング再審査を **「問題は修正した」** でリクエストしてください（指摘事項は実際の設定不備によるものなので、「指摘に誤りがある」は選ばないこと）。その後 **Audience → Publish** を押します。
       参考: [rclone: Making your own client_id](https://rclone.org/drive/#making-your-own-client-id)
-4. **対話式セットアップを実行**（rclone `gdrive` OAuth → Bitwarden 鍵 → 初回バックアップ）:
+4. **対話式セットアップを実行**（rclone `gdrive` OAuth → Bitwarden 鍵 → 初回バックアップ。プロンプトは英語表示）:
    ```bash
    backup setup          # restic-home-setup と同じ
    ```
@@ -387,7 +482,7 @@ exit
 
 既存の設定・ログインがある場合は再設定不要です。上の例はこのリポジトリと同じ Bitwarden EU 向けです。`RCLONE_CONFIG` があればその設定を使い、未指定なら `~/.config/rclone/rclone.conf`、それもなければ rclone の既定設定を使います。鍵は `rbw get restic-home` で取得し、`RESTIC_PASSWORD_FILE` / `RESTIC_PASSWORD_COMMAND` などが設定済みならそれを優先します。復元には**元の鍵**が必要です。新しい鍵の生成や `backup setup` は行わないでください。Google が `invalid_grant` を返す場合は、上のシェルで `rclone config reconnect gdrive:` を実行します。
 
-スクリプトは最新スナップショットを固定し、必要容量と空き容量を確認して、全体を `/var/tmp/restore-mitac-日時/` へ復元します。`restic restore --verify` の成功後に完了を表示します。既存ディレクトリへの上書きはせず、中断・失敗時のファイルも残します。
+スクリプトは非 CJK の TTY コンソールでも文字化けしないようすべて英語でメッセージを出力します。最新スナップショットを固定し、必要容量と空き容量を確認して、全体を `/var/tmp/restore-mitac-YYYYMMDD-HHMMSS/` へ復元します。`restic restore --verify` の成功後に `Restore and verification completed.` を表示します。既存ディレクトリへの上書きはせず、中断・失敗時のファイルも残します。
 
 - ホーム: `復元先/home/mitac/`
 - フォント: `復元先/home/mitac/Documents/hiragino-otf/`
@@ -397,7 +492,7 @@ exit
 
 ### 復元・確認（適用済みの環境）
 
-このモジュールはセットアップ、systemd ユニット、rclone 確認、および restic（リポジトリ／Bitwarden パスワードコマンド設定済み）をまとめて扱う `backup` CLI を導入します。`restic-home-setup` も `backup setup` のエイリアスとして残っています。
+このモジュールはセットアップ、systemd ユニット、rclone 確認、および restic（リポジトリ／Bitwarden パスワードコマンド設定済み）をまとめて扱う `backup` CLI（`backup --help`・`backup setup` の対話出力は TTY 互換のため英語表示）を導入します。`restic-home-setup` も `backup setup` のエイリアスとして残っています。
 
 ```bash
 backup                 # 使い方
@@ -506,6 +601,7 @@ audio-panic
 | キーボード | [cros-keyboard-map](https://github.com/WeirdTreeThing/cros-keyboard-map) 相当の `keyd`（delbin physmap）。最上段は ChromeOS キー。**Search+最上段**で F1–F10。tuigreet セッション一覧は **Search+3つ目のキー（zoom/全画面）**。**Ctrl+Alt+Del**（内蔵は **Ctrl+Alt+Backspace**）で手動 OOM killer。電源コード: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+Back=強制ログアウト** / **電源+Refresh=再起動**（`power-chords`） |
 | Flip | タブレットモード向け libinput quirk `ModelTabletModeNoSuspend=1` |
 | USB-C 電力 | `chromebook-typec-prefer-sink`: 空きポートは FORCE_SINK（壁充電器／モババッ受電）、スマホ(UFP)→ source、AC給電中の他ポート→ source。udev は partner 追加時のみ（typec CHANGE はループ防止で除外） |
+| ストレージ / Btrfs | 既定の `hardware-configuration.nix` は `ext4`。`btrfs`（`compress=zstd:1`）へ切り替える場合は「[Chromebook を btrfs 透過圧縮でクリーン再インストール](#chromebook-を-btrfs-透過圧縮でクリーン再インストール)」を参照 |
 
 ### Chromebook オーディオ確認
 
