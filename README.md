@@ -168,6 +168,97 @@ GUI インストーラを経由せず、USB から直接この flake の環境�
    - **dsh-TUI**: `npm i -g @deepseek-ai/dsh @deepseek-harness-tui/dsh-tui`
    - **ハードウェア確認**: 下記「VAIO オーディオ確認」「Chromebook オーディオ確認」「VA-API / Parsec 確認」を実行する。
 
+### Chromebook を btrfs 透過圧縮でクリーン再インストール
+
+Chromebook（delbin）を既存の `ext4` から `btrfs`（`compress=zstd:1`）へ安全に切り替える手順です。`modules/nixos/common.nix` は `fileSystems` 内の `btrfs` を自動検出し、有効化された環境でのみ `compsize` と月次の `services.btrfs.autoScrub` を組み込みます（現在の `hosts/chromebook/hardware-configuration.nix` は `ext4` のままなので、実機を入れ替える前の既存環境にも影響しません）。
+
+#### 事前準備（移行前の現在の Chromebook 上）
+
+1. **最新のバックアップを取得・確認する**：
+   ```bash
+   backup run
+   backup log
+   backup snapshots
+   ```
+2. `~/MySettings` に未プッシュの変更があれば確認して GitHub へプッシュする（`git status`）。
+3. 再インストール後にすぐ復元できるよう、**別の USB メモリ等へ秘密ファイルを退避**し、Bitwarden のログイン情報も手元に控えておく（Git には絶対に含めない）：
+   - `~/.config/rclone/rclone.conf`（OAuth `client_id` / `client_secret`・トークン入り。これを戻せば `rclone config` のやり直しを省けます）
+   - 利用している場合は `~/.ssh/id_wsl_builder`
+
+#### Live USB からの `btrfs` 導入（CLI 手順）
+
+Calamares（Graphical ISO）で `btrfs` を選ぶと初回導入時は `compress=zstd:1` が付かないため、**USB のターミナルから下記手順で最初からマウントオプション付きで導入する**のが確実です（最初の `nixos-install` 時点から `/nix/store` も圧縮されます）。
+
+1. Live USB を UEFI 起動し、日本語配列・ネットワークを設定する：
+   ```bash
+   loadkeys jp106
+   nmtui
+   ```
+2. `lsblk` で内蔵ストレージを確認し、GPT パーティション作成・フォーマットを行う（delbin は個体により NVMe の `/dev/nvme0n1` または eMMC の `/dev/mmcblk0`。以下は `nvme0n1` の例、eMMC なら `/dev/mmcblk0p1`・`p2` に読み替え。**既存 ext4 データは消去されます**）：
+   ```bash
+   sudo parted /dev/nvme0n1 -- mklabel gpt
+   sudo parted /dev/nvme0n1 -- mkpart ESP fat32 1MiB 1GiB
+   sudo parted /dev/nvme0n1 -- set 1 esp on
+   sudo parted /dev/nvme0n1 -- mkpart root btrfs 1GiB 100%
+
+   sudo mkfs.fat -F 32 -n boot /dev/nvme0n1p1
+   # 既存の ext4 署名を上書きするため -f を指定
+   sudo mkfs.btrfs -f -L nixos /dev/nvme0n1p2
+   ```
+3. サブボリューム（`@` / `@home` / `@nix` / `@log`）を作成し、`compress=zstd:1,noatime` でマウントする（同一プール上のため各領域の空き容量を柔軟に共有できます）：
+   ```bash
+   sudo mount /dev/nvme0n1p2 /mnt
+   sudo btrfs subvolume create /mnt/@
+   sudo btrfs subvolume create /mnt/@home
+   sudo btrfs subvolume create /mnt/@nix
+   sudo btrfs subvolume create /mnt/@log
+   sudo umount /mnt
+
+   sudo mount -o subvol=@,compress=zstd:1,noatime /dev/nvme0n1p2 /mnt
+   sudo mkdir -p /mnt/{home,nix,var/log,boot}
+   sudo mount -o subvol=@home,compress=zstd:1,noatime /dev/nvme0n1p2 /mnt/home
+   sudo mount -o subvol=@nix,compress=zstd:1,noatime /dev/nvme0n1p2 /mnt/nix
+   sudo mount -o subvol=@log,compress=zstd:1,noatime /dev/nvme0n1p2 /mnt/var/log
+   sudo mount -o umask=0077 /dev/nvme0n1p1 /mnt/boot
+   ```
+4. `hardware-configuration.nix` を生成して `#chromebook` をインストールする：
+   ```bash
+   sudo nixos-generate-config --root /mnt
+
+   nix-shell -p git --run '
+     sudo git clone -b main https://github.com/mitac31709/MySettings.git /tmp/MySettings
+   '
+
+   sudo cp /mnt/etc/nixos/hardware-configuration.nix \
+     /tmp/MySettings/hosts/chromebook/hardware-configuration.nix
+
+   sudo NIX_CONFIG='experimental-features = nix-command flakes' \
+     nixos-install --flake /tmp/MySettings#chromebook
+   ```
+5. `MySettings` の配置・`mitac` パスワード設定・所有者変更を行ってから再起動する：
+   ```bash
+   sudo cp -a /tmp/MySettings /mnt/home/mitac/MySettings
+   sudo nixos-enter --root /mnt
+   passwd mitac
+   chown -R mitac:users /home/mitac/MySettings
+   exit
+
+   sudo umount -R /mnt
+   sudo reboot
+   ```
+
+#### 再起動後の復元と圧縮確認
+
+1. `tuigreet` で `mitac` にログインする（Sway 起動）。
+2. 退避した `~/.config/rclone/rclone.conf` を戻す（`chmod 600 ~/.config/rclone/rclone.conf`）か「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」の `rclone config` 手順を実行し、続けて `rbw login && rbw unlock` を実行する（期限切れ時は `rclone config reconnect gdrive:`）。
+3. `./scripts/restore-on-nixos.sh` を実行し、`/var/tmp/restore-mitac-日時/` へ復元された `/home/mitac`・`/home/mitac/Documents/hiragino-otf/`・システム状態（Wi-Fi / Bluetooth / WARP / Tailscale）を実機へ反映する（確認後に `/var/tmp/restore-mitac-日時/` を削除）。
+4. ヒラギノ等を戻した場合は `rebuild` を実行し、圧縮率と scrub タイマーを確認する：
+   ```bash
+   sudo compsize / /nix/store /home
+   systemctl list-timers 'btrfs-scrub*'
+   ```
+5. 最後に `gh auth login` を行い、`~/MySettings/hosts/chromebook/hardware-configuration.nix`（新しい Btrfs UUID / サブボリューム構成）をコミット・プッシュする。
+
 ## 適用手順
 
 新しく USB から環境を構築する場合は、先に「[USB からの新規インストールと初回設定](#usb-からの新規インストールと初回設定)」を参照してください。既存バックアップからデータを戻す場合は、先に「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」を実行してください。
@@ -506,6 +597,7 @@ audio-panic
 | キーボード | [cros-keyboard-map](https://github.com/WeirdTreeThing/cros-keyboard-map) 相当の `keyd`（delbin physmap）。最上段は ChromeOS キー。**Search+最上段**で F1–F10。tuigreet セッション一覧は **Search+3つ目のキー（zoom/全画面）**。**Ctrl+Alt+Del**（内蔵は **Ctrl+Alt+Backspace**）で手動 OOM killer。電源コード: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+Back=強制ログアウト** / **電源+Refresh=再起動**（`power-chords`） |
 | Flip | タブレットモード向け libinput quirk `ModelTabletModeNoSuspend=1` |
 | USB-C 電力 | `chromebook-typec-prefer-sink`: 空きポートは FORCE_SINK（壁充電器／モババッ受電）、スマホ(UFP)→ source、AC給電中の他ポート→ source。udev は partner 追加時のみ（typec CHANGE はループ防止で除外） |
+| ストレージ / Btrfs | 既定の `hardware-configuration.nix` は `ext4`。`btrfs`（`compress=zstd:1`）へ切り替える場合は「[Chromebook を btrfs 透過圧縮でクリーン再インストール](#chromebook-を-btrfs-透過圧縮でクリーン再インストール)」を参照 |
 
 ### Chromebook オーディオ確認
 

@@ -12,10 +12,17 @@ let
   # rebuild adds --impure when the directory exists. pathExists is then real,
   # and builtins.path copies the OTFs into the store.
   hiraginoEnabled = builtins.pathExists hiraginoDir;
+  hasBtrfs = lib.any (fs: (fs.fsType or null) == "btrfs") (lib.attrValues config.fileSystems);
 in
 {
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
+
+  # Enable monthly scrub automatically once a host's hardware-configuration uses btrfs.
+  services.btrfs.autoScrub = lib.mkIf hasBtrfs {
+    enable = true;
+    interval = "monthly";
+  };
 
   # Live systemd job tree on the boot console (flake input `bootvine`).
   # This nixpkgs pin is NixOS 26.11, where the initrd is systemd-only, so the
@@ -180,19 +187,22 @@ in
     # Set a password after first boot: passwd mitac
   };
 
-  environment.systemPackages = with pkgs; [
-    # git and vim stay on the system profile for root and recovery shells.
-    # sudo's secure_path is /run/current-system/sw/bin and does not include
-    # the user Home Manager profile. programs.git (home/programs.nix) is the
-    # user's git, with name and email; this package is the unconfigured one.
-    vim
-    git
-    wget
-    curl
-    alsa-utils # amixer/alsactl — mute SOF amps if audio wedges
-    libva-utils # vainfo — verify VA-API / Parsec hw encode
-    iperf3 # LAN / WAN bandwidth test (server: -s, client: -c HOST)
-  ];
+  environment.systemPackages =
+    with pkgs;
+    [
+      # git and vim stay on the system profile for root and recovery shells.
+      # sudo's secure_path is /run/current-system/sw/bin and does not include
+      # the user Home Manager profile. programs.git (home/programs.nix) is the
+      # user's git, with name and email; this package is the unconfigured one.
+      vim
+      git
+      wget
+      curl
+      alsa-utils # amixer/alsactl — mute SOF amps if audio wedges
+      libva-utils # vainfo — verify VA-API / Parsec hw encode
+      iperf3 # LAN / WAN bandwidth test (server: -s, client: -c HOST)
+    ]
+    ++ lib.optionals hasBtrfs [ compsize ];
 
   # Cloudflare WARP (1.1.1.1): daemon + CLI, plus official GUI (warp-taskbar tray).
   services.cloudflare-warp.enable = true;
