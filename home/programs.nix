@@ -1,5 +1,11 @@
 # Shared user programs and packages (Sway session).
-{ lib, pkgs, ... }:
+{
+  lib,
+  pkgs,
+  config,
+  osConfig,
+  ...
+}:
 
 let
   email = "mitac31709@gmail.com";
@@ -9,17 +15,21 @@ let
     inherit value;
   };
 
-  # Classic Windows XP startup cue for paplay / PulseAudio.
-  # myinstants started returning 403; use the Internet Archive mirror instead.
-  windowsXpStartupWav = pkgs.fetchurl {
-    url = "https://archive.org/download/windowsxpstartup_201910/Windows%20XP%20Startup.wav";
-    hash = "sha256-j4Weu5AkcDbO0R24VISKvhQ03D/9+leV98XwbbmkI9U=";
+  # Windows 7 / Vista startup cue for paplay / PulseAudio (same Fripp boot sound).
+  # Official Media/Windows Startup.wav in Win7 is a ~0.2s stub; this is the iconic one.
+  windows7StartupWav = pkgs.fetchurl {
+    url = "https://archive.org/download/10-.-wav/Vista%20.WAV.wav";
+    name = "windows-7-startup.wav";
+    hash = "sha256-fOaAm7YsloolLoknFqr1Tqh81p9gFkq+T17LFwRg8vM=";
   };
 
   ghostty = "${pkgs.ghostty}/bin/ghostty";
   yazi = "${pkgs.yazi}/bin/yazi";
+  lazyPlugins = import ./lazy-plugins.nix { inherit pkgs lib; };
 in
 {
+  # User identity. The system profile also ships git, without this
+  # name/email, so root and a recovery shell can still run git.
   programs.git = {
     enable = true;
     settings.user = {
@@ -196,6 +206,19 @@ in
     /* keep empty — light GTK sync breaks waybar module backgrounds */
   '';
 
+  # Fcitx reads ~/.config/fcitx5 before /etc/xdg/fcitx5. These symlinks are the
+  # same INI the NixOS module writes to /etc, so an old user copy (keyboard-jp,
+  # Zenkaku as Trigger) cannot win. The store file is read-only: change the
+  # input method in modules/nixos/common.nix, not in fcitx5-configtool.
+  xdg.configFile."fcitx5/profile" = {
+    text = osConfig.environment.etc."xdg/fcitx5/profile".text;
+    force = true;
+  };
+  xdg.configFile."fcitx5/config" = {
+    text = osConfig.environment.etc."xdg/fcitx5/config".text;
+    force = true;
+  };
+
   # Bitwarden client (rbw). Holds the restic backup encryption key; see
   # modules/nixos/backup.nix. Log in once with `rbw login` after first switch.
   programs.rbw = {
@@ -217,13 +240,12 @@ in
     defaultEditor = true;
     viAlias = true;
     vimAlias = true;
-    # Plugins are managed by LazyVim / lazy.nvim (see ./nvim), not Home Manager.
-    # Mason is disabled under NixOS; put LSP / format / search CLIs here instead.
+    # LazyVim plugins and treesitter parsers come from nixpkgs
+    # (home/lazy-plugins.nix). Mason stays disabled. LSP / format / search
+    # CLIs stay here; nvim does not download them.
     extraPackages = with pkgs; [
       ripgrep
       fd
-      gcc # treesitter parser builds
-      tree-sitter # nvim-treesitter CLI requirement
       lua-language-server
       stylua
     ];
@@ -283,9 +305,9 @@ in
     };
   };
 
-  systemd.user.services.windows-xp-startup-sound = {
+  systemd.user.services.windows-7-startup-sound = {
     Unit = {
-      Description = "Windows XP startup sound";
+      Description = "Windows 7 startup sound";
       After = [
         "pulseaudio.service"
         "graphical-session.target"
@@ -295,25 +317,24 @@ in
     Service = {
       Type = "oneshot";
       ExecStartPre = "${pkgs.coreutils}/bin/sleep 3";
-      ExecStart = "${pkgs.pulseaudio}/bin/paplay ${windowsXpStartupWav}";
+      ExecStart = "${pkgs.pulseaudio}/bin/paplay ${windows7StartupWav}";
     };
     Install = {
       WantedBy = [ "graphical-session.target" ];
     };
   };
 
-  # Fcitx5 prefers ~/.config over /etc/xdg. Keep the declarative profile /
-  # config (Meltype first, TriggerKeys, ShareInputState) from being overwritten
-  # by an older user copy (e.g. keyboard-jp + Zenkaku as Trigger).
-  home.activation.syncFcitx5Profile = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    mkdir -p "$HOME/.config/fcitx5"
-    if [ -f /etc/xdg/fcitx5/profile ]; then
-      cp -f /etc/xdg/fcitx5/profile "$HOME/.config/fcitx5/profile"
-    fi
-    if [ -f /etc/xdg/fcitx5/config ]; then
-      cp -f /etc/xdg/fcitx5/config "$HOME/.config/fcitx5/config"
-    fi
+  # Writable npm global prefix (store node/npm cannot install -g into itself).
+  # Used for dsh / dsh-tui (`npm i -g @deepseek-ai/dsh @deepseek-harness-tui/dsh-tui`).
+  # allow-scripts: native helpers (node-pty / koffi / spawn helper) needed at runtime.
+  home.file.".npmrc".text = ''
+    prefix=${config.home.homeDirectory}/.npm-global
+    allow-scripts=@deepseek-ai/dsh-subprocess-local,koffi,node-pty,@google/genai,protobufjs
   '';
+
+  home.sessionPath = [
+    "${config.home.homeDirectory}/.npm-global/bin"
+  ];
 
   # Keep XDG dirs in English even with ja_JP.UTF-8 locale.
   xdg.userDirs = {
@@ -335,8 +356,11 @@ in
   xdg.configFile."nvim".source = ./nvim;
   # Keep outside lazy's plugin root (~/.local/share/nvim/lazy/): a HM symlink
   # there is seen as uninstalled (Util.ls reports "link"), so lazy tries to
-  # re-clone and fails with "should be a directory!".
+  # re-clone and fails with "should be a directory!". dev.path below is a
+  # sibling directory of real directories (linkFarm), which lazy accepts.
   xdg.dataFile."nvim/nix/lazy.nvim".source = "${pkgs.vimPlugins.lazy-nvim}";
+  xdg.dataFile."nvim/nix/plugins".source = lazyPlugins.plugins;
+  xdg.dataFile."nvim/nix/treesitter".source = lazyPlugins.treesitter;
 
   # Terminal file manager (Sway: Super+e → Ghostty -e yazi).
   # Bash wrapper `y` cds into the last dir on quit.
@@ -381,10 +405,16 @@ in
     # Archive manager GUI (7z / Zstd / zip / tar / …). Desktop: PeaZip.
     peazip
     code-cursor
+    # Zed code editor (CLI: zeditor).
+    zed-editor
     # Terminal Agent CLI (`cursor-agent`; also aliased as `agent`).
     cursor-cli
     # OpenCode 2 terminal agent (`opencode`; pkgs/opencode overrides nixpkgs 1.x).
     opencode
+    # Anthropic Claude Code CLI (`claude`).
+    claude-code
+    # Google Antigravity CLI (`agy` / `antigravity`; pkgs/antigravity).
+    antigravity
     # ChatGPT desktop (Codex included). App menu: ChatGPT.
     chatgpt
     # Grok Bot desktop agent. App menu: Grok Bot (`grok-bot`).
@@ -392,10 +422,11 @@ in
     # Earthquake map (pkgs/jquake: Sway AWT fix + sounds cwd + http.agent).
     jquake
     onlyoffice-desktopeditors
-    # Affinity v3 omitted: affinity-nix Wine builds often compile for hours
-    # when cache.forall.systems misses (and that cache is not in nix.settings).
-    # Re-enable: add affinity-v3 here and restore cache.forall.systems in
-    # modules/nixos/common.nix (extra-substituters + trusted-public-keys).
+    # 3D printer slicer (Bambu/Prusa fork). App menu: OrcaSlicer (`orca-slicer`).
+    orca-slicer
+    # Affinity v3 is not installed. The affinity-nix input and overlay were
+    # removed. Re-add steps are in the README (Affinity). Wine builds often
+    # take hours when cache.forall.systems misses.
     parsec-bin
     # Wineprefix manager for Windows apps/games (FHS-wrapped).
     (bottles.override { removeWarningPopup = true; })
@@ -420,10 +451,15 @@ in
     esptool
     # Android screen mirror / control (GUI; wraps adb + scrcpy-server).
     qtscrcpy
-    # Standalone adb / fastboot CLI (QtScrcpy also embeds adb).
+    # adb / fastboot on PATH. QtScrcpy embeds its own adb, but the cheatsheet
+    # runs `adb devices` as a separate command, so this package stays.
     android-tools
     # Node.js (`node` / `npm`) and pnpm (standalone binary; uses `node` on PATH).
     nodejs
     pnpm
+    # Typst typesetting (CLI). Cursor uses the Tinymist extension for LSP/preview.
+    typst
+    tinymist
+    typstyle
   ];
 }

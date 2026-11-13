@@ -3,6 +3,7 @@
 
 {
   imports = [
+    ./flake-tools.nix
     ./shell.nix
     ./programs.nix
     ./clipboard.nix

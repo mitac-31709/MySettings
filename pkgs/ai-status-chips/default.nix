@@ -6,11 +6,22 @@
   gobject-introspection,
   wrapGAppsHook3,
   makeWrapper,
+  pulseaudio,
+  fetchurl,
 }:
 
+let
+  # Windows Me system startup ("The Microsoft Sound", ~5.5s).
+  # Same asset as therestartpage login.wav / guidebookgallery Me startup.
+  windowsMeStartupWav = fetchurl {
+    url = "http://www.therestartpage.com/OS/media/windows-me/login.wav";
+    name = "windows-me-startup.wav";
+    hash = "sha256-Z2rgH1Ft8MJ6H5sY7inmxawdEg57qggoLYefb7InWqE=";
+  };
+in
 python3.pkgs.buildPythonApplication {
   pname = "ai-status-chips";
-  version = "0.1.0";
+  version = "0.2.1";
   format = "other";
 
   src = ./.;
@@ -37,12 +48,16 @@ python3.pkgs.buildPythonApplication {
   installPhase = ''
     runHook preInstall
     install -Dm755 ai_status_chips.py $out/bin/ai-status-chips
+    install -Dm644 ${windowsMeStartupWav} $out/share/ai-status-chips/windows-me-startup.wav
     runHook postInstall
   '';
 
   dontWrapGApps = true;
   preFixup = ''
-    wrapProgram $out/bin/ai-status-chips "''${gappsWrapperArgs[@]}"
+    wrapProgram $out/bin/ai-status-chips \
+      "''${gappsWrapperArgs[@]}" \
+      --prefix PATH : ${lib.makeBinPath [ pulseaudio ]} \
+      --set AI_STATUS_DONE_SOUND "$out/share/ai-status-chips/windows-me-startup.wav"
   '';
 
   meta = {

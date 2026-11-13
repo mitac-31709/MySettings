@@ -1,13 +1,15 @@
 # Bash aliases and helpers shared across all greetd sessions.
 {
   config,
+  lib,
   ...
 }:
 
 let
-  # Absolute flake path so `rebuild` works from $HOME (or any cwd), not only
-  # when the shell is already inside the MySettings checkout.
-  flakeUri = "${config.home.homeDirectory}/MySettings#mitac";
+  # One option (default lib/machine.nix). Works from any cwd, not only inside
+  # the checkout. The flake-update* commands are store paths.
+  flakeUri = "${config.mitac.repoPath}#${config.mitac.flakeHost}";
+  hiraginoDir = (import ../lib/machine.nix).hiraginoDir;
 in
 {
   programs.bash = {
@@ -19,10 +21,12 @@ in
       ll = "ls -la";
       bcat = "bat";
       generations = "nixos-rebuild list-generations";
-      # UniClipboard / ChatGPT .deb + nix flake update (Cursor / …).
-      flake-update = "${config.home.homeDirectory}/MySettings/scripts/flake-update.sh";
+      # .deb URLs + nix flake update of every input except nixpkgs-cursor.
+      flake-update = lib.getExe config.mitac.scripts.flakeUpdate;
+      # nixpkgs-cursor only (code-cursor / cursor-cli), same rev as nixpkgs otherwise.
+      flake-update-cursor = lib.getExe config.mitac.scripts.flakeUpdateCursor;
       # Waybar upd indicator: compare pinned debs + GitHub flake tips (no mutate).
-      flake-update-check = "${config.home.homeDirectory}/MySettings/scripts/flake-update-check.sh";
+      flake-update-check = lib.getExe config.mitac.scripts.flakeUpdateCheck;
       # Emergency: stop looping SOF amp playback (Broken pipe / stuck buffer).
       # Mute levels via the shared chromebook-speaker-levels helper (systemPackages).
       audio-panic = "chromebook-speaker-levels mute && systemctl --user restart pulseaudio.service 2>/dev/null; systemctl --user restart pipewire.service wireplumber.service 2>/dev/null; true";
@@ -67,7 +71,13 @@ in
           return 127
         }
         # Human-readable mode: pass-through eval/activation; ETA only while building.
-        sudo nixos-rebuild switch --flake ${flakeUri} |& "$nom"
+        # pathExists of the Hiragino directory is false in pure eval. Pass
+        # --impure only when the OTFs are actually on disk.
+        local -a rebuildArgs=(--flake ${lib.escapeShellArg flakeUri})
+        if [ -d ${lib.escapeShellArg hiraginoDir} ]; then
+          rebuildArgs+=(--impure)
+        fi
+        sudo nixos-rebuild switch "''${rebuildArgs[@]}" |& "$nom"
         return "''${PIPESTATUS[0]}"
       }
 

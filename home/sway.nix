@@ -9,10 +9,15 @@
 }:
 
 let
-  flakeRoot = "${config.home.homeDirectory}/MySettings";
-  flakeUpdateCheck = "${flakeRoot}/scripts/flake-update-check.sh";
-  flakeUpdate = "${flakeRoot}/scripts/flake-update.sh";
-  waybarAiStatus = "${pkgs.python3}/bin/python3 ${flakeRoot}/scripts/waybar-ai-status.py";
+  # Checkout for the waybar timer's ConditionPathExists. Scripts are store paths.
+  repoPath = config.mitac.repoPath;
+  flakeUpdateCheck = lib.getExe config.mitac.scripts.flakeUpdateCheck;
+  flakeUpdate = lib.getExe config.mitac.scripts.flakeUpdate;
+  waybarAiStatus = lib.getExe config.mitac.scripts.waybarAiStatus;
+  # Family string from nerd-fonts.jetbrains-mono (same as Ghostty).
+  # CSS does not name a CJK face. Missing glyphs go through fontconfig's
+  # defaultFonts (Hiragino, then Noto Sans CJK JP).
+  waybarFont = "JetBrainsMono Nerd Font";
   ghosttyBin = "${pkgs.ghostty}/bin/ghostty";
   openFlakeUpdate = "${ghosttyBin} -e ${flakeUpdate}";
   swaylockBin = "${pkgs.swaylock}/bin/swaylock";
@@ -21,6 +26,20 @@ let
   yaziBin = "${pkgs.yazi}/bin/yazi";
   polkitAgent = "${pkgs.kdePackages.polkit-kde-agent-1}/libexec/polkit-kde-authentication-agent-1";
   pactl = "${pkgs.pulseaudio}/bin/pactl";
+  # pactl +N% has no ceiling; PulseAudio happily goes past 100% (soft boost).
+  volumeUp = pkgs.writeShellScript "volume-up" ''
+    out="$(${pactl} get-sink-volume @DEFAULT_SINK@)" || exit 1
+    if [[ "$out" =~ ([0-9]+)% ]]; then
+      vol="''${BASH_REMATCH[1]}"
+    else
+      exit 1
+    fi
+    new=$((vol + 5))
+    if [ "$new" -gt 100 ]; then
+      new=100
+    fi
+    exec ${pactl} set-sink-volume @DEFAULT_SINK@ "''${new}%"
+  '';
   brightnessctl = "${pkgs.brightnessctl}/bin/brightnessctl";
   btopBin = "${pkgs.btop}/bin/btop";
   nmtuiBin = "${pkgs.networkmanager}/bin/nmtui";
@@ -84,6 +103,12 @@ let
       section = "起動・終了";
       label = "rofi（選択中 WS に起動）";
       keys = "Super+D / Alt+Space";
+    }
+    {
+      section = "起動・終了";
+      label = "Zed エディタ";
+      run = "zeditor";
+      mode = "exec";
     }
     {
       section = "起動・終了";
@@ -159,12 +184,12 @@ let
     }
     {
       section = "ウィンドウ・WS";
-      label = "WS1 Cursor+GPT / WS2 Vivaldi";
+      label = "WS2 Cursor+Grok / WS3 Vivaldi（WS1 空き）";
       keys = "起動時";
     }
     {
       section = "ウィンドウ・WS";
-      label = "外部リンク → Vivaldi(WS2)へフォーカス";
+      label = "外部リンク → Vivaldi(WS3)へフォーカス";
     }
     {
       section = "ウィンドウ・WS";
@@ -188,7 +213,7 @@ let
     }
     {
       section = "スクショ・音量・輝度";
-      label = "± / ミュート / 輝度 ±5%";
+      label = "±5%（音量は最大100%） / ミュート / 輝度";
       keys = "音量 / MicMute / 輝度キー";
     }
     # 入力・Chromebook
@@ -201,6 +226,11 @@ let
       section = "入力・Chromebook";
       label = "Meltype 内: 英数 ⇔ 日本語";
       keys = "半角/全角";
+    }
+    {
+      section = "入力・Chromebook";
+      label = "←↓↑→ ・ … など";
+      keys = "zh/zj/zk/zl / z/ z.";
     }
     {
       section = "入力・Chromebook";
@@ -296,6 +326,11 @@ let
     }
     {
       section = "Yazi / Neovim";
+      label = "隠しファイル既定ON（切替: ツリー H / 検索 Alt-h）";
+      keys = "H / Alt-h";
+    }
+    {
+      section = "Yazi / Neovim";
       label = "定義 / 参照 / ホバー";
       keys = "gd / gr / K";
     }
@@ -380,8 +415,18 @@ let
     }
     {
       section = "Waybar・日常";
-      label = "エージェント画面操作中（ChatGPT / Cursorブラウザ）";
+      label = "AI完了音（Windows Me）";
+      keys = "チップ末尾の「完了音」で ON/OFF／作業終了時に再生";
+    }
+    {
+      section = "Waybar・日常";
+      label = "画面操作中（ChatGPT CUA / Cursorブラウザ）";
       keys = "青枠＋バナー＋チャット";
+    }
+    {
+      section = "Waybar・日常";
+      label = "画面操作HUDを非表示（エージェントは継続）";
+      keys = "非表示";
     }
     {
       section = "Waybar・日常";
@@ -420,8 +465,14 @@ let
     }
     {
       section = "NixOS";
-      label = "入力＋Cursor/ChatGPT 等更新";
+      label = "入力＋.deb 更新（nixpkgs-cursor 以外）";
       run = "flake-update";
+      mode = "term";
+    }
+    {
+      section = "NixOS";
+      label = "Cursor だけ更新（nixpkgs-cursor）";
+      run = "flake-update-cursor";
       mode = "term";
     }
     {
@@ -429,6 +480,10 @@ let
       label = "適用（sudo 後・nom ETA）";
       run = "rebuild";
       mode = "term";
+    }
+    {
+      section = "NixOS";
+      label = "注: hiragino-otf があるとき rebuild は --impure";
     }
     {
       section = "NixOS";
@@ -475,9 +530,50 @@ let
     }
     {
       section = "開発";
+      label = "Claude Code";
+      run = "claude";
+      mode = "term";
+    }
+    {
+      section = "開発";
+      label = "Antigravity";
+      run = "agy";
+      mode = "term";
+    }
+    {
+      section = "開発";
+      label = "dsh-TUI";
+      run = "dsh-tui";
+      mode = "term";
+    }
+    {
+      section = "開発";
+      label = "dsh-TUI 更新";
+      run = "npm i -g @deepseek-ai/dsh @deepseek-harness-tui/dsh-tui";
+      mode = "term";
+    }
+    {
+      section = "開発";
       label = "pnpm / node";
       run = "pnpm --version; node --version";
       mode = "term";
+    }
+    {
+      section = "開発";
+      label = "Typst コンパイル（PDF）";
+      run = "typst compile main.typ";
+      mode = "term";
+    }
+    {
+      section = "開発";
+      label = "Typst 監視コンパイル";
+      run = "typst watch main.typ";
+      mode = "term";
+    }
+    {
+      section = "開発";
+      label = "Cursor: Tinymist プレビュー";
+      keys = "コマンドパレット → Typst Preview";
     }
     {
       section = "開発";
@@ -531,6 +627,30 @@ let
       section = "ディスク容量";
       label = "ログ使用量（上限1G）";
       run = "journalctl --disk-usage";
+      mode = "term";
+    }
+    {
+      section = "ディスク容量";
+      label = "journal を 200M に真空";
+      run = "sudo journalctl --vacuum-size=200M";
+      mode = "show";
+    }
+    {
+      section = "ディスク容量";
+      label = "/tmp remotion 残骸削除";
+      run = "rm -rf /tmp/remotion-* /tmp/react-motion-render* && df -h /";
+      mode = "show";
+    }
+    {
+      section = "ディスク容量";
+      label = "Downloads .tmp 残骸確認";
+      run = "du -sh ~/Downloads/.tmp_* 2>/dev/null; ls -la ~/Downloads/.tmp_* 2>/dev/null";
+      mode = "term";
+    }
+    {
+      section = "ディスク容量";
+      label = "restic-bak 残骸確認（復元済みなら削除可）";
+      run = "du -sh ~/restic-bak; du -xh --max-depth=2 ~/restic-bak | sort -hr | head";
       mode = "term";
     }
     {
@@ -708,6 +828,13 @@ let
       section = "ネット・BT・WARP";
       label = "注: バッファは遅延・並べ替え向け。本当に落ちた RTP は復元不可 → 解像度↓/同一LAN/TCP";
     }
+    # 3D印刷
+    {
+      section = "3D印刷";
+      label = "Orca Slicer";
+      run = "orca-slicer";
+      mode = "exec";
+    }
     # Windows 連携
     {
       section = "Windows 連携";
@@ -805,6 +932,10 @@ let
     {
       section = "バックアップ";
       label = "注: --target なしは /home/mitac を上書き（危険）";
+    }
+    {
+      section = "バックアップ";
+      label = "注: ~/MySettings 含む（復元先 …/home/mitac/MySettings）";
     }
     # 電源・Type-C
     {
@@ -962,6 +1093,16 @@ let
   '';
 in
 {
+  # On PATH once. programs.sway.extraPackages no longer links these.
+  # Binds still call the store paths above, which are the same packages.
+  home.packages = [
+    pkgs.swayidle
+    pkgs.grim
+    pkgs.slurp
+    pkgs.brightnessctl
+    pkgs.jq
+  ];
+
   wayland.windowManager.sway = {
     enable = true;
     package = null; # use system programs.sway
@@ -972,15 +1113,16 @@ in
       terminal = ghosttyBin;
       menu = rofiLauncher;
 
-      # Fixed autostart apps: place by criteria (ChatGPT is native Wayland).
+      # Fixed autostart apps: place by criteria (Grok Bot is Electron/ozone).
+      # Leave WS1 empty for ad-hoc windows; session apps land on 2/3.
       assigns = {
-        "1" = [
-          { app_id = "cursor"; }
-          { app_id = "chatgpt"; }
-          # Pre-Wayland launches (ozone x11 / XWayland).
-          { class = "ChatGPT"; }
-        ];
         "2" = [
+          { app_id = "cursor"; }
+          { app_id = "grok-bot"; }
+          # Pre-Wayland launches (ozone x11 / XWayland).
+          { class = "grok-bot"; }
+        ];
+        "3" = [
           { app_id = "vivaldi-stable"; }
         ];
       };
@@ -1074,7 +1216,7 @@ in
 
           "${mod}+v" = "exec clipboard-history";
           # Volume / mic (PulseAudio on sof-rt5682 Chromebook).
-          "XF86AudioRaiseVolume" = "exec ${pactl} set-sink-volume @DEFAULT_SINK@ +5%";
+          "XF86AudioRaiseVolume" = "exec ${volumeUp}";
           "XF86AudioLowerVolume" = "exec ${pactl} set-sink-volume @DEFAULT_SINK@ -5%";
           "XF86AudioMute" = "exec ${pactl} set-sink-mute @DEFAULT_SINK@ toggle";
           "XF86AudioMicMute" = "exec ${pactl} set-source-mute @DEFAULT_SOURCE@ toggle";
@@ -1101,11 +1243,11 @@ in
         { command = polkitAgent; }
         { command = "fcitx5 -d --replace"; }
         # cliphist store: home/clipboard.nix systemd user units
-        # Fixed session apps (assigns: WS1 cursor/ChatGPT, WS2 vivaldi).
+        # Fixed session apps (assigns: WS2 cursor/Grok Bot, WS3 vivaldi; WS1 empty).
         # NIXOS_OZONE_WL enables Cursor's --enable-wayland-ime (Meltype/fcitx5).
         { command = "env NIXOS_OZONE_WL=1 cursor"; }
         { command = "vivaldi"; }
-        { command = "chatgpt"; }
+        { command = "grok-bot"; }
         { command = "swaymsg 'workspace number 1'"; }
         # waybar: programs.waybar.systemd (MemoryMax / Restart)
         {
@@ -1125,7 +1267,7 @@ in
       for_window [app_id="showmethekey-gtk"] floating enable, sticky enable, border none
       for_window [app_id="one.alynx.showmethekey"] floating enable, sticky enable, border none
       # External http(s) opens (xdg-open → existing Vivaldi) set urgent but do not
-      # activate across workspaces (focus_on_window_activation is smart). Raise WS2.
+      # activate across workspaces (focus_on_window_activation is smart). Raise WS3.
       for_window [app_id="vivaldi-stable" urgent=latest] focus
       # Layout-independent cheatsheet (rofi; same as waybar ?)
       # --inhibited: work even when Cursor/Electron inhibit compositor shortcuts.
@@ -1162,7 +1304,7 @@ in
   systemd.user.services.flake-update-check = {
     Unit = {
       Description = "Check MySettings flake / pinned .deb updates for waybar";
-      ConditionPathExists = "${flakeRoot}/flake.nix";
+      ConditionPathExists = "${repoPath}/flake.nix";
     };
     Service = {
       Type = "oneshot";
@@ -1172,7 +1314,7 @@ in
   systemd.user.timers.flake-update-check = {
     Unit = {
       Description = "Periodic flake update check for waybar";
-      ConditionPathExists = "${flakeRoot}/flake.nix";
+      ConditionPathExists = "${repoPath}/flake.nix";
     };
     Timer = {
       # Boot+3min often races Wi‑Fi/WARP; fetches then fail spuriously.
@@ -1288,6 +1430,7 @@ in
         pulseaudio = {
           format = "vol {volume}%";
           format-muted = "mute";
+          max-volume = 100;
           on-click = "${pactl} set-sink-mute @DEFAULT_SINK@ toggle";
         };
         clock = {
@@ -1342,8 +1485,9 @@ in
       * {
         border: none;
         border-radius: 0;
-        /* CJK fallback: JetBrains Mono alone metrics-clip Japanese in a short bar. */
-        font-family: "JetBrainsMono Nerd Font", "Noto Sans CJK JP", sans-serif;
+        /* Latin and icons: nerd-fonts.jetbrains-mono. CJK is fontconfig
+           (defaultFonts: Hiragino, then Noto), not a second family here. */
+        font-family: "${waybarFont}", sans-serif;
         font-size: 11px;
         min-height: 0;
       }
@@ -1430,7 +1574,7 @@ in
         background: transparent;
       }
       window.side #custom-updates {
-        font-family: "JetBrainsMono Nerd Font", "Noto Sans CJK JP", sans-serif;
+        font-family: "${waybarFont}", sans-serif;
         font-size: 13px;
         min-width: 34px;
         padding: 8px 0;
@@ -1445,7 +1589,7 @@ in
         border-top: 2px solid #33c5c5;
       }
       window.side #custom-ai {
-        font-family: "JetBrainsMono Nerd Font", "Noto Sans CJK JP", sans-serif;
+        font-family: "${waybarFont}", sans-serif;
         font-size: 13px;
         min-width: 34px;
         padding: 8px 0;

@@ -1,9 +1,18 @@
 {
   config,
   pkgs,
+  lib,
   ...
 }:
-
+let
+  machine = import ../../lib/machine.nix;
+  hiraginoDir = machine.hiraginoDir;
+  # Pure eval cannot read an absolute path outside the flake: pathExists is
+  # false, so `nix flake check` and machines without the fonts still evaluate.
+  # rebuild adds --impure when the directory exists. pathExists is then real,
+  # and builtins.path copies the OTFs into the store.
+  hiraginoEnabled = builtins.pathExists hiraginoDir;
+in
 {
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
@@ -103,17 +112,41 @@
   # after changing this (single-instance ignores flags on --new-window).
   environment.sessionVariables.NIXOS_OZONE_WL = "1";
 
-  fonts.packages = with pkgs; [
-    nerd-fonts.jetbrains-mono
-    noto-fonts-color-emoji
-    hiragino-fonts
-  ];
+  fonts.packages =
+    with pkgs;
+    [
+      nerd-fonts.jetbrains-mono
+      noto-fonts-color-emoji
+      # Typst / docs often request "Noto Sans CJK JP" by name.
+      # Also the sans / mono fallback when Hiragino is not installed.
+      noto-fonts-cjk-sans
+      # Serif fallback (Hiragino Mincho ProN) when the local OTFs are absent.
+      noto-fonts-cjk-serif
+    ]
+    ++ lib.optionals hiraginoEnabled [
+      (pkgs.callPackage ../../pkgs/hiragino {
+        src = builtins.path {
+          path = hiraginoDir;
+          name = "hiragino-otf";
+          filter = path: type: type == "directory" || lib.hasSuffix ".otf" (lib.toLower path);
+        };
+      })
+    ];
+  # First family wins when it is installed. Missing families are skipped,
+  # so Noto CJK is the default whenever Hiragino is not in fonts.packages.
   fonts.fontconfig.defaultFonts = {
-    sansSerif = [ "Hiragino Kaku Gothic ProN" ];
-    serif = [ "Hiragino Mincho ProN" ];
+    sansSerif = [
+      "Hiragino Kaku Gothic ProN"
+      "Noto Sans CJK JP"
+    ];
+    serif = [
+      "Hiragino Mincho ProN"
+      "Noto Serif CJK JP"
+    ];
     monospace = [
       "JetBrainsMono Nerd Font"
       "Hiragino Kaku Gothic ProN"
+      "Noto Sans CJK JP"
     ];
     emoji = [ "Noto Color Emoji" ];
   };
@@ -123,10 +156,10 @@
       "nix-command"
       "flakes"
     ];
-    # Affinity omitted (home/programs.nix): do not hard-depend on
-    # cache.forall.systems — a wrong RTC before NTP makes every fetch fail
-    # with SSL "certificate is not yet valid", and misses also stall rebuild.
-    # When re-enabling affinity-v3, restore:
+    # Affinity is not installed (input and overlay removed; see README).
+    # Do not hard-depend on cache.forall.systems — a wrong RTC before NTP
+    # makes every fetch fail with SSL "certificate is not yet valid", and
+    # misses also stall rebuild. When re-enabling affinity-v3, restore:
     #   extra-substituters = [ "https://cache.forall.systems" ];
     #   extra-trusted-public-keys = [
     #     "cache.forall.systems:5PmD7QO4MSF8YgyRZtkSGXRDo96H3bybIf2SsQh8ScI="
@@ -148,6 +181,10 @@
   };
 
   environment.systemPackages = with pkgs; [
+    # git and vim stay on the system profile for root and recovery shells.
+    # sudo's secure_path is /run/current-system/sw/bin and does not include
+    # the user Home Manager profile. programs.git (home/programs.nix) is the
+    # user's git, with name and email; this package is the unconfigured one.
     vim
     git
     wget
