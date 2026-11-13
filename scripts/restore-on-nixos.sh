@@ -1,43 +1,57 @@
 #!/usr/bin/env bash
-# Restore the existing home backup before rebuilding NixOS.
+# OS ビルド前（初期日本語 LXQt 等）または再構築後に /home バックアップを復元するスクリプト。
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/restore-on-nixos.sh [EXTRACT_DIR]
+使い方: ./scripts/restore-on-nixos.sh [EXTRACT_DIR]
 
-Run as user mitac on the target NixOS machine (without sudo).
-Missing tools (restic, rclone, jq) are fetched via nix shell.
+対象 NixOS マシン上でユーザー mitac として実行します（sudo は付けない）。
+不足ツール（restic / rclone / jq / rbw / pinentry）は nix shell で自動取得します。
 
-Source: rclone:gdrive:restic/mitac-home (existing encrypted backup)
-Default (no arguments):
-  Verifies with restic --verify in temporary /var/tmp staging, then restores
-  all backed-up files directly to their original locations:
-    - Home: /home/mitac (overwrites existing files; keeps newly authenticated
-      rclone.conf only when OAuth was configured/reconnected in this run)
-    - System state (via sudo): /etc/NetworkManager/system-connections,
+復元元: rclone:gdrive:restic/mitac-home
+既定（引数なし）:
+  /var/tmp の一時領域で restic --verify による検証を完了させた後、
+  バックアップ済みファイルを元の位置へ上書き復元します:
+    - ホーム: /home/mitac（既存ファイルを上書き。ただし今回の実行中に
+      新規取得・再認証・Bitwarden 反映した rclone.conf のみ保持）
+    - システム状態（必要時のみ sudo）: /etc/NetworkManager/system-connections,
       /var/lib/bluetooth, /var/lib/cloudflare-warp, /var/lib/tailscale
-With EXTRACT_DIR (new absolute directory path):
-  Extracts and verifies into EXTRACT_DIR only without touching /home or /etc.
+EXTRACT_DIR 指定時（未作成の絶対パス）:
+  /home や /etc には触れず、EXTRACT_DIR 配下への展開と検証のみを行います。
 
-Prerequisites: check Bitwarden item 'restic-home' on another device.
-If gdrive: or RESTIC_PASSWORD* is missing, prompts interactively for:
-  1. Google OAuth client_id
-  2. Google OAuth client_secret
-  3. Google OAuth refresh_token (or token JSON; Enter = interactive OAuth)
-  4. Encryption password (password field of restic-home)
+Bitwarden (rbw) 自動入力とフォールバック:
+  - gdrive: リモートまたは暗号化パスワードが未設定の場合、Bitwarden の項目
+    'restic-home'（RBW_ITEM で変更可）から自動取得を試みます。
+  - rbw が未設定なら公式 EU クラウド（home/programs.nix と同じ設定。
+    メール既定: mitac31709@gmail.com、pinentry は GUI で pinentry-qt /
+    非 GUI で pinentry-curses）を自動設定してからログイン／ロック解除します。
+  - 項目 'restic-home' のパスワード欄を restic 暗号化パスワードとして使用し、
+    カスタムフィールドまたはメモ欄の client_id / client_secret /
+    refresh_token（または token JSON）から gdrive: を自動構成します。
+  - 一部または全部が未登録、あるいは手動入力を選んだ場合は、足りない値だけ
+    対話入力またはブラウザ OAuth（rclone config reconnect gdrive:）で補えます。
 
-Existing RCLONE_CONFIG (~/.config/rclone/rclone.conf or ~/.rclone.conf) and
-RESTIC_PASSWORD / RESTIC_PASSWORD_FILE / RESTIC_PASSWORD_COMMAND are honored.
+既存の RCLONE_CONFIG（~/.config/rclone/rclone.conf / ~/.rclone.conf）や
+RESTIC_PASSWORD / RESTIC_PASSWORD_FILE / RESTIC_PASSWORD_COMMAND がある場合は
+そちらを優先します（RESTORE_NO_RBW=1 で rbw 利用を抑止可能）。
+環境変数 RBW_ITEM / RBW_EMAIL / RBW_BASE_URL も利用できます。
 EOF
 }
 
 GDRIVE_CONFIGURED_THIS_RUN=0
+RBW_ITEM=${RBW_ITEM:-restic-home}
+RBW_FETCHED=0
+RBW_DECLINED=0
+RBW_CLIENT_ID=""
+RBW_CLIENT_SECRET=""
+RBW_TOKEN_JSON=""
+RBW_PASSWORD=""
 
 fail() { printf '%s\n' "$*" >&2; exit 1; }
 
 check_platform() {
-  [[ -f /etc/NIXOS ]] || fail 'Run this script on a NixOS machine.'
-  [[ $(id -un) == mitac ]] || fail 'Run as user mitac (without sudo).'
+  [[ -f /etc/NIXOS ]] || fail 'このスクリプトは NixOS マシン上で実行してください。'
+  [[ $(id -un) == mitac ]] || fail 'ユーザー mitac で実行してください（sudo は付けない）。'
 }
 
 trim_ws() {
@@ -144,7 +158,7 @@ restore_system_state() {
       continue
     fi
     if (( prompted == 0 )); then
-      printf '\nApplying system state via sudo...\n' >&2
+      printf '\nsudo でシステム状態を反映します...\n' >&2
       prompted=1
     fi
     run_sudo mkdir -p -- "$dest"
@@ -191,6 +205,9 @@ normalize_token_input() {
     ' <<<"$raw" 2>/dev/null
     return $?
   fi
+  if [[ $raw == *[[:space:]]* ]]; then
+    return 1
+  fi
   jq -nc --arg rt "$raw" \
     '{access_token:"x",token_type:"Bearer",refresh_token:$rt,expiry:"2000-01-01T00:00:00Z"}'
 }
@@ -209,70 +226,311 @@ resolve_rclone_config() {
   fi
 }
 
+has_rbw() {
+  [[ ${RESTORE_NO_RBW:-0} != 1 ]] && command -v rbw >/dev/null 2>&1
+}
+
+desired_pinentry_cmd() {
+  if [[ -n ${DISPLAY:-} || -n ${WAYLAND_DISPLAY:-} ]]; then
+    if command -v pinentry-qt >/dev/null 2>&1; then
+      command -v pinentry-qt
+      return 0
+    fi
+  fi
+  if command -v pinentry-curses >/dev/null 2>&1; then
+    command -v pinentry-curses
+    return 0
+  fi
+  if command -v pinentry-qt >/dev/null 2>&1; then
+    command -v pinentry-qt
+    return 0
+  fi
+  if command -v pinentry >/dev/null 2>&1; then
+    command -v pinentry
+    return 0
+  fi
+  return 1
+}
+
+configured_pinentry_works() {
+  command -v rbw >/dev/null 2>&1 || return 1
+  command -v jq >/dev/null 2>&1 || return 1
+  local cfg p
+  cfg=$(rbw config show 2>/dev/null || true)
+  p=$(jq -r '.pinentry // empty' <<<"$cfg" 2>/dev/null || true)
+  [[ -n $p && $p != pinentry ]] && command -v "$p" >/dev/null 2>&1
+}
+
+ensure_rbw_configured() {
+  local rbw_conf="${XDG_CONFIG_HOME:-$HOME/.config}/rbw/config.json"
+  local conf_ro=0
+  if [[ -L $rbw_conf && ! -w $rbw_conf ]] || { [[ -e $rbw_conf && ! -w $rbw_conf ]]; }; then
+    conf_ro=1
+  fi
+
+  local cfg_json
+  cfg_json=$(rbw config show 2>/dev/null || printf '{}')
+  if ! jq -e 'type == "object"' >/dev/null 2>&1 <<<"$cfg_json"; then
+    cfg_json='{}'
+  fi
+
+  local cur_email cur_base_url cur_identity_url cur_ui_url cur_notifications_url cur_pinentry
+  cur_email=$(jq -r '.email // empty' <<<"$cfg_json" 2>/dev/null || true)
+  cur_base_url=$(jq -r '.base_url // empty' <<<"$cfg_json" 2>/dev/null || true)
+  cur_identity_url=$(jq -r '.identity_url // empty' <<<"$cfg_json" 2>/dev/null || true)
+  cur_ui_url=$(jq -r '.ui_url // empty' <<<"$cfg_json" 2>/dev/null || true)
+  cur_notifications_url=$(jq -r '.notifications_url // empty' <<<"$cfg_json" 2>/dev/null || true)
+  cur_pinentry=$(jq -r '.pinentry // empty' <<<"$cfg_json" 2>/dev/null || true)
+
+  local changed=0
+  if [[ -z $cur_email ]]; then
+    if (( conf_ro == 1 )); then
+      printf 'rbw 設定ファイル (%s) が読み取り専用かつ未設定のため初期設定できません。\n' "$rbw_conf" >&2
+      return 1
+    fi
+    local email=""
+    if [[ -n ${RBW_EMAIL:-} ]]; then
+      email=$RBW_EMAIL
+    elif [[ -t 0 ]]; then
+      printf 'Bitwarden メールアドレス [Enter で mitac31709@gmail.com]: ' >&2
+      email=$(read_trimmed) || fail 'メールアドレスの入力が中断されました。'
+      email=${email:-mitac31709@gmail.com}
+    else
+      return 1
+    fi
+    rbw config set email "$email"
+    changed=1
+
+    if [[ -z $cur_base_url ]]; then
+      local target_base=${RBW_BASE_URL:-https://api.bitwarden.eu}
+      rbw config set base_url "$target_base"
+      if [[ $target_base == "https://api.bitwarden.eu" ]]; then
+        [[ -n $cur_identity_url ]] || rbw config set identity_url "${RBW_IDENTITY_URL:-https://identity.bitwarden.eu}"
+        [[ -n $cur_ui_url ]] || rbw config set ui_url "${RBW_UI_URL:-https://vault.bitwarden.eu}"
+        [[ -n $cur_notifications_url ]] || rbw config set notifications_url "${RBW_NOTIFICATIONS_URL:-https://notifications.bitwarden.eu}"
+      else
+        [[ -z ${RBW_IDENTITY_URL:-} ]] || rbw config set identity_url "$RBW_IDENTITY_URL"
+        [[ -z ${RBW_UI_URL:-} ]] || rbw config set ui_url "$RBW_UI_URL"
+        [[ -z ${RBW_NOTIFICATIONS_URL:-} ]] || rbw config set notifications_url "$RBW_NOTIFICATIONS_URL"
+      fi
+      printf 'rbw を初期設定しました (email: %s, server: %s)。\n' "$email" "$target_base" >&2
+    else
+      printf 'rbw のメールアドレスを設定しました (%s)。\n' "$email" >&2
+    fi
+  fi
+
+  if (( conf_ro == 0 )); then
+    if [[ -z $cur_pinentry || $cur_pinentry == pinentry ]] || ! command -v "$cur_pinentry" >/dev/null 2>&1; then
+      local target_pinentry=""
+      if target_pinentry=$(desired_pinentry_cmd); then
+        rbw config set pinentry "$target_pinentry"
+        changed=1
+      fi
+    fi
+  fi
+
+  if (( changed == 1 )); then
+    rbw stop-agent >/dev/null 2>&1 || true
+  fi
+  return 0
+}
+
+ensure_rbw_unlocked() {
+  local force_prompt=${1:-0}
+  if rbw unlocked >/dev/null 2>&1; then
+    return 0
+  fi
+  if [[ ! -t 0 ]]; then
+    return 1
+  fi
+
+  if (( force_prompt == 0 )); then
+    printf "\nBitwarden (rbw) から項目 '%s' の設定・鍵を自動取得しますか？ [Y/n] " "$RBW_ITEM" >&2
+    local reply=""
+    reply=$(read_trimmed) || fail '入力が中断されました。'
+    case $reply in
+      ''|y|Y|yes|YES) ;;
+      *)
+        RBW_DECLINED=1
+        return 1
+        ;;
+    esac
+  fi
+
+  ensure_rbw_configured || return 1
+
+  local action=""
+  while true; do
+    if ! rbw unlocked >/dev/null 2>&1; then
+      printf 'Bitwarden (rbw) へログイン／ロック解除します...\n' >&2
+      if rbw login && rbw unlock; then
+        :
+      else
+        printf '\nBitwarden (rbw) のログインまたはロック解除に失敗しました。\n' >&2
+        printf '公式 Bitwarden サーバーでは初回のみ端末登録（rbw register + Personal API Key）が必要な場合があります。\n' >&2
+        while true; do
+          printf '選択: [r]bw register を実行して再試行, [l]ogin/unlock を再試行, [m]手動入力へ切替, [q]中止 [r/l/m/q]: ' >&2
+          action=$(read_trimmed) || fail '操作選択が中断されました。'
+          case $action in
+            r|R)
+              rbw register || true
+              if rbw login && rbw unlock; then
+                break
+              fi
+              printf 'ログインまたはロック解除に失敗しました。\n' >&2
+              ;;
+            l|L)
+              if rbw login && rbw unlock; then
+                break
+              fi
+              printf 'ログインまたはロック解除に失敗しました。\n' >&2
+              ;;
+            m|M)
+              RBW_DECLINED=1
+              return 1
+              ;;
+            q|Q)
+              fail '中止しました。'
+              ;;
+            *)
+              printf 'r, l, m, q のいずれかを入力してください。\n' >&2
+              ;;
+          esac
+        done
+      fi
+    fi
+    if rbw unlocked >/dev/null 2>&1; then
+      break
+    fi
+  done
+  return 0
+}
+
+clean_rbw_field_value() {
+  local v
+  v=$(trim_ws "$1")
+  if [[ ${#v} -ge 2 ]]; then
+    if [[ ( $v == \"*\" ) || ( $v == \'*\' ) ]]; then
+      v=${v:1:${#v}-2}
+      v=$(trim_ws "$v")
+    fi
+  fi
+  case $v in
+    ""|"(not set)"|"(未設定)"|"null"|"NULL"|"none"|"NONE")
+      printf ''
+      return 0
+      ;;
+    \<*\>)
+      printf ''
+      return 0
+      ;;
+  esac
+  printf '%s' "$v"
+}
+
+rbw_extract_custom_field() {
+  local target_norm=$1 json=$2
+  jq -r --arg k "$target_norm" '
+    [ .fields[]?
+      | select((.name? // "" | tostring | ascii_downcase | gsub("[-_[:space:]]+"; "")) == $k)
+      | (.value? // "" | tostring)
+    ][0] // empty
+  ' <<<"$json" 2>/dev/null || true
+}
+
+load_from_rbw() {
+  local force_sync=${1:-0}
+  has_rbw || return 1
+  if (( force_sync == 0 )) && (( RBW_FETCHED == 1 )); then
+    return 0
+  fi
+  if (( force_sync == 0 )) && (( RBW_DECLINED == 1 )); then
+    return 1
+  fi
+
+  ensure_rbw_unlocked "$force_sync" || return 1
+  if (( force_sync == 1 )); then
+    rbw sync || printf '警告: rbw sync に失敗しました（ローカルキャッシュを参照します）。\n' >&2
+  else
+    rbw sync >/dev/null 2>&1 || true
+  fi
+
+  local raw_json=""
+  if ! raw_json=$(rbw get --raw "$RBW_ITEM" 2>/dev/null) || [[ -z $raw_json ]]; then
+    printf "警告: Bitwarden の項目 '%s' を取得できませんでした（項目名・rbw sync を確認してください）。\n" "$RBW_ITEM" >&2
+    return 1
+  fi
+  if ! jq -e 'type == "object"' >/dev/null 2>&1 <<<"$raw_json"; then
+    printf "警告: Bitwarden の項目 '%s' の出力形式を解釈できませんでした。\n" "$RBW_ITEM" >&2
+    return 1
+  fi
+
+  RBW_PASSWORD=$(jq -r '.data.password // empty' <<<"$raw_json" 2>/dev/null || true)
+
+  local f_cid f_csec f_rt f_tok
+  f_cid=$(clean_rbw_field_value "$(rbw_extract_custom_field clientid "$raw_json")")
+  f_csec=$(clean_rbw_field_value "$(rbw_extract_custom_field clientsecret "$raw_json")")
+  f_rt=$(clean_rbw_field_value "$(rbw_extract_custom_field refreshtoken "$raw_json")")
+  f_tok=$(clean_rbw_field_value "$(rbw_extract_custom_field token "$raw_json")")
+
+  local n_cid="" n_csec="" n_rt="" n_tok=""
+  local notes line raw_key norm_key raw_val cleaned_val
+  notes=$(jq -r '([.notes, .data.notes] | map(select(type == "string" and length > 0)) | .[0]) // ""' <<<"$raw_json" 2>/dev/null || true)
+  while IFS= read -r line || [[ -n $line ]]; do
+    line=${line%$'\r'}
+    if [[ $line =~ ^[[:space:]]*[-*]?[[:space:]]*([A-Za-z][A-Za-z0-9_[:space:]-]*)[[:space:]]*[:=][[:space:]]*(.*)$ ]]; then
+      raw_key=${BASH_REMATCH[1]}
+      raw_val=${BASH_REMATCH[2]}
+      norm_key=${raw_key,,}
+      norm_key=${norm_key//[-_[:space:]]/}
+      case $norm_key in
+        clientid)
+          cleaned_val=$(clean_rbw_field_value "$raw_val")
+          [[ -z $cleaned_val ]] || n_cid=$cleaned_val
+          ;;
+        clientsecret)
+          cleaned_val=$(clean_rbw_field_value "$raw_val")
+          [[ -z $cleaned_val ]] || n_csec=$cleaned_val
+          ;;
+        refreshtoken)
+          cleaned_val=$(clean_rbw_field_value "$raw_val")
+          [[ -z $cleaned_val ]] || n_rt=$cleaned_val
+          ;;
+        token)
+          cleaned_val=$(clean_rbw_field_value "$raw_val")
+          [[ -z $cleaned_val ]] || n_tok=$cleaned_val
+          ;;
+      esac
+    fi
+  done <<<"$notes"
+
+  RBW_CLIENT_ID=${f_cid:-$n_cid}
+  RBW_CLIENT_SECRET=${f_csec:-$n_csec}
+
+  RBW_TOKEN_JSON=""
+  local tok_cand="" normalized_tok=""
+  for tok_cand in "$f_rt" "$f_tok" "$n_rt" "$n_tok"; do
+    [[ -n $tok_cand ]] || continue
+    if normalized_tok=$(normalize_token_input "$tok_cand") && [[ -n $normalized_tok ]]; then
+      RBW_TOKEN_JSON=$normalized_tok
+      break
+    else
+      printf "警告: Bitwarden '%s' 内の refresh_token / token の形式が不正なため無視しました。\n" "$RBW_ITEM" >&2
+    fi
+  done
+
+  RBW_FETCHED=1
+  return 0
+}
+
 probe_gdrive() {
   rclone about gdrive: --contimeout 10s --timeout 30s --retries 1 --low-level-retries 1
 }
 
-configure_gdrive() {
-  local existing_id="" existing_secret="" dump_json=""
-  if [[ -f $RCLONE_CONFIG ]]; then
-    dump_json=$(rclone config dump 2>/dev/null || true)
-    if [[ -n $dump_json ]]; then
-      existing_id=$(jq -r '.gdrive.client_id // empty' <<<"$dump_json" 2>/dev/null || true)
-      existing_secret=$(jq -r '.gdrive.client_secret // empty' <<<"$dump_json" 2>/dev/null || true)
-    fi
-  fi
-
-  local client_id="" client_secret="" id_preview=""
-  while [[ -z $client_id ]]; do
-    if [[ -n $existing_id ]]; then
-      id_preview=${existing_id:0:12}
-      if (( ${#existing_id} > 12 )); then
-        id_preview="${id_preview}..."
-      fi
-      printf 'Google OAuth client_id [Enter to keep %s]: ' "$id_preview" >&2
-      client_id=$(read_trimmed) || fail 'Aborted while reading Google OAuth client_id.'
-      if [[ -z $client_id ]]; then
-        client_id=$existing_id
-      fi
-    else
-      printf 'Google OAuth client_id: ' >&2
-      client_id=$(read_trimmed) || fail 'Aborted while reading Google OAuth client_id.'
-      if [[ -z $client_id ]]; then
-        printf 'Google OAuth client_id is required.\n' >&2
-      fi
-    fi
-  done
-
-  while [[ -z $client_secret ]]; do
-    if [[ -n $existing_secret ]]; then
-      printf 'Google OAuth client_secret [Enter to keep existing]: ' >&2
-      client_secret=$(read_trimmed) || fail 'Aborted while reading Google OAuth client_secret.'
-      if [[ -z $client_secret ]]; then
-        client_secret=$existing_secret
-      fi
-    else
-      printf 'Google OAuth client_secret: ' >&2
-      client_secret=$(read_trimmed) || fail 'Aborted while reading Google OAuth client_secret.'
-      if [[ -z $client_secret ]]; then
-        printf 'Google OAuth client_secret is required.\n' >&2
-      fi
-    fi
-  done
-
-  local raw_token="" token_json=""
-  while true; do
-    printf 'Google OAuth refresh_token (or token JSON; Enter for OAuth): ' >&2
-    raw_token=$(read_trimmed) || fail 'Aborted while reading Google OAuth refresh_token.'
-    if [[ -z $raw_token ]]; then
-      token_json=""
-      break
-    fi
-    if token_json=$(normalize_token_input "$raw_token") && [[ -n $token_json ]]; then
-      break
-    fi
-    printf 'Invalid token JSON (expected object with refresh_token or access_token).\n' >&2
-  done
+write_gdrive_config() {
+  local client_id=$1
+  local client_secret=$2
+  local token_json=${3:-}
 
   mkdir -p -- "$(dirname -- "$RCLONE_CONFIG")"
   touch -- "$RCLONE_CONFIG"
@@ -286,22 +544,106 @@ configure_gdrive() {
       token "$token_json" \
       config_refresh_token false \
       config_is_local false >/dev/null
-    chmod 600 -- "$RCLONE_CONFIG"
   else
     rclone config create gdrive drive \
       client_id "$client_id" \
       client_secret "$client_secret" \
       scope drive \
       config_is_local false >/dev/null
-    chmod 600 -- "$RCLONE_CONFIG"
-    printf '\nStarting interactive OAuth for gdrive:.\n' >&2
-    printf "If this machine has no browser, answer 'n' to 'Use auto config?' and authorize on another device.\n" >&2
+  fi
+  chmod 600 -- "$RCLONE_CONFIG"
+  GDRIVE_CONFIGURED_THIS_RUN=1
+}
+
+configure_gdrive() {
+  local default_id=${1:-}
+  local default_secret=${2:-}
+  local default_token_json=${3:-}
+  local prefer_default=${4:-0}
+
+  local existing_id="" existing_secret="" dump_json=""
+  if [[ -f $RCLONE_CONFIG ]]; then
+    dump_json=$(rclone config dump 2>/dev/null || true)
+    if [[ -n $dump_json ]]; then
+      existing_id=$(jq -r '.gdrive.client_id // empty' <<<"$dump_json" 2>/dev/null || true)
+      existing_secret=$(jq -r '.gdrive.client_secret // empty' <<<"$dump_json" 2>/dev/null || true)
+    fi
+  fi
+
+  if (( prefer_default == 1 )); then
+    [[ -n $default_id ]] && existing_id=$default_id
+    [[ -n $default_secret ]] && existing_secret=$default_secret
+  else
+    [[ -n $existing_id ]] || existing_id=$default_id
+    [[ -n $existing_secret ]] || existing_secret=$default_secret
+  fi
+
+  local client_id="" client_secret="" id_preview=""
+  while [[ -z $client_id ]]; do
+    if [[ -n $existing_id ]]; then
+      id_preview=${existing_id:0:12}
+      if (( ${#existing_id} > 12 )); then
+        id_preview="${id_preview}..."
+      fi
+      printf 'Google OAuth client_id [Enter で維持: %s]: ' "$id_preview" >&2
+      client_id=$(read_trimmed) || fail 'client_id の入力が中断されました。'
+      if [[ -z $client_id ]]; then
+        client_id=$existing_id
+      fi
+    else
+      printf 'Google OAuth client_id: ' >&2
+      client_id=$(read_trimmed) || fail 'client_id の入力が中断されました。'
+      if [[ -z $client_id ]]; then
+        printf 'Google OAuth client_id は必須です。\n' >&2
+      fi
+    fi
+  done
+
+  while [[ -z $client_secret ]]; do
+    if [[ -n $existing_secret ]]; then
+      printf 'Google OAuth client_secret [Enter で既存値を維持]: ' >&2
+      client_secret=$(read_trimmed) || fail 'client_secret の入力が中断されました。'
+      if [[ -z $client_secret ]]; then
+        client_secret=$existing_secret
+      fi
+    else
+      printf 'Google OAuth client_secret: ' >&2
+      client_secret=$(read_trimmed) || fail 'client_secret の入力が中断されました。'
+      if [[ -z $client_secret ]]; then
+        printf 'Google OAuth client_secret は必須です。\n' >&2
+      fi
+    fi
+  done
+
+  local raw_token="" token_json=""
+  if [[ -n $default_token_json ]]; then
+    token_json=$default_token_json
+  else
+    while true; do
+      printf 'Google OAuth refresh_token（または token JSON。空 Enter でブラウザ OAuth）: ' >&2
+      raw_token=$(read_trimmed) || fail 'refresh_token の入力が中断されました。'
+      if [[ -z $raw_token ]]; then
+        token_json=""
+        break
+      fi
+      if token_json=$(normalize_token_input "$raw_token") && [[ -n $token_json ]]; then
+        break
+      fi
+      printf 'token JSON の形式が不正です（refresh_token または access_token を含む JSON オブジェクトが必要です）。\n' >&2
+    done
+  fi
+
+  if [[ -n $token_json ]]; then
+    write_gdrive_config "$client_id" "$client_secret" "$token_json"
+  else
+    write_gdrive_config "$client_id" "$client_secret"
+    printf '\ngdrive: の対話式 OAuth 認証を開始します。\n' >&2
+    printf "実機にブラウザーがない環境では 'Use auto config?' に 'n' と答え、別端末で認証してください。\n" >&2
     if ! rclone config reconnect gdrive:; then
-      printf 'Interactive OAuth did not complete.\n' >&2
+      printf '対話式 OAuth 認証が完了しませんでした。\n' >&2
     fi
     chmod 600 -- "$RCLONE_CONFIG"
   fi
-  GDRIVE_CONFIGURED_THIS_RUN=1
 }
 
 ensure_gdrive_remote() {
@@ -310,29 +652,63 @@ ensure_gdrive_remote() {
   local remotes=""
   remotes=$(rclone listremotes 2>/dev/null || true)
   if ! grep -Fxq 'gdrive:' <<<"$remotes"; then
-    [[ -t 0 ]] || fail "Remote gdrive: is missing in ${RCLONE_CONFIG}. Configure it first or run interactively."
-    printf '\nRemote gdrive: is not configured (%s).\n' "$RCLONE_CONFIG" >&2
-    printf "Check Bitwarden item 'restic-home' on another device and enter Google Drive OAuth values:\n" >&2
-    configure_gdrive
+    local used_rbw=0
+    if load_from_rbw 0; then
+      used_rbw=1
+    fi
+    if [[ -n $RBW_CLIENT_ID && -n $RBW_CLIENT_SECRET && -n $RBW_TOKEN_JSON ]]; then
+      write_gdrive_config "$RBW_CLIENT_ID" "$RBW_CLIENT_SECRET" "$RBW_TOKEN_JSON"
+      printf "Bitwarden (%s) から gdrive: を自動設定しました。\n" "$RBW_ITEM" >&2
+    else
+      [[ -t 0 ]] || fail "リモート gdrive: が ${RCLONE_CONFIG} に見つかりません。事前に rclone を設定するか、rbw をロック解除状態にするか、対話環境で実行してください。"
+      printf '\nリモート gdrive: が未設定です (%s)。\n' "$RCLONE_CONFIG" >&2
+      if (( used_rbw == 1 )); then
+        printf "Bitwarden (%s) の OAuth 情報に不足があるため、不足項目のみ確認します:\n" "$RBW_ITEM" >&2
+      else
+        printf "Bitwarden の項目 '%s' などを確認して Google Drive OAuth 情報を入力してください:\n" "$RBW_ITEM" >&2
+      fi
+      configure_gdrive "$RBW_CLIENT_ID" "$RBW_CLIENT_SECRET" "$RBW_TOKEN_JSON" 1
+    fi
   fi
 
   local action=""
   while ! probe_gdrive; do
-    [[ -t 0 ]] || fail 'Failed to access Google Drive remote gdrive:.'
-    printf '\nFailed to access Google Drive remote gdrive:.\n' >&2
+    [[ -t 0 ]] || fail 'Google Drive リモート gdrive: への接続に失敗しました。'
+    printf '\nGoogle Drive リモート gdrive: への接続に失敗しました。\n' >&2
     while true; do
-      printf 'Choose: [r]e-enter values, [o]auth reconnect, [t]ry again, or [q]uit [r/o/t/q]: ' >&2
-      action=$(read_trimmed) || fail 'Aborted while reading action.'
+      printf '選択: [b]Bitwarden (rbw) を同期して再読込, [r]値を手動入力, [o]OAuth ブラウザ再接続, [t]再試行, [q]中止 [b/r/o/t/q]: ' >&2
+      action=$(read_trimmed) || fail '操作選択が中断されました。'
       case $action in
+        b|B)
+          if ! has_rbw; then
+            printf 'rbw が利用できないため [r] または [o] を選択してください。\n' >&2
+            continue
+          fi
+          RBW_FETCHED=0
+          RBW_DECLINED=0
+          if load_from_rbw 1; then
+            if [[ -n $RBW_CLIENT_ID && -n $RBW_CLIENT_SECRET && -n $RBW_TOKEN_JSON ]]; then
+              write_gdrive_config "$RBW_CLIENT_ID" "$RBW_CLIENT_SECRET" "$RBW_TOKEN_JSON"
+              printf "Bitwarden (%s) から gdrive: を再設定しました。\n" "$RBW_ITEM" >&2
+              break
+            elif [[ -n $RBW_CLIENT_ID || -n $RBW_CLIENT_SECRET || -n $RBW_TOKEN_JSON ]]; then
+              printf "Bitwarden (%s) の一部項目のみ取得できたため、不足分を確認します:\n" "$RBW_ITEM" >&2
+              configure_gdrive "$RBW_CLIENT_ID" "$RBW_CLIENT_SECRET" "$RBW_TOKEN_JSON" 1
+              break
+            else
+              printf "Bitwarden (%s) に OAuth 項目（client_id / client_secret / refresh_token）が見つかりませんでした。\n" "$RBW_ITEM" >&2
+            fi
+          fi
+          ;;
         r|R)
-          configure_gdrive
+          configure_gdrive "$RBW_CLIENT_ID" "$RBW_CLIENT_SECRET" "" 0
           break
           ;;
         o|O)
-          printf '\nStarting interactive OAuth reconnect for gdrive:.\n' >&2
-          printf "If this machine has no browser, answer 'n' to 'Use auto config?' and authorize on another device.\n" >&2
+          printf '\ngdrive: の対話式 OAuth 再接続を開始します。\n' >&2
+          printf "実機にブラウザーがない環境では 'Use auto config?' に 'n' と答え、別端末で認証してください。\n" >&2
           if ! rclone config reconnect gdrive:; then
-            printf 'Interactive OAuth reconnect did not complete.\n' >&2
+            printf '対話式 OAuth 再接続が完了しませんでした。\n' >&2
           fi
           chmod 600 -- "$RCLONE_CONFIG" 2>/dev/null || true
           GDRIVE_CONFIGURED_THIS_RUN=1
@@ -342,36 +718,97 @@ ensure_gdrive_remote() {
           break
           ;;
         q|Q)
-          fail 'Aborted.'
+          fail '中止しました。'
           ;;
         *)
-          printf 'Enter r, o, t, or q.\n' >&2
+          printf 'b, r, o, t, q のいずれかを入力してください。\n' >&2
           ;;
       esac
     done
   done
 }
 
+need_rbw_upfront() {
+  [[ ${RESTORE_NO_RBW:-0} != 1 ]] || return 1
+  resolve_rclone_config
+  local have_gdrive=0 have_pw=0
+  if [[ -f $RCLONE_CONFIG ]] && grep -Eiq '^[[:space:]]*\[gdrive\][[:space:]]*$' -- "$RCLONE_CONFIG"; then
+    have_gdrive=1
+  fi
+  if [[ -v RESTIC_PASSWORD || -n ${RESTIC_PASSWORD_FILE:-} || -n ${RESTIC_PASSWORD_COMMAND:-} ]]; then
+    have_pw=1
+  fi
+  if (( have_gdrive == 0 || have_pw == 0 )); then
+    return 0
+  fi
+  return 1
+}
+
 ensure_tools() {
-  local tool script
-  local -a tools=(rclone restic jq)
-  for tool in "${tools[@]}"; do
-    if ! command -v "$tool" >/dev/null; then
-      command -v nix >/dev/null || fail 'Nix is required to fetch restore tools.'
-      script="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/$(basename -- "${BASH_SOURCE[0]}")"
-      printf 'Fetching restore tools via nix shell...\n'
-      # The inner shell expands its own arguments and tool names.
-      # shellcheck disable=SC2016
-      exec nix --extra-experimental-features 'nix-command flakes' shell \
-        nixpkgs#restic nixpkgs#rclone nixpkgs#jq \
-        --command bash -c '
-          for tool in restic rclone jq; do
-            command -v "$tool" >/dev/null || exit 1
-          done
-          exec bash "$@"
-        ' restore-tools "$script" "$@"
+  local pinentry_pkg=""
+  if [[ -n ${DISPLAY:-} || -n ${WAYLAND_DISPLAY:-} ]]; then
+    pinentry_pkg=pinentry-qt
+  else
+    pinentry_pkg=pinentry-curses
+  fi
+
+  local need_core=0 tool
+  for tool in rclone restic jq; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+      need_core=1
+      break
     fi
   done
+
+  local need_rbw=0 need_pinentry=0
+  if need_rbw_upfront; then
+    if ! command -v rbw >/dev/null 2>&1; then
+      need_rbw=1
+    fi
+    if ! configured_pinentry_works && ! desired_pinentry_cmd >/dev/null 2>&1; then
+      if ! { command -v rbw >/dev/null 2>&1 && rbw unlocked >/dev/null 2>&1; }; then
+        need_pinentry=1
+      fi
+    fi
+  fi
+
+  local run_nix=0
+  if (( need_core == 1 )); then
+    command -v nix >/dev/null 2>&1 || fail '不足しているツール（restic / rclone / jq）の取得に nix コマンドが必要です。'
+    run_nix=1
+  elif (( need_rbw == 1 || need_pinentry == 1 )) && command -v nix >/dev/null 2>&1; then
+    run_nix=1
+  fi
+
+  if (( run_nix == 1 )); then
+    local script
+    script="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/$(basename -- "${BASH_SOURCE[0]}")"
+    local -a nix_pkgs=(nixpkgs#restic nixpkgs#rclone nixpkgs#jq)
+    local -a verify_cmds=(restic rclone jq)
+    if [[ ${RESTORE_NO_RBW:-0} != 1 ]] && { (( need_rbw == 1 )) || ! command -v rbw >/dev/null 2>&1; }; then
+      nix_pkgs+=(nixpkgs#rbw)
+      verify_cmds+=(rbw)
+    fi
+    if [[ ${RESTORE_NO_RBW:-0} != 1 ]] && { (( need_pinentry == 1 )) || { ! configured_pinentry_works && ! desired_pinentry_cmd >/dev/null 2>&1; }; }; then
+      nix_pkgs+=("nixpkgs#${pinentry_pkg}")
+      verify_cmds+=("$pinentry_pkg")
+    fi
+
+    local verify_list="${verify_cmds[*]}"
+    printf 'nix shell で不足ツールを取得しています (%s)...\n' "$verify_list"
+    # 内側の bash が位置引数とツール名を展開する。
+    # shellcheck disable=SC2016
+    exec nix --extra-experimental-features 'nix-command flakes' shell \
+      "${nix_pkgs[@]}" \
+      --command bash -c '
+        IFS=" " read -r -a _tools <<<"$1"
+        for tool in "${_tools[@]}"; do
+          command -v "$tool" >/dev/null 2>&1 || exit 1
+        done
+        shift
+        exec bash "$@"
+      ' restore-tools "$verify_list" "$script" "$@"
+  fi
 }
 
 main() {
@@ -381,7 +818,7 @@ main() {
     usage
     return 0
   fi
-  (( $# <= 1 )) || fail 'Too many arguments. See --help.'
+  (( $# <= 1 )) || fail '引数が多すぎます。--help を確認してください。'
   local explicit_target=${1:-}
   local root_prefix=${RESTORE_ROOT:-/}
   root_prefix=${root_prefix%/}
@@ -390,13 +827,13 @@ main() {
 
   if [[ -n $explicit_target ]]; then
     target=$explicit_target
-    [[ $target == /* ]] || fail 'Target path must be absolute. See --help.'
-    [[ ! -e $target && ! -L $target ]] || fail "Target already exists. Choose a new directory: $target"
+    [[ $target == /* ]] || fail '展開先パスは絶対パスで指定してください（--help を参照）。'
+    [[ ! -e $target && ! -L $target ]] || fail "指定された展開先は既に存在します。新しいディレクトリを指定してください: $target"
     parent=$(dirname -- "$target")
-    [[ -d $parent && -w $parent ]] || fail "Parent directory is not writable: $parent"
+    [[ -d $parent && -w $parent ]] || fail "親ディレクトリに書き込み権限がありません: $parent"
   else
     parent=$stage_parent
-    [[ -d $parent && -w $parent ]] || fail "Staging parent directory is not writable: $parent"
+    [[ -d $parent && -w $parent ]] || fail "一時ステージ用の親ディレクトリに書き込み権限がありません: $parent"
   fi
 
   check_platform
@@ -405,57 +842,118 @@ main() {
 
   export RESTIC_REPOSITORY=rclone:gdrive:restic/mitac-home
 
-  # Let restic compare timestamps, then pin the snapshot before checking its size.
+  # 先にスナップショット ID を固定してから必要容量・復元を行う。
   local snapshot_id="" snapshots_json="" stats required_bytes available_bytes
   if [[ ! -v RESTIC_PASSWORD && -z ${RESTIC_PASSWORD_FILE:-} && -z ${RESTIC_PASSWORD_COMMAND:-} ]]; then
-    [[ -t 0 ]] || fail 'Set RESTIC_PASSWORD, RESTIC_PASSWORD_FILE, or RESTIC_PASSWORD_COMMAND, or run interactively.'
-    local pw="" retry=""
-    while true; do
-      printf "Enter restic encryption password (Bitwarden item 'restic-home', input hidden): " >&2
-      IFS= read -rs pw || fail 'Aborted while reading restic encryption password.'
-      printf '\n' >&2
-      if [[ -z $pw ]]; then
-        printf 'Password cannot be empty.\n' >&2
-        continue
+    local pw_resolved=0 rbw_attempted=0
+    if has_rbw && (( RBW_DECLINED == 0 )); then
+      if load_from_rbw 0; then
+        rbw_attempted=1
+        if [[ -n $RBW_PASSWORD ]]; then
+          export RESTIC_PASSWORD=$RBW_PASSWORD
+          printf "Bitwarden (%s) から取得した暗号化パスワードでリポジトリを確認しています...\n" "$RBW_ITEM" >&2
+          if snapshots_json=$(restic snapshots --json latest); then
+            pw_resolved=1
+          else
+            unset RESTIC_PASSWORD
+            printf "Bitwarden (%s) のパスワードでは restic リポジトリを開けませんでした。\n" "$RBW_ITEM" >&2
+          fi
+        else
+          printf "Bitwarden (%s) のパスワード欄が空です。\n" "$RBW_ITEM" >&2
+        fi
       fi
-      export RESTIC_PASSWORD=$pw
-      if snapshots_json=$(restic snapshots --json latest); then
-        break
+    fi
+
+    if (( pw_resolved == 0 )); then
+      [[ -t 0 ]] || fail 'RESTIC_PASSWORD / RESTIC_PASSWORD_FILE / RESTIC_PASSWORD_COMMAND を設定するか、rbw をロック解除状態にするか、対話環境で実行してください。'
+
+      local use_manual_pw=1 pw_action=""
+      if (( rbw_attempted == 1 )) && has_rbw; then
+        use_manual_pw=0
+        while (( use_manual_pw == 0 && pw_resolved == 0 )); do
+          printf '選択: [b]Bitwarden (rbw) を同期して再試行, [m]パスワードを手動入力, [q]中止 [b/m/q]: ' >&2
+          pw_action=$(read_trimmed) || fail '操作選択が中断されました。'
+          case $pw_action in
+            b|B)
+              RBW_FETCHED=0
+              RBW_DECLINED=0
+              if load_from_rbw 1; then
+                if [[ -n $RBW_PASSWORD ]]; then
+                  export RESTIC_PASSWORD=$RBW_PASSWORD
+                  printf "Bitwarden (%s) から再取得したパスワードでリポジトリを確認しています...\n" "$RBW_ITEM" >&2
+                  if snapshots_json=$(restic snapshots --json latest); then
+                    pw_resolved=1
+                    break
+                  fi
+                  unset RESTIC_PASSWORD
+                  printf "Bitwarden (%s) のパスワードでは restic リポジトリを開けませんでした。\n" "$RBW_ITEM" >&2
+                else
+                  printf "Bitwarden (%s) のパスワード欄が空です。\n" "$RBW_ITEM" >&2
+                fi
+              fi
+              ;;
+            m|M)
+              use_manual_pw=1
+              ;;
+            q|Q)
+              fail '中止しました。'
+              ;;
+            *)
+              printf 'b, m, q のいずれかを入力してください。\n' >&2
+              ;;
+          esac
+        done
       fi
-      printf 'Failed to open restic repository with entered password.\n' >&2
-      printf 'Retry password? [Y/n] ' >&2
-      retry=$(read_trimmed) || fail 'Aborted while reading choice.'
-      case $retry in
-        ''|y|Y|yes|YES) continue ;;
-        *)
-          unset RESTIC_PASSWORD
-          fail 'Aborted.'
-          ;;
-      esac
-    done
+
+      local pw="" retry=""
+      while (( pw_resolved == 0 )); do
+        printf "restic 暗号化パスワードを入力してください（Bitwarden 項目 '%s'、入力は非表示）: " "$RBW_ITEM" >&2
+        IFS= read -rs pw || fail '暗号化パスワードの入力が中断されました。'
+        printf '\n' >&2
+        if [[ -z $pw ]]; then
+          printf 'パスワードは空にできません。\n' >&2
+          continue
+        fi
+        export RESTIC_PASSWORD=$pw
+        if snapshots_json=$(restic snapshots --json latest); then
+          pw_resolved=1
+          break
+        fi
+        printf '入力されたパスワードで restic リポジトリを開けませんでした。\n' >&2
+        printf 'パスワードを再入力しますか？ [Y/n] ' >&2
+        retry=$(read_trimmed) || fail '操作選択が中断されました。'
+        case $retry in
+          ''|y|Y|yes|YES) continue ;;
+          *)
+            unset RESTIC_PASSWORD
+            fail '中止しました。'
+            ;;
+        esac
+      done
+    fi
   else
     snapshots_json=$(restic snapshots --json latest)
   fi
-  snapshot_id=$(jq -er '.[0].id // empty' <<<"$snapshots_json") || fail 'No snapshot found to restore.'
-  [[ $snapshot_id =~ ^[0-9a-f]{64}$ ]] || fail 'No snapshot found to restore.'
+  snapshot_id=$(jq -er '.[0].id // empty' <<<"$snapshots_json") || fail '復元対象のスナップショットが見つかりませんでした。'
+  [[ $snapshot_id =~ ^[0-9a-f]{64}$ ]] || fail '復元対象のスナップショットが見つかりませんでした。'
   restic snapshots "$snapshot_id"
   stats=$(restic stats "$snapshot_id" --mode restore-size --json)
   required_bytes=$(jq -er '.total_size | select(type == "number" and . >= 0) | floor' <<<"$stats")
-  printf 'Required restore size: %s bytes\n' "$required_bytes"
+  printf '復元に必要なサイズ: %s バイト\n' "$required_bytes"
   df -h -- "$parent"
   available_bytes=$(df --output=avail -B1 -- "$parent" | tail -n 1)
-  (( available_bytes >= required_bytes )) || fail 'Insufficient free disk space. Pass a new target directory on another disk.'
+  (( available_bytes >= required_bytes )) || fail '空き容量が不足しています。別のディスク上の新しい展開先ディレクトリを指定してください。'
 
   if [[ -n $explicit_target ]]; then
-    # Extract to an explicit directory only without modifying /home or /etc.
+    # 指定ディレクトリへ展開・検証のみ行い、/home や /etc は変更しない。
     mkdir -m 700 -- "$target"
     restic restore "$snapshot_id" --target "$target" --verify
     printf '%s\n' "$snapshot_id" > "$target/.restored-snapshot-id"
-    printf '\nRestore and verification completed.\n'
-    printf 'Extracted to: %s\n' "$target"
-    printf 'Home: %s/home/mitac\n' "$target"
-    printf 'System state: %s/run/restic-backups-home/system\n' "$target"
-    printf 'Fonts: %s/home/mitac/Documents/hiragino-otf\n' "$target"
+    printf '\n復元と検証が完了しました。\n'
+    printf '展開先: %s\n' "$target"
+    printf 'ホーム: %s/home/mitac\n' "$target"
+    printf 'システム状態: %s/run/restic-backups-home/system\n' "$target"
+    printf 'フォント: %s/home/mitac/Documents/hiragino-otf\n' "$target"
     return 0
   fi
 
@@ -485,12 +983,12 @@ main() {
   restore_system_state "${stage_dir}/run/restic-backups-home/system" "$root_prefix"
   rm -rf -- "$stage_dir"
 
-  printf '\nRestore and verification completed.\n'
-  printf 'Snapshot: %s\n' "$snapshot_id"
-  printf 'Home: %s\n' "$target_home"
-  printf 'System state: %s/etc/NetworkManager/system-connections, %s/var/lib/{bluetooth,cloudflare-warp,tailscale}\n' "$root_prefix" "$root_prefix"
-  printf 'Fonts (if backed up): %s/Documents/hiragino-otf\n' "$target_home"
-  printf 'If rebuilding NixOS from ~/MySettings, add --impure when Documents/hiragino-otf exists.\n'
+  printf '\n復元と検証が完了しました。\n'
+  printf 'スナップショット: %s\n' "$snapshot_id"
+  printf 'ホーム: %s\n' "$target_home"
+  printf 'システム状態: %s/etc/NetworkManager/system-connections, %s/var/lib/{bluetooth,cloudflare-warp,tailscale}\n' "$root_prefix" "$root_prefix"
+  printf 'フォント（バックアップ時）: %s/Documents/hiragino-otf\n' "$target_home"
+  printf '%s/MySettings から NixOS を再ビルドする際、Documents/hiragino-otf がある場合は --impure を付けてください。\n' "$target_home"
 }
 
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then

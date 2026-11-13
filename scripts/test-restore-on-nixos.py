@@ -18,7 +18,7 @@ import unittest
 
 
 SCRIPT = Path(__file__).resolve().with_name("restore-on-nixos.sh")
-SUCCESS = "Restore and verification completed."
+SUCCESS = "復元と検証が完了しました。"
 
 
 def run_in_pty(command, *, cwd, env, steps, timeout=15):
@@ -112,7 +112,7 @@ class RestoreIntegrationTest(unittest.TestCase):
         cls.environment = {
             key: value
             for key, value in os.environ.items()
-            if not key.startswith(("RESTIC_", "RCLONE_"))
+            if not key.startswith(("RESTIC_", "RCLONE_", "RBW_", "RESTORE_"))
         }
         cls.environment.update(
             HOME=str(cls.home),
@@ -120,6 +120,7 @@ class RestoreIntegrationTest(unittest.TestCase):
             RCLONE_CONFIG=str(cls.config),
             RESTIC_CACHE_DIR=str(cls.root / "restic-cache"),
             RESTIC_PASSWORD="disposable-local-fixture-password",
+            RESTORE_NO_RBW="1",
             TZ="UTC",
         )
         cls.run_restic("init")
@@ -258,10 +259,10 @@ class RestoreIntegrationTest(unittest.TestCase):
             cwd=self.root,
             env=environment,
             steps=[
-                ("Enter restic encryption password", ""),
-                ("Password cannot be empty", "wrong-password"),
-                ("Retry password? [Y/n]", "y"),
-                ("input hidden):", "disposable-local-fixture-password"),
+                ("restic 暗号化パスワードを入力してください", ""),
+                ("パスワードは空にできません。", "wrong-password"),
+                ("パスワードを再入力しますか？ [Y/n]", "y"),
+                ("入力は非表示）:", "disposable-local-fixture-password"),
             ],
             timeout=60,
         )
@@ -363,7 +364,7 @@ class RestoreIntegrationTest(unittest.TestCase):
 
 
 class RestorePromptTest(unittest.TestCase):
-    """Exercise interactive rclone/password setup without requiring real Google/restic."""
+    """Exercise interactive rbw/rclone/password setup without requiring real Google/Bitwarden/restic."""
 
     FAKE_HASH = "a" * 64
 
@@ -382,6 +383,9 @@ class RestorePromptTest(unittest.TestCase):
         self.home.mkdir()
         self.bin = self.root / "bin"
         self.bin.mkdir()
+        self.rbw_state = self.root / "rbw-state"
+        self.rbw_state.mkdir()
+        self.rbw_log = self.root / "rbw.log"
         self.target = self.root / "target-restore"
         self.capture = self.root / "captured.txt"
         self.sudo_log = self.root / "sudo.log"
@@ -391,7 +395,10 @@ class RestorePromptTest(unittest.TestCase):
         self.environment = {
             key: value
             for key, value in os.environ.items()
-            if not key.startswith(("RESTIC_", "RCLONE_", "XDG_CONFIG_HOME", "RESTORE_"))
+            if not key.startswith(
+                ("RESTIC_", "RCLONE_", "XDG_CONFIG_HOME", "RESTORE_", "RBW_")
+            )
+            and key not in ("DISPLAY", "WAYLAND_DISPLAY")
         }
         self.environment.update(
             HOME=str(self.home),
@@ -400,8 +407,34 @@ class RestorePromptTest(unittest.TestCase):
             CAPTURE_FILE=str(self.capture),
             SUDO_LOG=str(self.sudo_log),
             RESTORE_STAGE_PARENT=str(self.stage_parent),
+            RESTORE_NO_RBW="1",
+            RBW_STATE_DIR=str(self.rbw_state),
+            RBW_LOG=str(self.rbw_log),
             FAKE_HASH=self.FAKE_HASH,
         )
+
+    def rbw_env(self, **extra):
+        env = {k: v for k, v in self.environment.items() if k != "RESTORE_NO_RBW"}
+        env.update(extra)
+        return env
+
+    def write_rbw_item(self, data, filename="item.json"):
+        path = self.rbw_state / filename
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    def write_rbw_config(self, cfg):
+        conf = self.rbw_state / "config.json"
+        conf.write_text(json.dumps(cfg), encoding="utf-8")
+        return conf
+
+    def read_rbw_config(self):
+        return json.loads((self.rbw_state / "config.json").read_text(encoding="utf-8"))
+
+    def read_rbw_log(self):
+        if not self.rbw_log.exists():
+            return []
+        return self.rbw_log.read_text(encoding="utf-8").splitlines()
 
     def install_shims(self):
         sudo_shim = self.bin / "sudo"
@@ -416,6 +449,113 @@ class RestorePromptTest(unittest.TestCase):
             encoding="utf-8",
         )
         sudo_shim.chmod(0o700)
+
+        for pin_name in ("pinentry-qt", "pinentry-curses"):
+            pin_shim = self.bin / pin_name
+            pin_shim.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            pin_shim.chmod(0o700)
+
+        rbw_shim = self.bin / "rbw"
+        rbw_shim.write_text(
+            '#!/usr/bin/env bash\n'
+            'set -euo pipefail\n'
+            'state=${RBW_STATE_DIR:?}\n'
+            'mkdir -p "$state"\n'
+            'conf="${state}/config.json"\n'
+            '[[ -f $conf ]] || printf "{}" > "$conf"\n'
+            'log="${RBW_LOG:-$state/rbw.log}"\n'
+            'printf "%s\\n" "$*" >> "$log"\n'
+            'cmd=${1:-}\n'
+            'shift || true\n'
+            'case "$cmd" in\n'
+            '  config)\n'
+            '    sub=${1:-}\n'
+            '    shift || true\n'
+            '    case "$sub" in\n'
+            '      show)\n'
+            '        cat "$conf"\n'
+            '        ;;\n'
+            '      set)\n'
+            '        key=${1:-}\n'
+            '        val=${2:-}\n'
+            '        tmp=$(mktemp "$state/config.XXXXXX")\n'
+            '        jq --arg k "$key" --arg v "$val" \'.[$k] = $v\' "$conf" > "$tmp"\n'
+            '        mv -f "$tmp" "$conf"\n'
+            '        ;;\n'
+            '      *)\n'
+            '        exit 1\n'
+            '        ;;\n'
+            '    esac\n'
+            '    ;;\n'
+            '  stop-agent)\n'
+            '    exit 0\n'
+            '    ;;\n'
+            '  unlocked)\n'
+            '    [[ -f "$state/unlocked" ]]\n'
+            '    ;;\n'
+            '  register)\n'
+            '    if [[ ${RBW_SHIM_REGISTER_FAIL:-0} == 1 ]]; then\n'
+            '      exit 1\n'
+            '    fi\n'
+            '    touch "$state/registered"\n'
+            '    ;;\n'
+            '  login)\n'
+            '    if [[ ${RBW_SHIM_NEED_REGISTER:-0} == 1 && ! -f "$state/registered" ]]; then\n'
+            '      printf "rbw login: device registration required\\n" >&2\n'
+            '      exit 1\n'
+            '    fi\n'
+            '    if [[ ${RBW_SHIM_LOGIN_FAIL:-0} == 1 ]]; then\n'
+            '      printf "rbw login: failed\\n" >&2\n'
+            '      exit 1\n'
+            '    fi\n'
+            '    ;;\n'
+            '  unlock)\n'
+            '    if [[ ${RBW_SHIM_UNLOCK_FAIL:-0} == 1 ]]; then\n'
+            '      printf "rbw unlock: failed\\n" >&2\n'
+            '      exit 1\n'
+            '    fi\n'
+            '    touch "$state/unlocked"\n'
+            '    ;;\n'
+            '  sync)\n'
+            '    if [[ ${RBW_SHIM_SYNC_FAIL:-0} == 1 ]]; then\n'
+            '      printf "rbw sync: simulated error\\n" >&2\n'
+            '      exit 1\n'
+            '    fi\n'
+            '    if [[ -f "$state/first-sync-done" ]]; then\n'
+            '      if [[ -n ${RBW_RESYNC_ITEM_FILE:-} && -f ${RBW_RESYNC_ITEM_FILE} ]]; then\n'
+            '        cp -f "$RBW_RESYNC_ITEM_FILE" "$state/item.json"\n'
+            '      fi\n'
+            '    else\n'
+            '      touch "$state/first-sync-done"\n'
+            '    fi\n'
+            '    ;;\n'
+            '  get)\n'
+            '    raw=0\n'
+            '    if [[ ${1:-} == --raw ]]; then\n'
+            '      raw=1\n'
+            '      shift\n'
+            '    fi\n'
+            '    item=${1:-}\n'
+            '    [[ -f "$state/unlocked" ]] || { printf "rbw get: vault is locked\\n" >&2; exit 1; }\n'
+            '    expected_item=${RBW_EXPECTED_ITEM:-restic-home}\n'
+            '    if [[ $item != "$expected_item" || ! -f "$state/item.json" ]]; then\n'
+            '      printf "rbw get: no entry found for %s\\n" "$item" >&2\n'
+            '      exit 1\n'
+            '    fi\n'
+            '    if (( raw == 1 )); then\n'
+            '      cat "$state/item.json"\n'
+            '    else\n'
+            '      jq -r \'.data.password // empty\' "$state/item.json"\n'
+            '    fi\n'
+            '    ;;\n'
+            '  *)\n'
+            '    printf "unexpected rbw subcommand: %s\\n" "$cmd" >&2\n'
+            '    exit 1\n'
+            '    ;;\n'
+            'esac\n',
+            encoding="utf-8",
+        )
+        rbw_shim.chmod(0o700)
 
         rclone_shim = self.bin / "rclone"
         rclone_shim.write_text(
@@ -515,7 +655,8 @@ class RestorePromptTest(unittest.TestCase):
             timeout=15,
         )
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Remote gdrive: is missing", result.stderr)
+        self.assertIn("リモート gdrive: が", result.stderr)
+        self.assertIn("見つかりません", result.stderr)
         self.assertFalse((self.home / ".config" / "rclone" / "rclone.conf").exists())
 
     def test_pty_configures_gdrive_from_refresh_token_and_restores(self):
@@ -539,7 +680,7 @@ class RestorePromptTest(unittest.TestCase):
                 ("Google OAuth client_id:", "  cid=abc  "),
                 ("Google OAuth client_secret:", "  csec=xyz  "),
                 ("Google OAuth refresh_token", "  1//rt=hello  "),
-                ("Enter restic encryption password", "secret pass with spaces"),
+                ("restic 暗号化パスワードを入力してください", "secret pass with spaces"),
             ],
         )
         self.assertEqual(consumed, 4, output)
@@ -587,9 +728,9 @@ class RestorePromptTest(unittest.TestCase):
                 ("Google OAuth client_id:", "cid-1"),
                 ("Google OAuth client_secret:", "csec-1"),
                 ("Google OAuth refresh_token", "{not-json"),
-                ("Invalid token JSON", "{}"),
-                ("Invalid token JSON", '{"refresh_token":"1//min-tok"}'),
-                ("Enter restic encryption password", "pw1"),
+                ("token JSON の形式が不正です", "{}"),
+                ("token JSON の形式が不正です", '{"refresh_token":"1//min-tok"}'),
+                ("restic 暗号化パスワードを入力してください", "pw1"),
             ],
         )
         self.assertEqual(consumed, 6, output)
@@ -656,11 +797,11 @@ class RestorePromptTest(unittest.TestCase):
             cwd=self.root,
             env=env,
             steps=[
-                ("Choose: [r]e-enter values", "r"),
-                ("Enter to keep existing-cli...]:", ""),
-                ("Enter to keep existing]:", ""),
+                ("[b/r/o/t/q]:", "r"),
+                ("[Enter で維持: existing-cli...]:", ""),
+                ("[Enter で既存値を維持]:", ""),
                 ("Google OAuth refresh_token", "1//fresh-rt"),
-                ("Enter restic encryption password", "pw2"),
+                ("restic 暗号化パスワードを入力してください", "pw2"),
             ],
         )
         self.assertEqual(consumed, 5, output)
@@ -733,8 +874,8 @@ class RestorePromptTest(unittest.TestCase):
             cwd=self.root,
             env=env,
             steps=[
-                ("Choose: [r]e-enter values", "o"),
-                ("Enter restic encryption password", "pw-o"),
+                ("[b/r/o/t/q]:", "o"),
+                ("restic 暗号化パスワードを入力してください", "pw-o"),
             ],
         )
         self.assertEqual(consumed, 2, output)
@@ -770,7 +911,7 @@ class RestorePromptTest(unittest.TestCase):
                 ("Google OAuth client_id:", "cid-full"),
                 ("Google OAuth client_secret:", "csec-full"),
                 ("Google OAuth refresh_token", json.dumps(full_token)),
-                ("Enter restic encryption password", "pw-full"),
+                ("restic 暗号化パスワードを入力してください", "pw-full"),
             ],
         )
         self.assertEqual(consumed, 4, output)
@@ -808,12 +949,12 @@ class RestorePromptTest(unittest.TestCase):
                 ("Google OAuth client_id:", "cid-oauth"),
                 ("Google OAuth client_secret:", "csec-oauth"),
                 ("Google OAuth refresh_token", ""),
-                ("Enter restic encryption password", "pw3"),
+                ("restic 暗号化パスワードを入力してください", "pw3"),
             ],
         )
         self.assertEqual(consumed, 4, output)
         self.assertEqual(rc, 0, output)
-        self.assertIn("Starting interactive OAuth for gdrive:.", output)
+        self.assertIn("gdrive: の対話式 OAuth 認証を開始します。", output)
         conf = self.home / ".config" / "rclone" / "rclone.conf"
         self.assertEqual(stat.S_IMODE(conf.stat().st_mode), 0o600)
         gdrive = self.dump_gdrive(conf)
@@ -836,9 +977,9 @@ class RestorePromptTest(unittest.TestCase):
             cwd=self.root,
             env=env,
             steps=[
-                ("Enter restic encryption password", "wrong-pw"),
-                ("Retry password? [Y/n]", ""),
-                ("input hidden):", "right-password"),
+                ("restic 暗号化パスワードを入力してください", "wrong-pw"),
+                ("パスワードを再入力しますか？ [Y/n]", ""),
+                ("入力は非表示）:", "right-password"),
             ],
         )
         self.assertEqual(consumed, 3, output)
@@ -949,7 +1090,7 @@ class RestorePromptTest(unittest.TestCase):
                 ("Google OAuth client_id:", "cid-inplace"),
                 ("Google OAuth client_secret:", "csec-inplace"),
                 ("Google OAuth refresh_token", "1//fresh-inplace-rt"),
-                ("Enter restic encryption password", "pw-inplace"),
+                ("restic 暗号化パスワードを入力してください", "pw-inplace"),
             ],
         )
         self.assertEqual(consumed, 4, output)
@@ -1096,8 +1237,8 @@ class RestorePromptTest(unittest.TestCase):
             cwd=self.root,
             env=env,
             steps=[
-                ("Choose: [r]e-enter values", "o"),
-                ("Enter restic encryption password", "pw-rec"),
+                ("[b/r/o/t/q]:", "o"),
+                ("restic 暗号化パスワードを入力してください", "pw-rec"),
             ],
         )
         self.assertEqual(consumed, 2, output)
@@ -1185,6 +1326,606 @@ class RestorePromptTest(unittest.TestCase):
         staged_dirs = list(self.stage_parent.iterdir())
         self.assertEqual(len(staged_dirs), 1)
         self.assertTrue(staged_dirs[0].name.startswith("restore-mitac-"))
+
+    def test_pty_rbw_auto_config_gui_custom_fields_verbatim_password_spaces(self):
+        self.write_rbw_item(
+            {
+                "data": {"password": "  pw with leading and trailing spaces  "},
+                "fields": [
+                    {"name": "Client ID", "value": "  cid-from-field  "},
+                    {"name": "client-secret", "value": " csec-from-field "},
+                    {"name": "Refresh Token", "value": "1//field-rt"},
+                ],
+                "notes": (
+                    "client_id: ignored-note-cid\n"
+                    "client_secret: ignored-note-csec\n"
+                    "refresh_token: 1//ignored-note-rt\n"
+                ),
+            }
+        )
+        env = self.rbw_env(
+            DISPLAY=":0",
+            EXPECTED_RESTIC_PASSWORD="  pw with leading and trailing spaces  ",
+            SIMULATE_ABOUT_REQUIRE_TOKEN="1//field-rt",
+        )
+        rc, output, consumed = run_in_pty(
+            [
+                "bash",
+                "-c",
+                'source "$1"; check_platform() { :; }; shift; main "$@"',
+                "rbw-gui-custom",
+                str(SCRIPT),
+                str(self.target),
+            ],
+            cwd=self.root,
+            env=env,
+            steps=[
+                ("Bitwarden (rbw) から項目 'restic-home' の設定・鍵を自動取得しますか？ [Y/n]", ""),
+                ("Bitwarden メールアドレス [Enter で mitac31709@gmail.com]:", ""),
+            ],
+        )
+        self.assertEqual(consumed, 2, output)
+        self.assertEqual(rc, 0, output)
+        self.assertIn(SUCCESS, output)
+        self.assertNotIn("Google OAuth client_id", output)
+        self.assertNotIn("入力は非表示", output)
+
+        rbw_cfg = self.read_rbw_config()
+        self.assertEqual(rbw_cfg["email"], "mitac31709@gmail.com")
+        self.assertEqual(rbw_cfg["base_url"], "https://api.bitwarden.eu")
+        self.assertEqual(rbw_cfg["identity_url"], "https://identity.bitwarden.eu")
+        self.assertEqual(rbw_cfg["ui_url"], "https://vault.bitwarden.eu")
+        self.assertEqual(rbw_cfg["notifications_url"], "https://notifications.bitwarden.eu")
+        self.assertEqual(rbw_cfg["pinentry"], str(self.bin / "pinentry-qt"))
+
+        log = self.read_rbw_log()
+        self.assertIn("stop-agent", log)
+        self.assertIn("login", log)
+        self.assertIn("unlock", log)
+        self.assertIn("sync", log)
+        self.assertIn("get --raw restic-home", log)
+
+        conf = self.home / ".config" / "rclone" / "rclone.conf"
+        self.assertEqual(stat.S_IMODE(conf.stat().st_mode), 0o600)
+        gdrive = self.dump_gdrive(conf)
+        self.assertEqual(gdrive["client_id"], "cid-from-field")
+        self.assertEqual(gdrive["client_secret"], "csec-from-field")
+        self.assertEqual(json.loads(gdrive["token"])["refresh_token"], "1//field-rt")
+        self.assertIn(
+            "PW=  pw with leading and trailing spaces  \n",
+            self.capture.read_text(encoding="utf-8"),
+        )
+
+    def test_pty_rbw_headless_pinentry_curses_notes_crlf_and_custom_item(self):
+        self.write_rbw_item(
+            {
+                "data": {"password": "pw-notes-crlf"},
+                "fields": [{"name": "refresh_token", "value": "(未設定)"}],
+                "notes": (
+                    "client_id: \"cid-from-notes\"\r\n"
+                    "  client_secret = 'csec-from-notes'\r\n"
+                    "refresh_token: (not set)\r\n"
+                    "token: <replace me>\r\n"
+                    "- token: {\"refresh_token\":\"1//notes-tok\"}\r\n"
+                ),
+            }
+        )
+        env = self.rbw_env(
+            RBW_ITEM="alt-backup-item",
+            RBW_EXPECTED_ITEM="alt-backup-item",
+            EXPECTED_RESTIC_PASSWORD="pw-notes-crlf",
+            SIMULATE_ABOUT_REQUIRE_TOKEN="1//notes-tok",
+        )
+        rc, output, consumed = run_in_pty(
+            [
+                "bash",
+                "-c",
+                'source "$1"; check_platform() { :; }; shift; main "$@"',
+                "rbw-headless-notes",
+                str(SCRIPT),
+                str(self.target),
+            ],
+            cwd=self.root,
+            env=env,
+            steps=[
+                ("Bitwarden (rbw) から項目 'alt-backup-item' の設定・鍵を自動取得しますか？ [Y/n]", "y"),
+                ("Bitwarden メールアドレス [Enter で mitac31709@gmail.com]:", "custom@example.org"),
+            ],
+        )
+        self.assertEqual(consumed, 2, output)
+        self.assertEqual(rc, 0, output)
+        self.assertIn(SUCCESS, output)
+
+        rbw_cfg = self.read_rbw_config()
+        self.assertEqual(rbw_cfg["email"], "custom@example.org")
+        self.assertEqual(rbw_cfg["pinentry"], str(self.bin / "pinentry-curses"))
+
+        conf = self.home / ".config" / "rclone" / "rclone.conf"
+        gdrive = self.dump_gdrive(conf)
+        self.assertEqual(gdrive["client_id"], "cid-from-notes")
+        self.assertEqual(gdrive["client_secret"], "csec-from-notes")
+        self.assertEqual(json.loads(gdrive["token"])["refresh_token"], "1//notes-tok")
+
+    def test_non_tty_preunlocked_rbw_restores_without_prompts(self):
+        self.write_rbw_config(
+            {
+                "email": "mitac31709@gmail.com",
+                "base_url": "https://api.bitwarden.eu",
+                "pinentry": str(self.bin / "pinentry-curses"),
+            }
+        )
+        (self.rbw_state / "unlocked").touch()
+        self.write_rbw_item(
+            {
+                "data": {"password": "pw-preunlocked"},
+                "notes": (
+                    "  client_id: cid-pre\n"
+                    "  client_secret: csec-pre\n"
+                    "  refresh_token: 1//pre-rt\n"
+                ),
+            }
+        )
+        env = self.rbw_env(
+            EXPECTED_RESTIC_PASSWORD="pw-preunlocked",
+            SIMULATE_ABOUT_REQUIRE_TOKEN="1//pre-rt",
+        )
+        result = subprocess.run(
+            [
+                "bash",
+                "-c",
+                'source "$1"; check_platform() { :; }; shift; main "$@"',
+                "rbw-nontty-unlocked",
+                str(SCRIPT),
+                str(self.target),
+            ],
+            cwd=self.root,
+            env=env,
+            stdin=subprocess.DEVNULL,
+            text=True,
+            capture_output=True,
+            timeout=15,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(SUCCESS, result.stdout)
+        self.assertIn("Bitwarden (restic-home) から gdrive: を自動設定しました。", result.stderr)
+
+    def test_pty_readonly_hm_rbw_config_skips_config_set(self):
+        store_cfg = self.root / "store-rbw-config.json"
+        hm_cfg = {
+            "email": "mitac31709@gmail.com",
+            "base_url": "https://api.bitwarden.eu",
+            "identity_url": "https://identity.bitwarden.eu",
+            "ui_url": "https://vault.bitwarden.eu",
+            "notifications_url": "https://notifications.bitwarden.eu",
+            "pinentry": str(self.bin / "pinentry-qt"),
+        }
+        store_cfg.write_text(json.dumps(hm_cfg), encoding="utf-8")
+        store_cfg.chmod(0o444)
+        self.addCleanup(store_cfg.chmod, 0o600)
+        hm_link = self.home / ".config" / "rbw" / "config.json"
+        hm_link.parent.mkdir(parents=True)
+        hm_link.symlink_to(store_cfg)
+
+        self.write_rbw_config(hm_cfg)
+        self.write_rbw_item(
+            {
+                "data": {"password": "pw-hm"},
+                "notes": (
+                    "client_id: cid-hm\n"
+                    "client_secret: csec-hm\n"
+                    "refresh_token: 1//hm-rt\n"
+                ),
+            }
+        )
+        env = self.rbw_env(
+            DISPLAY=":0",
+            EXPECTED_RESTIC_PASSWORD="pw-hm",
+            SIMULATE_ABOUT_REQUIRE_TOKEN="1//hm-rt",
+        )
+        rc, output, consumed = run_in_pty(
+            [
+                "bash",
+                "-c",
+                'source "$1"; check_platform() { :; }; shift; main "$@"',
+                "rbw-hm-ro",
+                str(SCRIPT),
+                str(self.target),
+            ],
+            cwd=self.root,
+            env=env,
+            steps=[
+                ("Bitwarden (rbw) から項目 'restic-home' の設定・鍵を自動取得しますか？ [Y/n]", ""),
+            ],
+        )
+        self.assertEqual(consumed, 1, output)
+        self.assertEqual(rc, 0, output)
+        self.assertIn(SUCCESS, output)
+        log = self.read_rbw_log()
+        self.assertFalse(any(line.startswith("config set ") for line in log), log)
+
+    def test_pty_rbw_partial_item_prefills_and_oauth_reconnect(self):
+        self.write_rbw_config(
+            {
+                "email": "mitac31709@gmail.com",
+                "base_url": "https://api.bitwarden.eu",
+                "pinentry": str(self.bin / "pinentry-qt"),
+            }
+        )
+        self.write_rbw_item(
+            {
+                "data": {"password": "pw-partial"},
+                "notes": (
+                    "  client_id: cid-partial-123456\n"
+                    "  client_secret: csec-partial\n"
+                    "  refresh_token: (未設定)\n"
+                ),
+            }
+        )
+        oauth_token = json.dumps(
+            {
+                "access_token": "oauth-acc",
+                "token_type": "Bearer",
+                "refresh_token": "1//partial-reconnected",
+                "expiry": "2031-01-01T00:00:00Z",
+            }
+        )
+        env = self.rbw_env(
+            DISPLAY=":0",
+            EXPECTED_RESTIC_PASSWORD="pw-partial",
+            SIMULATE_OAUTH_TOKEN=oauth_token,
+            SIMULATE_ABOUT_REQUIRE_TOKEN="1//partial-reconnected",
+        )
+        rc, output, consumed = run_in_pty(
+            [
+                "bash",
+                "-c",
+                'source "$1"; check_platform() { :; }; shift; main "$@"',
+                "rbw-partial",
+                str(SCRIPT),
+                str(self.target),
+            ],
+            cwd=self.root,
+            env=env,
+            steps=[
+                ("Bitwarden (rbw) から項目 'restic-home' の設定・鍵を自動取得しますか？ [Y/n]", ""),
+                ("[Enter で維持: cid-partial-...]:", ""),
+                ("[Enter で既存値を維持]:", ""),
+                ("Google OAuth refresh_token", ""),
+            ],
+        )
+        self.assertEqual(consumed, 4, output)
+        self.assertEqual(rc, 0, output)
+        self.assertIn(SUCCESS, output)
+        self.assertNotIn("入力は非表示", output)
+        conf = self.home / ".config" / "rclone" / "rclone.conf"
+        gdrive = self.dump_gdrive(conf)
+        self.assertEqual(gdrive["client_id"], "cid-partial-123456")
+        self.assertEqual(gdrive["client_secret"], "csec-partial")
+        self.assertEqual(json.loads(gdrive["token"])["refresh_token"], "1//partial-reconnected")
+
+    def test_pty_rbw_login_failure_recovers_via_register(self):
+        self.write_rbw_config(
+            {
+                "email": "mitac31709@gmail.com",
+                "base_url": "https://api.bitwarden.eu",
+                "pinentry": str(self.bin / "pinentry-qt"),
+            }
+        )
+        self.write_rbw_item(
+            {
+                "data": {"password": "pw-reg"},
+                "notes": (
+                    "client_id: cid-reg\n"
+                    "client_secret: csec-reg\n"
+                    "refresh_token: 1//reg-rt\n"
+                ),
+            }
+        )
+        env = self.rbw_env(
+            DISPLAY=":0",
+            RBW_SHIM_NEED_REGISTER="1",
+            EXPECTED_RESTIC_PASSWORD="pw-reg",
+            SIMULATE_ABOUT_REQUIRE_TOKEN="1//reg-rt",
+        )
+        rc, output, consumed = run_in_pty(
+            [
+                "bash",
+                "-c",
+                'source "$1"; check_platform() { :; }; shift; main "$@"',
+                "rbw-register-recover",
+                str(SCRIPT),
+                str(self.target),
+            ],
+            cwd=self.root,
+            env=env,
+            steps=[
+                ("Bitwarden (rbw) から項目 'restic-home' の設定・鍵を自動取得しますか？ [Y/n]", ""),
+                ("[r/l/m/q]:", "r"),
+            ],
+        )
+        self.assertEqual(consumed, 2, output)
+        self.assertEqual(rc, 0, output)
+        self.assertIn(SUCCESS, output)
+        self.assertIn("register", self.read_rbw_log())
+
+    def test_pty_rbw_probe_failure_resync_in_place_preserves_new_rclone(self):
+        restore_root = self.root / "restore-root"
+        target_home = restore_root / "home" / "mitac"
+        conf = target_home / ".config" / "rclone" / "rclone.conf"
+        conf.parent.mkdir(parents=True)
+        conf.touch()
+        conf.chmod(0o600)
+        subprocess.run(
+            [
+                self.real_rclone,
+                "config",
+                "create",
+                "gdrive",
+                "drive",
+                "client_id",
+                "cid-stale",
+                "client_secret",
+                "csec-stale",
+                "scope",
+                "drive",
+                "token",
+                json.dumps(
+                    {
+                        "access_token": "x",
+                        "token_type": "Bearer",
+                        "refresh_token": "1//stale-rt",
+                        "expiry": "2000-01-01T00:00:00Z",
+                    }
+                ),
+                "config_refresh_token",
+                "false",
+                "config_is_local",
+                "false",
+            ],
+            env=dict(self.environment, RCLONE_CONFIG=str(conf)),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=True,
+        )
+
+        self.write_rbw_config(
+            {
+                "email": "mitac31709@gmail.com",
+                "base_url": "https://api.bitwarden.eu",
+                "pinentry": str(self.bin / "pinentry-qt"),
+            }
+        )
+        self.write_rbw_item(
+            {
+                "data": {"password": "pw-before-sync"},
+                "notes": (
+                    "client_id: cid-stale\n"
+                    "client_secret: csec-stale\n"
+                    "refresh_token: 1//stale-rt\n"
+                ),
+            }
+        )
+        resync_item = self.write_rbw_item(
+            {
+                "data": {"password": "pw-after-sync"},
+                "notes": (
+                    "client_id: cid-resynced\n"
+                    "client_secret: csec-resynced\n"
+                    "refresh_token: 1//resynced-rt\n"
+                ),
+            },
+            filename="item-resync.json",
+        )
+        # Simulate user previously unlocked agent before updating Bitwarden on another device.
+        (self.rbw_state / "unlocked").touch()
+        (self.rbw_state / "first-sync-done").touch()
+
+        fixture = self.root / "fixture-stage"
+        (fixture / "home" / "mitac" / ".config" / "rclone").mkdir(parents=True)
+        (fixture / "home" / "mitac" / ".config" / "rclone" / "rclone.conf").write_text(
+            "[gdrive]\ntype = drive\nclient_id = stale-from-snapshot\n", encoding="utf-8"
+        )
+
+        env = self.rbw_env(
+            HOME=str(target_home),
+            RESTORE_ROOT=str(restore_root),
+            FIXTURE_STAGE_TREE=str(fixture),
+            DISPLAY=":0",
+            RBW_RESYNC_ITEM_FILE=str(resync_item),
+            EXPECTED_RESTIC_PASSWORD="pw-after-sync",
+            SIMULATE_ABOUT_REQUIRE_TOKEN="1//resynced-rt",
+        )
+        rc, output, consumed = run_in_pty(
+            [
+                "bash",
+                "-c",
+                'source "$1"; check_platform() { :; }; shift; main "$@"',
+                "rbw-resync-inplace",
+                str(SCRIPT),
+            ],
+            cwd=self.root,
+            env=env,
+            steps=[
+                ("[b/r/o/t/q]:", "b"),
+            ],
+        )
+        self.assertEqual(consumed, 1, output)
+        self.assertEqual(rc, 0, output)
+        self.assertIn(SUCCESS, output)
+        gdrive = self.dump_gdrive(conf)
+        self.assertEqual(gdrive["client_id"], "cid-resynced")
+        self.assertEqual(gdrive["client_secret"], "csec-resynced")
+        self.assertEqual(json.loads(gdrive["token"])["refresh_token"], "1//resynced-rt")
+
+    def test_pty_rbw_wrong_password_resync_recovers(self):
+        self.write_rbw_config(
+            {
+                "email": "mitac31709@gmail.com",
+                "base_url": "https://api.bitwarden.eu",
+                "pinentry": str(self.bin / "pinentry-qt"),
+            }
+        )
+        self.write_rbw_item(
+            {
+                "data": {"password": "old-wrong-password"},
+                "notes": (
+                    "client_id: cid-pw\n"
+                    "client_secret: csec-pw\n"
+                    "refresh_token: 1//pw-rt\n"
+                ),
+            }
+        )
+        resync_item = self.write_rbw_item(
+            {
+                "data": {"password": "updated-right-password"},
+                "notes": (
+                    "client_id: cid-pw\n"
+                    "client_secret: csec-pw\n"
+                    "refresh_token: 1//pw-rt\n"
+                ),
+            },
+            filename="item-pw-resync.json",
+        )
+        env = self.rbw_env(
+            DISPLAY=":0",
+            RBW_RESYNC_ITEM_FILE=str(resync_item),
+            EXPECTED_RESTIC_PASSWORD="updated-right-password",
+            SIMULATE_ABOUT_REQUIRE_TOKEN="1//pw-rt",
+        )
+        rc, output, consumed = run_in_pty(
+            [
+                "bash",
+                "-c",
+                'source "$1"; check_platform() { :; }; shift; main "$@"',
+                "rbw-pw-resync",
+                str(SCRIPT),
+                str(self.target),
+            ],
+            cwd=self.root,
+            env=env,
+            steps=[
+                ("Bitwarden (rbw) から項目 'restic-home' の設定・鍵を自動取得しますか？ [Y/n]", ""),
+                ("[b/m/q]:", "b"),
+            ],
+        )
+        self.assertEqual(consumed, 2, output)
+        self.assertEqual(rc, 0, output)
+        self.assertIn(SUCCESS, output)
+        self.assertIn("PW=updated-right-password\n", self.capture.read_text(encoding="utf-8"))
+
+    def test_pty_rbw_empty_password_manual_fallback(self):
+        self.write_rbw_config(
+            {
+                "email": "mitac31709@gmail.com",
+                "base_url": "https://api.bitwarden.eu",
+                "pinentry": str(self.bin / "pinentry-qt"),
+            }
+        )
+        self.write_rbw_item(
+            {
+                "data": {"password": ""},
+                "notes": (
+                    "client_id: cid-epw\n"
+                    "client_secret: csec-epw\n"
+                    "refresh_token: 1//epw-rt\n"
+                ),
+            }
+        )
+        env = self.rbw_env(
+            DISPLAY=":0",
+            EXPECTED_RESTIC_PASSWORD="manual-fallback-password",
+            SIMULATE_ABOUT_REQUIRE_TOKEN="1//epw-rt",
+        )
+        rc, output, consumed = run_in_pty(
+            [
+                "bash",
+                "-c",
+                'source "$1"; check_platform() { :; }; shift; main "$@"',
+                "rbw-empty-pw-manual",
+                str(SCRIPT),
+                str(self.target),
+            ],
+            cwd=self.root,
+            env=env,
+            steps=[
+                ("Bitwarden (rbw) から項目 'restic-home' の設定・鍵を自動取得しますか？ [Y/n]", ""),
+                ("[b/m/q]:", "m"),
+                ("restic 暗号化パスワードを入力してください", "manual-fallback-password"),
+            ],
+        )
+        self.assertEqual(consumed, 3, output)
+        self.assertEqual(rc, 0, output)
+        self.assertIn(SUCCESS, output)
+        self.assertIn(
+            "PW=manual-fallback-password\n", self.capture.read_text(encoding="utf-8")
+        )
+
+    def test_pty_declining_rbw_falls_back_to_manual_without_reprompt(self):
+        env = self.rbw_env(
+            EXPECTED_RESTIC_PASSWORD="declined-manual-pw",
+            SIMULATE_ABOUT_REQUIRE_TOKEN="1//declined-rt",
+        )
+        rc, output, consumed = run_in_pty(
+            [
+                "bash",
+                "-c",
+                'source "$1"; check_platform() { :; }; shift; main "$@"',
+                "rbw-decline",
+                str(SCRIPT),
+                str(self.target),
+            ],
+            cwd=self.root,
+            env=env,
+            steps=[
+                ("Bitwarden (rbw) から項目 'restic-home' の設定・鍵を自動取得しますか？ [Y/n]", "n"),
+                ("Google OAuth client_id:", "cid-manual"),
+                ("Google OAuth client_secret:", "csec-manual"),
+                ("Google OAuth refresh_token", "1//declined-rt"),
+                ("restic 暗号化パスワードを入力してください", "declined-manual-pw"),
+            ],
+        )
+        self.assertEqual(consumed, 5, output)
+        self.assertEqual(rc, 0, output)
+        self.assertIn(SUCCESS, output)
+        self.assertEqual(output.count("自動取得しますか？"), 1, output)
+        log = self.read_rbw_log()
+        self.assertNotIn("login", log)
+        self.assertNotIn("unlock", log)
+
+    def test_pty_missing_rbw_on_non_nix_host_falls_back_to_manual(self):
+        (self.bin / "rbw").unlink()
+        clean_dirs = [
+            d
+            for d in os.environ["PATH"].split(os.pathsep)
+            if d and not (Path(d) / "rbw").exists() and not (Path(d) / "nix").exists()
+        ]
+        env = self.rbw_env(
+            PATH=f"{self.bin}:{os.pathsep.join(clean_dirs)}",
+            EXPECTED_RESTIC_PASSWORD="no-rbw-manual-pw",
+            SIMULATE_ABOUT_REQUIRE_TOKEN="1//no-rbw-rt",
+        )
+        rc, output, consumed = run_in_pty(
+            [
+                "bash",
+                "-c",
+                'source "$1"; check_platform() { :; }; shift; main "$@"',
+                "no-rbw-fallback",
+                str(SCRIPT),
+                str(self.target),
+            ],
+            cwd=self.root,
+            env=env,
+            steps=[
+                ("Google OAuth client_id:", "cid-norbw"),
+                ("Google OAuth client_secret:", "csec-norbw"),
+                ("Google OAuth refresh_token", "1//no-rbw-rt"),
+                ("restic 暗号化パスワードを入力してください", "no-rbw-manual-pw"),
+            ],
+        )
+        self.assertEqual(consumed, 4, output)
+        self.assertEqual(rc, 0, output)
+        self.assertIn(SUCCESS, output)
+        self.assertNotIn("Bitwarden (rbw) から項目", output)
 
 
 if __name__ == "__main__":

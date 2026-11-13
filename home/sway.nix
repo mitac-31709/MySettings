@@ -979,7 +979,7 @@ let
     }
     {
       section = "バックアップ";
-      label = "注: restic-home に鍵と rclone ID/secret/token を手動保存";
+      label = "注: restic-home に鍵+ID/secret/token保存→全体復元はrbw自動入力";
     }
     # 電源（Chromebook: 電源・Type-C / VAIO: 電源・省電力）
     {

@@ -39,7 +39,8 @@ let
   rcloneConfigFile = "/home/${user}/.config/rclone/rclone.conf";
 
   # Bitwarden item whose password field holds the restic encryption key
-  # (and where client_id / client_secret / refresh_token are saved manually).
+  # (client_id / client_secret / refresh_token can also be saved in its notes
+  # or custom fields so scripts/restore-on-nixos.sh can load them via rbw).
   bitwardenItem = "restic-home";
 
   # Matches RuntimeDirectory from the nixpkgs restic module for this unit.
@@ -292,7 +293,7 @@ let
   '';
 
   # Print client_id / client_secret / refresh_token from rclone config so the
-  # user can save or update them manually in Bitwarden item "restic-home".
+  # user can paste or save them in Bitwarden item "restic-home" (notes or custom fields).
   printRcloneBitwardenFields = pkgs.writeShellScript "restic-home-show-oauth" ''
     set -eu
     export PATH="${
@@ -318,11 +319,12 @@ let
         ' 2>/dev/null || true
       )"
     fi
-    printf '\nBitwarden item (%s) - save/update these values manually for pre-build restore:\n' "$bw_item"
-    printf '  client_id:     %s\n' "''${client_id:-(not set)}"
-    printf '  client_secret: %s\n' "''${client_secret:-(not set)}"
-    printf '  refresh_token: %s\n' "''${refresh_token:-(not set)}"
-    printf '  (Fixed values not needed in Bitwarden: remote=%s, type=drive, scope=drive)\n' "$remote"
+    printf '\nBitwarden の項目「%s」に保存（メモ欄へ貼り付け、または同名カスタムフィールドを作成）:\n' "$bw_item"
+    printf '  client_id: %s\n' "''${client_id:-(未設定)}"
+    printf '  client_secret: %s\n' "''${client_secret:-(未設定)}"
+    printf '  refresh_token: %s\n' "''${refresh_token:-(未設定)}"
+    printf '  ※ 固定値（remote=%s, type=drive, scope=drive）の保存は不要です。\n' "$remote"
+    printf '  ※ 復元時 ./scripts/restore-on-nixos.sh が rbw 経由で自動読込します。\n'
   '';
 
   # Single entrypoint for home backup ops (systemd / rclone / rbw / restic).
@@ -350,32 +352,32 @@ let
 
     usage() {
       cat <<'EOF'
-backup - home backup CLI (restic / rclone / Bitwarden / systemd)
+backup — ホーム暗号化バックアップ CLI (restic / rclone / Bitwarden / systemd)
 
-Usage:
-  backup <command> [args...]
+使い方:
+  backup <command> [args…]
   backup -h | --help | help
 
-Workflow:
-  backup unlock-key              Unlock Bitwarden vault via rbw (restic key)
-  backup setup                   Interactive first-time setup (restic-home-setup)
-  backup reconnect               Reconnect rclone OAuth remote (gdrive:)
-  backup about                   Check Google Drive connectivity
-  backup run                     Start full backup service (systemd)
-  backup log                     Follow backup logs in journalctl
-  backup status                  Show service and timer status
+基本ワークフロー:
+  backup unlock-key              rbw unlock（Bitwarden から restic 鍵を解錠）
+  backup setup                   対話式初回セットアップ (restic-home-setup)
+  backup reconnect               rclone OAuth 再接続 (gdrive:)
+  backup about                   Google Drive 疎通確認
+  backup run                     フルバックアップ開始 (systemd)
+  backup log                     進捗・ログを journal で追う
+  backup status                  unit / timer の状態を表示
 
-Inspect / restore (restic with repo & key env loaded):
+確認・部分復元（リポジトリ＆暗号化鍵の環境変数読み込み済み）:
   backup snapshots
   backup ls latest
   backup find NAME
   backup restore latest --target /tmp/restore
-  backup unlock                  Remove stale restic repository locks
+  backup unlock                  古い restic リポジトリロックを解除
 
-Notes:
-  - Always pass --target to restore (omitting it would overwrite /home/mitac)
-  - Help for a restic subcommand: backup <command> --help
-  - Any unrecognized first argument is passed straight through to restic
+注意:
+  - restore には必ず --target を指定する（省略すると /home/mitac を上書き）
+  - restic サブコマンドの詳細ヘルプ: backup <command> --help
+  - 上記以外の第1引数はそのまま restic へ渡されます
 EOF
     }
 
@@ -388,14 +390,14 @@ EOF
       run|start)
         shift
         if systemctl --quiet is-active "$unit" 2>/dev/null; then
-          printf '%s is already running.\n' "$unit"
+          printf '%s は既に実行中です。\n' "$unit"
         elif systemctl start "$unit" 2>/dev/null; then
-          printf 'Started %s.\n' "$unit"
+          printf '%s を開始しました。\n' "$unit"
         else
           sudo systemctl start "$unit"
-          printf 'Started %s (via sudo).\n' "$unit"
+          printf '%s を開始しました（sudo 経由）。\n' "$unit"
         fi
-        printf 'Follow logs: backup log\n'
+        printf 'ログ確認: backup log\n'
         ;;
       log|logs)
         shift
@@ -471,7 +473,7 @@ EOF
 
       say() { printf '%s\n' "$*"; }
       step() { printf '\n==> %s\n' "$*"; }
-      die() { printf 'error: %s\n' "$*" >&2; exit 1; }
+      die() { printf 'エラー: %s\n' "$*" >&2; exit 1; }
 
       confirm() {
         local prompt="$1"
@@ -487,17 +489,17 @@ EOF
       # Google OAuth apps left in "Testing" issue refresh tokens that die ~weekly
       # (invalid_grant). Publishing (unverified is fine for personal use) fixes it.
       warn_oauth_publish() {
-        say "CRITICAL: Google Cloud OAuth consent must be Published (not Testing)."
-        say "  Testing mode → refresh tokens expire about every 7 days → invalid_grant."
+        say "重要: Google Cloud の OAuth 同意画面は「本番環境に公開 (Publish)」にしてください（Testing 不可）。"
+        say "  Testing のままだと refresh_token が約 7 日で失効します（invalid_grant）。"
         say "  Console: https://console.cloud.google.com/auth/audience"
-        say "  Branding (owned domain; github.io is often rejected):"
-        say "    app name: restic Home Backup"
-        say "    home:     https://restic-oauth.mitac.f5.si/"
-        say "    privacy:  https://restic-oauth.mitac.f5.si/privacy.html"
-        say "    domain:   mitac.f5.si (Search Console Domain verify)"
-        say "  Save Branding, then Audience → Publish app."
-        say "  After publishing, reconnect so you get a long-lived refresh token."
-        say "  Docs: https://rclone.org/drive/#making-your-own-client-id"
+        say "  Branding（所有ドメイン必須。github.io は却下されやすい）:"
+        say "    アプリ名: restic Home Backup"
+        say "    ホームページ: https://restic-oauth.mitac.f5.si/"
+        say "    プライバシー: https://restic-oauth.mitac.f5.si/privacy.html"
+        say "    承認済みドメイン: mitac.f5.si（Search Console でドメイン確認済み）"
+        say "  Branding 保存後、Audience → Publish app を押してください。"
+        say "  Publish 後に再接続すると長寿命の refresh_token が発行されます。"
+        say "  参考: https://rclone.org/drive/#making-your-own-client-id"
       }
 
       probe_gdrive() {
@@ -515,13 +517,13 @@ EOF
         esac
       }
 
-      say "restic home backup — first-time setup"
-      say "repo: $repo"
-      say "rclone config: $rclone_conf"
-      say "Bitwarden item: $bw_item"
+      say "restic ホームバックアップ — 初回セットアップ"
+      say "リポジトリ: $repo"
+      say "rclone 設定: $rclone_conf"
+      say "Bitwarden 項目: $bw_item"
 
       # --- 1. rclone Google Drive remote ---------------------------------
-      step "1/3 Google Drive remote ($remote_name)"
+      step "1/3 Google Drive リモート ($remote_name)"
       export RCLONE_CONFIG="$rclone_conf"
       mkdir -p "$(dirname "$rclone_conf")"
 
@@ -531,75 +533,75 @@ EOF
       fi
 
       if [ "$has_remote" -eq 1 ]; then
-        say "Remote ''${remote_name}: already configured."
+        say "リモート ''${remote_name}: は既に設定済みです。"
         probe_rc=0
         probe_gdrive || probe_rc=$?
         if [ "$probe_rc" -eq 0 ]; then
-          say "Google Drive auth OK (rclone about ''${remote_name}:)."
-          if confirm "Reconfigure OAuth anyway (own client_id / refresh token)?"; then
+          say "Google Drive 認証 OK (rclone about ''${remote_name}:)。"
+          if confirm "OAuth を再設定しますか（独自 client_id / refresh_token）？"; then
             warn_oauth_publish
-            say "Prefer your own Desktop OAuth client_id (shared rclone ID is rate-limited / retiring 2026)."
+            say "独自の Desktop OAuth client_id を設定してください（共有 ID は制限／2026 年廃止予定）。"
             rclone config reconnect "''${remote_name}:" || rclone config
           fi
         else
-          say "Google Drive auth FAILED (probe exit $probe_rc)."
+          say "Google Drive 認証エラー（終了コード $probe_rc）。"
           warn_oauth_publish
-          if ! confirm "Confirm the OAuth app is Published, then reconnect now?"; then
-            die "Aborted. Publish the app, then: rclone config reconnect ''${remote_name}:"
+          if ! confirm "OAuth アプリを公開 (Publish) 済みであることを確認し、今すぐ再接続しますか？"; then
+            die "中断しました。アプリを公開してから次を実行してください: rclone config reconnect ''${remote_name}:"
           fi
           rclone config reconnect "''${remote_name}:" || rclone config
-          probe_gdrive || die "Still cannot reach ''${remote_name}: after reconnect. Check Publish + client_id."
-          say "Google Drive auth OK after reconnect."
+          probe_gdrive || die "再接続後も ''${remote_name}: へ接続できませんでした。Publish と client_id を確認してください。"
+          say "再接続後の Google Drive 認証 OK。"
         fi
       else
-        say "Remote ''${remote_name}: missing. Launching interactive rclone config."
+        say "リモート ''${remote_name}: が未設定です。対話式 rclone config を起動します。"
         warn_oauth_publish
-        say "Create a remote named exactly ''${remote_name} (storage: Google Drive / drive)."
-        say "IMPORTANT: paste your own Google Cloud OAuth client_id and client_secret"
-        say "(Desktop app). Do not leave them blank — shared rclone client_id is slow and"
-        say "being retired in 2026. See: https://rclone.org/drive/#making-your-own-client-id"
-        say "Then complete browser OAuth and quit the rclone menu."
-        if ! confirm "Start rclone config now?"; then
-          die "Aborted. Re-run: backup setup  (after configuring rclone)."
+        say "リモート名は必ず ''${remote_name}（storage: Google Drive / drive）にしてください。"
+        say "重要: 自分で作成した Google Cloud の Desktop OAuth client_id と client_secret を"
+        say "貼り付けてください（空欄にすると共有クライアントになり低速・廃止対象です）。"
+        say "参考: https://rclone.org/drive/#making-your-own-client-id"
+        say "ブラウザー OAuth を完了し、rclone メニューを終了 (q) してください。"
+        if ! confirm "rclone config を開始しますか？"; then
+          die "中断しました。rclone 設定後に次を再実行してください: backup setup"
         fi
         rclone config
         if ! rclone listremotes 2>/dev/null | grep -qx "''${remote_name}:"; then
-          die "Remote ''${remote_name}: still missing after rclone config."
+          die "rclone config 完了後もリモート ''${remote_name}: が見つかりません。"
         fi
-        probe_gdrive || die "Remote ''${remote_name}: configured but auth probe failed."
-        say "Remote ''${remote_name}: OK."
+        probe_gdrive || die "リモート ''${remote_name}: を作成しましたが認証確認に失敗しました。"
+        say "リモート ''${remote_name}: OK。"
       fi
 
       # --- 2. Bitwarden (rbw) + restic encryption key --------------------
-      step "2/3 Bitwarden key ($bw_item)"
+      step "2/3 Bitwarden 暗号化鍵 ($bw_item)"
 
       if ! rbw unlocked >/dev/null 2>&1; then
-        say "Vault is locked (or not logged in)."
-        if ! confirm "Run rbw login / unlock now?"; then
-          die "Aborted. Run: rbw login && rbw unlock"
+        say "Bitwarden Vault がロック中（または未ログイン）です。"
+        if ! confirm "今すぐ rbw login / unlock を実行しますか？"; then
+          die "中断しました。次を実行してください: rbw login && rbw unlock"
         fi
         # login is idempotent-ish; unlock prompts via pinentry when needed.
         rbw login || true
         rbw unlock
       else
-        say "Vault is unlocked."
+        say "Vault はロック解除済みです。"
       fi
 
       rbw sync >/dev/null || true
 
       if rbw get "$bw_item" >/dev/null 2>&1; then
-        say "Bitwarden item '$bw_item' already exists."
+        say "Bitwarden 項目 '$bw_item' は既に存在します。"
       else
-        say "Creating Bitwarden item '$bw_item' (40-char generated passphrase = restic key)."
-        if ! confirm "Generate and store a new restic key as '$bw_item'?"; then
-          die "Aborted. Create the item manually: rbw generate 40 $bw_item"
+        say "Bitwarden 項目 '$bw_item' を新規作成します（40 文字の生成パスフレーズ＝restic 暗号化鍵）。"
+        if ! confirm "新しい restic 鍵を生成して '$bw_item' として保存しますか？"; then
+          die "中断しました。手動作成する場合: rbw generate 40 $bw_item"
         fi
         rbw generate 40 "$bw_item"
         rbw sync >/dev/null || true
         if ! rbw get "$bw_item" >/dev/null 2>&1; then
-          die "Failed to read '$bw_item' after generate."
+          die "生成後に項目 '$bw_item' を読み取れませんでした。"
         fi
-        say "Key stored in Bitwarden as '$bw_item'."
+        say "鍵を Bitwarden の項目 '$bw_item' へ保存しました。"
       fi
 
       "${printRcloneBitwardenFields}" "$remote_name" "$bw_item"
@@ -607,34 +609,34 @@ EOF
       # Smoke-check: restic can decrypt the password command path via wrapper.
       if command -v backup >/dev/null 2>&1; then
         if backup snapshots >/dev/null 2>&1; then
-          say "backup can open the repository (existing snapshots OK)."
+          say "backup コマンドでリポジトリを開けました（既存スナップショット OK）。"
         else
-          say "Repository not readable yet (expected before first backup / initialize)."
+          say "まだリポジトリは未初期化です（初回バックアップ前の正常な状態）。"
         fi
       fi
 
       # --- 3. First backup -----------------------------------------------
-      step "3/3 First backup ($unit)"
-      say "This creates the restic repo on Google Drive if needed (initialize = true)."
-      if confirm "Start $unit now (may prompt for sudo)?"; then
+      step "3/3 初回バックアップ ($unit)"
+      say "必要に応じて Google Drive 上に restic リポジトリを自動初期化します (initialize = true)。"
+      if confirm "$unit を今すぐ開始しますか（sudo を求める場合があります）？"; then
         if systemctl --quiet is-active "$unit" 2>/dev/null; then
-          say "$unit is already running."
+          say "$unit は既に実行中です。"
         elif systemctl start "$unit" 2>/dev/null; then
-          say "Started $unit."
+          say "$unit を開始しました。"
         else
           sudo systemctl start "$unit"
-          say "Started $unit (via sudo)."
+          say "$unit を開始しました（sudo 経由）。"
         fi
-        say "Follow logs with:"
+        say "ログ確認:"
         say "  backup log"
       else
-        say "Skipped. Start later with:"
+        say "スキップしました。あとで開始するには:"
         say "  backup run"
         say "  backup log"
       fi
 
       say ""
-      say "Done. Afterwards:"
+      say "完了です。以後の確認・部分復元:"
       say "  backup snapshots"
       say "  backup restore latest --target /tmp/restore"
     '';
