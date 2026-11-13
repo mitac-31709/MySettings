@@ -57,6 +57,8 @@ NixOS の世代番号はマシン固有です。コミットとの対応はビ�
 
 新しい PC や空の SSD へ NixOS Live USB から導入する手順です。この flake は `systemd-boot`（UEFI 専用、`modules/nixos/common.nix`）と `zramSwap`（RAM 100% / `zstd`、`modules/nixos/laptop/power.nix`）を使うため、**UEFI ブート有効（セキュアブート無効）**・GPT（ESP + root、swap パーティション不要）を前提とします。
 
+> **初期設定（Live USB・TTY）は英語設定で行う**: 初期状態の NixOS コンソール TTY には日本語フォント（CJK グリフ）が含まれず、日本語ロケールでは文字化けします（`modules/nixos/greetd.nix` も同理由で ASCII 時刻表示）。そのため、Live USB 起動時・Calamares インストーラの言語／ロケールは **English**（`en_US.UTF-8`）のまま進め、キーボード配列のみ日本語（**Japanese** / `jp106`）に設定してください。初期設定で使うスクリプト（`./scripts/restore-on-nixos.sh`・`backup setup`・`backup --help`）も TTY 上で読めるよう英語表示にしてあります。flake 適用・再起動後は `modules/nixos/common.nix` により自動的に `ja_JP.UTF-8` と日本語 Sway 環境へ切り替わります。
+
 ### 0. USB メディアの作成と起動
 
 1. [NixOS ダウンロードページ](https://nixos.org/download/) から **Graphical ISO**（GUI インストーラ付き・推奨）または **Minimal ISO**（CLI のみ）を取得し、USB メモリへ書き込む。
@@ -70,6 +72,8 @@ NixOS の世代番号はマシン固有です。コミットとの対応はビ�
 
 1. Live 環境で Wi-Fi 等へ接続し、**Install NixOS**（Calamares）を起動する。
 2. インストーラで以下を設定してインストールする：
+   - 言語／ロケール（Welcome / Location）: **English**（American English / `en_US.UTF-8`）を選択（TTY での文字化け防止のため初期設定は英語。タイムゾーンは Tokyo を選んでよい。flake 適用後に `ja_JP.UTF-8` へ切り替わります）
+   - キーボード（Keyboard）: **Japanese** を選択
    - ユーザー名: **`mitac`**（`lib/machine.nix` の `/home/mitac/MySettings`・各種設定と一致させる）＋ 任意のパスワード
    - デスクトップ環境: **No desktop**（後の flake 適用で Sway 環境一式が入るため最小構成でよい）
    - パーティション: ディスク消去（UEFI / GPT）を選択。swap は **No swap**（`zramSwap` を使用）でも問題ない
@@ -80,7 +84,7 @@ NixOS の世代番号はマシン固有です。コミットとの対応はビ�
      'git clone -b main https://github.com/mitac31709/MySettings.git ~/MySettings'
    cd ~/MySettings
    ```
-5. **（既存バックアップからデータを戻す場合）** OS ビルドの前に「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」の手順で `./scripts/restore-on-nixos.sh` を実行し、必要なホームデータ・システム状態・ヒラギノフォント（`/home/mitac/Documents/hiragino-otf/`）を配置しておく（スクリプトは `/var/tmp/restore-mitac-日時/` へ展開するため `~/MySettings` は上書きされません）。
+5. **（既存バックアップからデータを戻す場合）** OS ビルドの前に「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」の手順で `./scripts/restore-on-nixos.sh` を実行し（出力は TTY 向けに英語表示）、必要なホームデータ・システム状態・ヒラギノフォント（`/home/mitac/Documents/hiragino-otf/`）を配置しておく（スクリプトは `/var/tmp/restore-mitac-YYYYMMDD-HHMMSS/` へ展開するため `~/MySettings` は上書きされません）。
 6. 実機の `hardware-configuration.nix` を生成し、flake を適用する（対象は `vaio` または `chromebook`）：
    ```bash
    # VAIO の場合（Chromebook は hosts/chromebook/hardware-configuration.nix と .#chromebook）
@@ -96,7 +100,7 @@ NixOS の世代番号はマシン固有です。コミットとの対応はビ�
 
 GUI インストーラを経由せず、USB から直接この flake の環境を書き込む手順です（Live 環境上には `/home/mitac/Documents/hiragino-otf` が無いため、初回は Noto CJK でビルドされます）。
 
-1. 必要なら日本語配列とネットワークを設定する：
+1. ロケールは ISO 既定の英語（`en_US.UTF-8`）のまま（TTY 文字化け防止）、必要なら日本語配列とネットワークを設定する：
    ```bash
    loadkeys jp106
    nmtui                        # Wi-Fi / 有線ネットワーク接続
@@ -189,7 +193,7 @@ Chromebook（delbin）を既存の `ext4` から `btrfs`（`compress=zstd:1`）�
 
 Calamares（Graphical ISO）で `btrfs` を選ぶと初回導入時は `compress=zstd:1` が付かないため、**USB のターミナルから下記手順で最初からマウントオプション付きで導入する**のが確実です（最初の `nixos-install` 時点から `/nix/store` も圧縮されます）。
 
-1. Live USB を UEFI 起動し、日本語配列・ネットワークを設定する：
+1. Live USB を UEFI 起動し、ロケールは ISO 既定の英語（`en_US.UTF-8`）のまま（TTY 文字化け防止）、日本語配列・ネットワークを設定する：
    ```bash
    loadkeys jp106
    nmtui
@@ -251,7 +255,7 @@ Calamares（Graphical ISO）で `btrfs` を選ぶと初回導入時は `compress
 
 1. `tuigreet` で `mitac` にログインする（Sway 起動）。
 2. 退避した `~/.config/rclone/rclone.conf` を戻す（`chmod 600 ~/.config/rclone/rclone.conf`）か「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」の `rclone config` 手順を実行し、続けて `rbw login && rbw unlock` を実行する（期限切れ時は `rclone config reconnect gdrive:`）。
-3. `./scripts/restore-on-nixos.sh` を実行し、`/var/tmp/restore-mitac-日時/` へ復元された `/home/mitac`・`/home/mitac/Documents/hiragino-otf/`・システム状態（Wi-Fi / Bluetooth / WARP / Tailscale）を実機へ反映する（確認後に `/var/tmp/restore-mitac-日時/` を削除）。
+3. `./scripts/restore-on-nixos.sh`（TTY 互換のため英語出力）を実行し、`/var/tmp/restore-mitac-YYYYMMDD-HHMMSS/` へ復元された `/home/mitac`・`/home/mitac/Documents/hiragino-otf/`・システム状態（Wi-Fi / Bluetooth / WARP / Tailscale）を実機へ反映する（確認後に `/var/tmp/restore-mitac-YYYYMMDD-HHMMSS/` を削除）。
 4. ヒラギノ等を戻した場合は `rebuild` を実行し、圧縮率と scrub タイマーを確認する：
    ```bash
    sudo compsize / /nix/store /home
@@ -421,7 +425,7 @@ Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行�
       - 承認済みドメイン: `mitac.f5.si`（GCP プロジェクトと同じ Google アカウントで [Search Console](https://search.google.com/search-console) のドメインプロパティとして所有権を確認）
       保存後、所有権確認直後の場合は最大 24 時間待ち、ブランディング再審査を **「問題は修正した」** でリクエストしてください（指摘事項は実際の設定不備によるものなので、「指摘に誤りがある」は選ばないこと）。その後 **Audience → Publish** を押します。
       参考: [rclone: Making your own client_id](https://rclone.org/drive/#making-your-own-client-id)
-4. **対話式セットアップを実行**（rclone `gdrive` OAuth → Bitwarden 鍵 → 初回バックアップ）:
+4. **対話式セットアップを実行**（rclone `gdrive` OAuth → Bitwarden 鍵 → 初回バックアップ。プロンプトは英語表示）:
    ```bash
    backup setup          # restic-home-setup と同じ
    ```
@@ -478,7 +482,7 @@ exit
 
 既存の設定・ログインがある場合は再設定不要です。上の例はこのリポジトリと同じ Bitwarden EU 向けです。`RCLONE_CONFIG` があればその設定を使い、未指定なら `~/.config/rclone/rclone.conf`、それもなければ rclone の既定設定を使います。鍵は `rbw get restic-home` で取得し、`RESTIC_PASSWORD_FILE` / `RESTIC_PASSWORD_COMMAND` などが設定済みならそれを優先します。復元には**元の鍵**が必要です。新しい鍵の生成や `backup setup` は行わないでください。Google が `invalid_grant` を返す場合は、上のシェルで `rclone config reconnect gdrive:` を実行します。
 
-スクリプトは最新スナップショットを固定し、必要容量と空き容量を確認して、全体を `/var/tmp/restore-mitac-日時/` へ復元します。`restic restore --verify` の成功後に完了を表示します。既存ディレクトリへの上書きはせず、中断・失敗時のファイルも残します。
+スクリプトは非 CJK の TTY コンソールでも文字化けしないようすべて英語でメッセージを出力します。最新スナップショットを固定し、必要容量と空き容量を確認して、全体を `/var/tmp/restore-mitac-YYYYMMDD-HHMMSS/` へ復元します。`restic restore --verify` の成功後に `Restore and verification completed.` を表示します。既存ディレクトリへの上書きはせず、中断・失敗時のファイルも残します。
 
 - ホーム: `復元先/home/mitac/`
 - フォント: `復元先/home/mitac/Documents/hiragino-otf/`
@@ -488,7 +492,7 @@ exit
 
 ### 復元・確認（適用済みの環境）
 
-このモジュールはセットアップ、systemd ユニット、rclone 確認、および restic（リポジトリ／Bitwarden パスワードコマンド設定済み）をまとめて扱う `backup` CLI を導入します。`restic-home-setup` も `backup setup` のエイリアスとして残っています。
+このモジュールはセットアップ、systemd ユニット、rclone 確認、および restic（リポジトリ／Bitwarden パスワードコマンド設定済み）をまとめて扱う `backup` CLI（`backup --help`・`backup setup` の対話出力は TTY 互換のため英語表示）を導入します。`restic-home-setup` も `backup setup` のエイリアスとして残っています。
 
 ```bash
 backup                 # 使い方

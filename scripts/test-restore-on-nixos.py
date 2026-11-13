@@ -14,7 +14,7 @@ import unittest
 
 
 SCRIPT = Path(__file__).resolve().with_name("restore-on-nixos.sh")
-SUCCESS = "全体の復元・検証が完了しました。"
+SUCCESS = "Restore and verification completed."
 
 
 class RestoreIntegrationTest(unittest.TestCase):
