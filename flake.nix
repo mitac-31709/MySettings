@@ -1,5 +1,5 @@
 {
-  description = "NixOS configuration for mitac (Sway + greetd, Chromebook delbin)";
+  description = "NixOS configuration for mitac (Sway + greetd, Chromebook delbin & VAIO)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -56,86 +56,106 @@
       chatgptVersion = "26.1103.32239";
       # Must match inputs.grok-bot-deb URL (updated by scripts/flake-update.sh).
       grokBotVersion = "0.79.2";
+
+      mkHost =
+        {
+          flakeTarget,
+          hostModule,
+        }:
+        nixpkgs.lib.nixosSystem {
+          inherit system;
+          specialArgs = { inherit inputs flakeTarget; };
+          modules = [
+            hostModule
+            home-manager.nixosModules.home-manager
+            bootvine.nixosModules.default
+            {
+              # Links this generation to a git commit (shows in
+              # `nixos-rebuild list-generations` / `nixos-version --json`).
+              # Uncommitted trees get dirtyRev / dirtyShortRev; clean trees get rev.
+              system.configurationRevision = self.rev or self.dirtyRev or "dirty";
+
+              nixpkgs.config.allowUnfree = true;
+              nixpkgs.overlays = [
+                (
+                  final: prev:
+                  let
+                    # Electron app + Agent CLI; pull latest Cursor without a full nixpkgs bump.
+                    cursorPkgs = import inputs.nixpkgs-cursor {
+                      system = prev.stdenv.hostPlatform.system;
+                      config.allowUnfree = true;
+                    };
+                  in
+                  {
+                    inherit (cursorPkgs) cursor-cli;
+                    # Cursor's resources/helpers/node is an unpatched FHS binary that
+                    # SIGSEGVs under nix-ld on this host (dl_main / SEGV_ACCERR). MCP
+                    # / npm-exec helpers then dump core. Point it at nixpkgs node.
+                    code-cursor = cursorPkgs.code-cursor.overrideAttrs (old: {
+                      postInstall = (old.postInstall or "") + ''
+                        helperNode="$out/lib/cursor/resources/app/resources/helpers/node"
+                        if [[ -e "$helperNode" ]]; then
+                          rm -f "$helperNode"
+                          ln -s ${final.nodejs}/bin/node "$helperNode"
+                        fi
+                      '';
+                    });
+                    uniclipboard = final.callPackage ./pkgs/uniclipboard {
+                      src = inputs.uniclipboard-deb;
+                      version = uniclipboardVersion;
+                    };
+                    # Meltype Linux preview as Fcitx5 addon (not in nixpkgs).
+                    meltype = final.callPackage ./pkgs/meltype { };
+                    # Official ChatGPT Linux desktop (Codex included); overrides darwin-only nixpkgs attr.
+                    chatgpt = final.callPackage ./pkgs/chatgpt {
+                      src = inputs.chatgpt-deb;
+                      version = chatgptVersion;
+                    };
+                    # Sway HUD while ChatGPT / Cursor screen agents drive the desktop.
+                    chatgpt-cua-indicator = final.callPackage ./pkgs/chatgpt-cua-indicator { };
+                    # Left-bar AI status: hover slide-in chips (companion to waybar custom/ai).
+                    ai-status-chips = final.callPackage ./pkgs/ai-status-chips { };
+                    # Official Grok Bot Linux desktop (Cursor / x.ai).
+                    grok-bot = final.callPackage ./pkgs/grok-bot {
+                      src = inputs.grok-bot-deb;
+                      version = grokBotVersion;
+                    };
+                    # 1.8.4 + Sway AWT / sounds / no-update-prompt wrapper.
+                    jquake = final.callPackage ./pkgs/jquake { jquake = prev.jquake; };
+                    # OpenCode 2 CLI (nixpkgs still ships 1.x; pin npm linux-x64 binary).
+                    opencode = final.callPackage ./pkgs/opencode { };
+                    # Google Antigravity CLI (`agy`; binary from antigravity-public).
+                    antigravity = final.callPackage ./pkgs/antigravity { };
+                  }
+                )
+              ];
+              home-manager = {
+                useGlobalPkgs = true;
+                useUserPackages = true;
+                # Rename colliding existing files instead of failing activation
+                # (e.g. ~/.config/user-dirs.dirs from xdg-user-dirs).
+                backupFileExtension = "backup";
+                extraSpecialArgs = { inherit inputs flakeTarget; };
+                users.mitac = import ./home/mitac.nix;
+              };
+            }
+          ];
+        };
+
+      chromebook = mkHost {
+        flakeTarget = "chromebook";
+        hostModule = ./hosts/chromebook;
+      };
     in
     {
-      nixosConfigurations.mitac = nixpkgs.lib.nixosSystem {
-        inherit system;
-        specialArgs = { inherit inputs; };
-        modules = [
-          ./hosts/mitac
-          home-manager.nixosModules.home-manager
-          bootvine.nixosModules.default
-          {
-            # Links this generation to a git commit (shows in
-            # `nixos-rebuild list-generations` / `nixos-version --json`).
-            # Uncommitted trees get dirtyRev / dirtyShortRev; clean trees get rev.
-            system.configurationRevision = self.rev or self.dirtyRev or "dirty";
-
-            nixpkgs.config.allowUnfree = true;
-            nixpkgs.overlays = [
-              (
-                final: prev:
-                let
-                  # Electron app + Agent CLI; pull latest Cursor without a full nixpkgs bump.
-                  cursorPkgs = import inputs.nixpkgs-cursor {
-                    system = prev.stdenv.hostPlatform.system;
-                    config.allowUnfree = true;
-                  };
-                in
-                {
-                  inherit (cursorPkgs) cursor-cli;
-                  # Cursor's resources/helpers/node is an unpatched FHS binary that
-                  # SIGSEGVs under nix-ld on this host (dl_main / SEGV_ACCERR). MCP
-                  # / npm-exec helpers then dump core. Point it at nixpkgs node.
-                  code-cursor = cursorPkgs.code-cursor.overrideAttrs (old: {
-                    postInstall = (old.postInstall or "") + ''
-                      helperNode="$out/lib/cursor/resources/app/resources/helpers/node"
-                      if [[ -e "$helperNode" ]]; then
-                        rm -f "$helperNode"
-                        ln -s ${final.nodejs}/bin/node "$helperNode"
-                      fi
-                    '';
-                  });
-                  uniclipboard = final.callPackage ./pkgs/uniclipboard {
-                    src = inputs.uniclipboard-deb;
-                    version = uniclipboardVersion;
-                  };
-                  # Meltype Linux preview as Fcitx5 addon (not in nixpkgs).
-                  meltype = final.callPackage ./pkgs/meltype { };
-                  # Official ChatGPT Linux desktop (Codex included); overrides darwin-only nixpkgs attr.
-                  chatgpt = final.callPackage ./pkgs/chatgpt {
-                    src = inputs.chatgpt-deb;
-                    version = chatgptVersion;
-                  };
-                  # Sway HUD while ChatGPT / Cursor screen agents drive the desktop.
-                  chatgpt-cua-indicator = final.callPackage ./pkgs/chatgpt-cua-indicator { };
-                  # Left-bar AI status: hover slide-in chips (companion to waybar custom/ai).
-                  ai-status-chips = final.callPackage ./pkgs/ai-status-chips { };
-                  # Official Grok Bot Linux desktop (Cursor / x.ai).
-                  grok-bot = final.callPackage ./pkgs/grok-bot {
-                    src = inputs.grok-bot-deb;
-                    version = grokBotVersion;
-                  };
-                  # 1.8.4 + Sway AWT / sounds / no-update-prompt wrapper.
-                  jquake = final.callPackage ./pkgs/jquake { jquake = prev.jquake; };
-                  # OpenCode 2 CLI (nixpkgs still ships 1.x; pin npm linux-x64 binary).
-                  opencode = final.callPackage ./pkgs/opencode { };
-                  # Google Antigravity CLI (`agy`; binary from antigravity-public).
-                  antigravity = final.callPackage ./pkgs/antigravity { };
-                }
-              )
-            ];
-            home-manager = {
-              useGlobalPkgs = true;
-              useUserPackages = true;
-              # Rename colliding existing files instead of failing activation
-              # (e.g. ~/.config/user-dirs.dirs from xdg-user-dirs).
-              backupFileExtension = "backup";
-              extraSpecialArgs = { inherit inputs; };
-              users.mitac = import ./home/mitac.nix;
-            };
-          }
-        ];
+      nixosConfigurations = {
+        inherit chromebook;
+        vaio = mkHost {
+          flakeTarget = "vaio";
+          hostModule = ./hosts/vaio;
+        };
+        # Legacy alias so existing `.#mitac` rebuild commands keep working.
+        mitac = chromebook;
       };
     };
 }

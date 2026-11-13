@@ -1,39 +1,22 @@
-# Chromebook keyboard (keyd) + libinput quirks for keyd virtual keyboard.
+# Chromebook keyboard (cros-keyboard-map keyd layout) + EC SPI silence + Flip quirk.
+# Shared keyd OOM (ctrl-alt-del-oom) and sysrq config live in ../laptop/input.nix.
 {
-  lib,
   pkgs,
   ...
 }:
 
 let
-  # keyd command(): invoke kernel OOM killer (SysRq-f). Prefer this over a
-  # Sway bind — compositor may be wedged. Chromebook has no Del key; use
-  # Ctrl+Alt+Backspace (same chord users mean by Ctrl+Alt+Del).
+  # keyd command(): invoke kernel OOM killer (SysRq-f). Chromebook has no Del
+  # key; use Ctrl+Alt+Backspace (same chord users mean by Ctrl+Alt+Del).
   sysrqOom = pkgs.writeShellScript "sysrq-oom" ''
     ${pkgs.coreutils}/bin/printf f > /proc/sysrq-trigger
   '';
-
-  ctrlAltDelOom = ''
-    [control+alt]
-    delete = command(${sysrqOom})
-    backspace = command(${sysrqOom})
-  '';
 in
 {
-  # Allow Magic SysRq via keyboard too (Alt+SysRq+letter). /proc/sysrq-trigger
-  # ignores this mask; kept so classic SysRq still works if needed.
-  boot.kernel.sysctl."kernel.sysrq" = 244;
-
   # delbin registers Chrome EC on LPC (cros_ec_lpcs). The SPI companion probe
   # always times out (-110) and only adds boot noise; LPC already exposes
   # /dev/cros_ec, sensors, Type-C, etc.
   boot.blacklistedKernelModules = [ "cros_ec_spi" ];
-
-  # keyd drops privileges to group "keyd"; NixOS module never creates it.
-  users.groups.keyd = { };
-
-  # NixOS keyd sets ProcSubset=pid, which hides /proc/sysrq-trigger.
-  systemd.services.keyd.serviceConfig.ProcSubset = lib.mkForce "all";
 
   # --- Keyboard: WeirdTreeThing cros-keyboard-map (keyd) ---
   # Chromebook top-row scancodes are Vivaldi keys (back/refresh/zoom/...), not
@@ -43,127 +26,116 @@ in
   #   bare top row → ChromeOS actions; Search+top row → F1–F10.
   # tuigreet sessions (F3): hold Search + 3rd key (zoom / 全画面).
   # Manual OOM: Ctrl+Alt+Del (内蔵は Ctrl+Alt+Backspace).
-  services.keyd = {
-    enable = true;
-    keyboards = {
-      # Match cros_ec / AT / Hammer IDs from cros-keyboard-map (not all USB boards).
-      cros = {
-        ids = [
-          # AT Translated Set 2 (i8042 Chromebook keyboard). Do not include
-          # k:0000:0000 — that also matches sof-rt5682 Headset Jack.
-          "k:0001:0001"
-          "k:18d1:502b"
-          "k:18d1:5030"
-          "k:18d1:503c"
-          "k:18d1:503d"
-          "k:18d1:5044"
-          "k:18d1:504c"
-          "k:18d1:5050"
-          "k:18d1:5052"
-          "k:18d1:5057"
-          "k:18d1:505b"
-          "k:18d1:5061"
-        ];
-        extraConfig = ''
-          [main]
-          f1 = back
-          f2 = refresh
-          f3 = f11
-          f4 = scale
-          f5 = sysrq
-          f6 = brightnessdown
-          f7 = brightnessup
-          f8 = mute
-          f9 = volumedown
-          f10 = volumeup
+  services.keyd.keyboards.cros = {
+    # Match cros_ec / AT / Hammer IDs from cros-keyboard-map (not all USB boards).
+    ids = [
+      # AT Translated Set 2 (i8042 Chromebook keyboard). Do not include
+      # k:0000:0000 — that also matches sof-rt5682 Headset Jack.
+      "k:0001:0001"
+      "k:18d1:502b"
+      "k:18d1:5030"
+      "k:18d1:503c"
+      "k:18d1:503d"
+      "k:18d1:5044"
+      "k:18d1:504c"
+      "k:18d1:5050"
+      "k:18d1:5052"
+      "k:18d1:5057"
+      "k:18d1:505b"
+      "k:18d1:5061"
+    ];
+    extraConfig = ''
+      [main]
+      f1 = back
+      f2 = refresh
+      f3 = f11
+      f4 = scale
+      f5 = sysrq
+      f6 = brightnessdown
+      f7 = brightnessup
+      f8 = mute
+      f9 = volumedown
+      f10 = volumeup
 
-          back = back
-          refresh = refresh
-          zoom = f11
-          scale = scale
-          sysrq = sysrq
-          brightnessdown = brightnessdown
-          brightnessup = brightnessup
-          mute = mute
-          volumedown = volumedown
-          volumeup = volumeup
+      back = back
+      refresh = refresh
+      zoom = f11
+      scale = scale
+      sysrq = sysrq
+      brightnessdown = brightnessdown
+      brightnessup = brightnessup
+      mute = mute
+      volumedown = volumedown
+      volumeup = volumeup
 
-          f13 = coffee
-          sleep = coffee
+      f13 = coffee
+      sleep = coffee
 
-          [meta]
-          f1 = f1
-          f2 = f2
-          f3 = f3
-          f4 = f4
-          f5 = f5
-          f6 = f6
-          f7 = f7
-          f8 = f8
-          f9 = f9
-          f10 = f10
+      [meta]
+      f1 = f1
+      f2 = f2
+      f3 = f3
+      f4 = f4
+      f5 = f5
+      f6 = f6
+      f7 = f7
+      f8 = f8
+      f9 = f9
+      f10 = f10
 
-          back = f1
-          refresh = f2
-          zoom = f3
-          scale = f4
-          sysrq = f5
-          brightnessdown = f6
-          brightnessup = f7
-          mute = f8
-          volumedown = f9
-          volumeup = f10
+      back = f1
+      refresh = f2
+      zoom = f3
+      scale = f4
+      sysrq = f5
+      brightnessdown = f6
+      brightnessup = f7
+      mute = f8
+      volumedown = f9
+      volumeup = f10
 
-          [alt]
-          backspace = delete
-          brightnessdown = kbdillumdown
-          brightnessup = kbdillumup
-          f6 = kbdillumdown
-          f7 = kbdillumup
+      [alt]
+      backspace = delete
+      brightnessdown = kbdillumdown
+      brightnessup = kbdillumup
+      f6 = kbdillumdown
+      f7 = kbdillumup
 
-          [control]
-          f5 = sysrq
-          scale = sysrq
+      [control]
+      f5 = sysrq
+      scale = sysrq
 
-          [altgr]
-          backspace = delete
-          left = home
-          right = end
-          up = pageup
-          down = pagedown
+      [altgr]
+      backspace = delete
+      left = home
+      right = end
+      up = pageup
+      down = pagedown
 
-          [control+alt]
-          delete = command(${sysrqOom})
-          backspace = command(${sysrqOom})
-          f1 = C-A-f1
-          f2 = C-A-f2
-          f3 = C-A-f3
-          f4 = C-A-f4
-          f5 = C-A-f5
-          f6 = C-A-f6
-          f7 = C-A-f7
-          f8 = C-A-f8
-          f9 = C-A-f9
-          f10 = C-A-f10
-          back = C-A-f1
-          refresh = C-A-f2
-          zoom = C-A-f3
-          scale = C-A-f4
-          sysrq = C-A-f5
-          brightnessdown = C-A-f6
-          brightnessup = C-A-f7
-          mute = C-A-f8
-          volumedown = C-A-f9
-          volumeup = C-A-f10
-        '';
-      };
-
-      # External USB/Bluetooth keyboards (cros ids take precedence for built-in).
-      ctrl-alt-del-oom = {
-        ids = [ "*" ];
-        extraConfig = ctrlAltDelOom;
-      };
-    };
+      [control+alt]
+      delete = command(${sysrqOom})
+      backspace = command(${sysrqOom})
+      f1 = C-A-f1
+      f2 = C-A-f2
+      f3 = C-A-f3
+      f4 = C-A-f4
+      f5 = C-A-f5
+      f6 = C-A-f6
+      f7 = C-A-f7
+      f8 = C-A-f8
+      f9 = C-A-f9
+      f10 = C-A-f10
+      back = C-A-f1
+      refresh = C-A-f2
+      zoom = C-A-f3
+      scale = C-A-f4
+      sysrq = C-A-f5
+      brightnessdown = C-A-f6
+      brightnessup = C-A-f7
+      mute = C-A-f8
+      volumedown = C-A-f9
+      volumeup = C-A-f10
+    '';
   };
 
   # Palm rejection + Flip tablet mode with keyd virtual keyboard

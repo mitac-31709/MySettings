@@ -1,12 +1,12 @@
 # MySettings — NixOS flake（mitac）
 
-ホスト／ユーザー `mitac` 向けの Flakes + Home Manager 構成。ログインは **greetd + tuigreet**、デスクトップは **Sway のみ**。
+ホスト／ユーザー `mitac` 向けの Flakes + Home Manager 構成。ログインは **greetd + tuigreet**、デスクトップは **Sway のみ**。**VAIO（Intel 第8世代以降）** と **Chromebook（ASUS CX5500FE / delbin）** の両対応です。
 
 ## ブランチ
 
 | ブランチ | 用途 |
 |----------|------|
-| `main` | **作業・適用の既定**。汎用デスクトップ／ノート、および delbin Chromebook 向け設定を含む |
+| `main` | **作業・適用の既定**。VAIO（`.#vaio`）および delbin Chromebook（`.#chromebook`、レガシー別名 `.#mitac`）向け設定を含む |
 | `chromebook` | レガシー。新規作業には使わない |
 
 ## セッション（greetd + tuigreet）
@@ -31,9 +31,9 @@
 | スクショ | **Print** / **Super+Shift+S** | **grim**（全画面）/ grim+**slurp**（範囲）→ クリップボード |
 | タッチパッド | — | 自然スクロール off・タップクリック on・入力中もポインタ有効 |
 
-電源ボタン（`chromebook-power-chords`）: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+Back=強制ログアウト** / **電源+Refresh=再起動**。
+電源ボタン（`power-chords`）: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+F1（Chromebook は 電源+Back）=強制ログアウト** / **電源+F2（Chromebook は 電源+Refresh）=再起動**。
 
-Polkit / Fcitx5 / cliphist（systemd user）を起動時に起動。音量・輝度は PulseAudio / brightnessctl 経由。通知は mako、ステータスバーは waybar。
+Polkit / Fcitx5 / cliphist（systemd user）を起動時に起動。音量は PulseAudio（Chromebook）または PipeWire / `pipewire-pulse`（VAIO）経由で `pactl` 操作、輝度は `brightnessctl` 経由。通知は mako、ステータスバーは waybar。
 
 ## 世代とコミットの対応
 
@@ -49,32 +49,151 @@ NixOS の世代番号はマシン固有です。コミットとの対応はビ�
 ## 前提条件
 
 - Flakes が有効な NixOS マシン（この flake でも有効化します）
-- 初回 rebuild の**前に**、`hosts/mitac/hardware-configuration.nix` を自分のマシンで生成したファイルに差し替えること
+- 初回 rebuild の**前に**、対象ホストの `hosts/<target>/hardware-configuration.nix` を実機で生成したファイルに差し替えること（`hosts/vaio/hardware-configuration.nix` は汎用テンプレート、`hosts/chromebook/hardware-configuration.nix` は delbin 実機設定）
 - 非フリーパッケージ（`code-cursor`、`cursor-cli`、`jquake`、`parsec-bin`、`steam`、`vivaldi`）は `flake.nix` で許可済み。`affinity-v3` は未導入（戻し方は下記）
 - Chromebook: MrChromebox（または同等）の UEFI／WP 無効を想定。ファームウェアの書き込みはこのリポジトリの範囲外
 
+## USB からの新規インストールと初回設定
+
+新しい PC や空の SSD へ NixOS Live USB から導入する手順です。この flake は `systemd-boot`（UEFI 専用、`modules/nixos/common.nix`）と `zramSwap`（RAM 100% / `zstd`、`modules/nixos/laptop/power.nix`）を使うため、**UEFI ブート有効（セキュアブート無効）**・GPT（ESP + root、swap パーティション不要）を前提とします。
+
+### 0. USB メディアの作成と起動
+
+1. [NixOS ダウンロードページ](https://nixos.org/download/) から **Graphical ISO**（GUI インストーラ付き・推奨）または **Minimal ISO**（CLI のみ）を取得し、USB メモリへ書き込む。
+2. 対象機の UEFI 設定で Secure Boot を無効にし、USB から **UEFI モード**で起動する（Chromebook は事前に MrChromebox 等の UEFI ファームウェアを導入しておく）。
+
+### 1. NixOS の導入（2 パターン）
+
+#### パターン A: Graphical ISO の GUI インストーラで最小導入してから適用（推奨）
+
+既存バックアップを `./scripts/restore-on-nixos.sh` で復元する場合（`mitac` ユーザーで実機 NixOS 上から実行する設計）は、この手順が最も安全です。
+
+1. Live 環境で Wi-Fi 等へ接続し、**Install NixOS**（Calamares）を起動する。
+2. インストーラで以下を設定してインストールする：
+   - ユーザー名: **`mitac`**（`lib/machine.nix` の `/home/mitac/MySettings`・各種設定と一致させる）＋ 任意のパスワード
+   - デスクトップ環境: **No desktop**（後の flake 適用で Sway 環境一式が入るため最小構成でよい）
+   - パーティション: ディスク消去（UEFI / GPT）を選択。swap は **No swap**（`zramSwap` を使用）でも問題ない
+3. 完了後に USB を抜いて再起動し、`mitac` でログインする。
+4. 作業コピーを `~/MySettings` へ取得する（初回は最小環境のため `nix-shell` で `git` を一時利用）：
+   ```bash
+   nix-shell -p git --run \
+     'git clone -b main https://github.com/mitac31709/MySettings.git ~/MySettings'
+   cd ~/MySettings
+   ```
+5. **（既存バックアップからデータを戻す場合）** OS ビルドの前に「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」の手順で `./scripts/restore-on-nixos.sh` を実行し、必要なホームデータ・システム状態・ヒラギノフォント（`/home/mitac/Documents/hiragino-otf/`）を配置しておく（スクリプトは `/var/tmp/restore-mitac-日時/` へ展開するため `~/MySettings` は上書きされません）。
+6. 実機の `hardware-configuration.nix` を生成し、flake を適用する（対象は `vaio` または `chromebook`）：
+   ```bash
+   # VAIO の場合（Chromebook は hosts/chromebook/hardware-configuration.nix と .#chromebook）
+   sudo nixos-generate-config --show-hardware-config > hosts/vaio/hardware-configuration.nix
+
+   # 適用（~/Documents/hiragino-otf が既にある場合は `--impure` を追加）
+   sudo NIX_CONFIG='experimental-features = nix-command flakes' \
+     nixos-rebuild switch --flake .#vaio
+   ```
+7. 完了後、カーネル／bootvine／greetd／Sway セッションをクリーンに反映するため `sudo reboot` する。
+
+#### パターン B: Minimal ISO（CLI）から `nixos-install --flake` で直接導入
+
+GUI インストーラを経由せず、USB から直接この flake の環境を書き込む手順です（Live 環境上には `/home/mitac/Documents/hiragino-otf` が無いため、初回は Noto CJK でビルドされます）。
+
+1. 必要なら日本語配列とネットワークを設定する：
+   ```bash
+   loadkeys jp106
+   nmtui                        # Wi-Fi / 有線ネットワーク接続
+   ```
+2. `lsblk` で対象ディスクを確認し、GPT パーティション作成・フォーマット・マウントを行う（**対象ディスクの全データが消去されます**。例: NVMe の `/dev/nvme0n1` — eMMC なら `/dev/mmcblk0`、SATA なら `/dev/sda` に読み替え）：
+   ```bash
+   sudo parted /dev/nvme0n1 -- mklabel gpt
+   sudo parted /dev/nvme0n1 -- mkpart ESP fat32 1MiB 1GiB
+   sudo parted /dev/nvme0n1 -- set 1 esp on
+   sudo parted /dev/nvme0n1 -- mkpart root ext4 1GiB 100%
+
+   sudo mkfs.fat -F 32 -n boot /dev/nvme0n1p1
+   sudo mkfs.ext4 -L nixos /dev/nvme0n1p2
+
+   sudo mount /dev/nvme0n1p2 /mnt
+   sudo mkdir -p /mnt/boot
+   sudo mount -o umask=0077 /dev/nvme0n1p1 /mnt/boot
+   ```
+3. ハードウェア設定生成と作業用リポジトリの用意を行う（`/mnt/home/mitac` は `nixos-install` 時に正しい所有者で作成させるため、ここでは `/tmp/MySettings` へ clone します）：
+   ```bash
+   sudo nixos-generate-config --root /mnt
+
+   nix-shell -p git --run '
+     sudo git clone -b main https://github.com/mitac31709/MySettings.git /tmp/MySettings
+   '
+
+   # 生成した実機構成を対象ホストへコピー（Chromebook の場合は chromebook に読み替え）
+   sudo cp /mnt/etc/nixos/hardware-configuration.nix \
+     /tmp/MySettings/hosts/vaio/hardware-configuration.nix
+   ```
+4. flake でインストールする（対象は `#vaio` または `#chromebook`）：
+   ```bash
+   sudo NIX_CONFIG='experimental-features = nix-command flakes' \
+     nixos-install --flake /tmp/MySettings#vaio
+   ```
+   プロンプトに従って `root` パスワードを設定する。
+5. **【必須】再起動前に作業コピーの配置・`mitac` のパスワード設定・所有者変更を行う**（`modules/nixos/common.nix` に初期パスワードが無いため、未設定だと `tuigreet` でログインできません）：
+   ```bash
+   sudo cp -a /tmp/MySettings /mnt/home/mitac/MySettings
+   sudo nixos-enter --root /mnt
+   passwd mitac
+   chown -R mitac:users /home/mitac/MySettings
+   exit
+   ```
+6. アンマウントして USB を抜き、再起動する：
+   ```bash
+   sudo umount -R /mnt
+   sudo reboot
+   ```
+
+### 2. 初回ログイン後の設定チェックリスト
+
+再起動後の `tuigreet` でユーザー `mitac` を選んでログインすると **Sway** が起動します（端末: **Ctrl+Alt+T** / **Super+Return**、IME トグル: **Super+Space**、英数⇔日本語: **半角/全角**、ランチャー: **Super+D** / **Alt+Space**）。秘密情報・認証・機体固有ファイルはリポジトリに含まれないため、実機で一度だけ次を設定します。
+
+1. **GitHub 認証（`gh`）**:
+   `gh auth login` を実行する（`programs.gh` の `gitCredentialHelper` が有効なため、以降の `~/MySettings` での `git push` / `pull` にも使われます）。
+2. **VPN（Tailscale / Cloudflare WARP）**（※ バックアップから `/var/lib/{tailscale,cloudflare-warp}` を復元しなかった場合）：
+   - Tailscale: `sudo tailscale up --operator=mitac`（自宅外でのみ必要な場合は `ts-home-routes off` のまま維持）
+   - Cloudflare WARP: `warp-cli registration new` → `warp-cli connect`
+3. **暗号化バックアップの復元または新規設定**:
+   - **別機体の既存バックアップから復元する場合**: 「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」および「復元・確認（適用済みの環境）」を参照し、`rclone config`（`gdrive`）と `rbw` ログインを行って復元する（**新しい鍵を作らないこと**）。
+   - **新規でバックアップを初期構築する場合**: 「`/home の暗号化バックアップ` → `初回セットアップ`」に従い、GCP OAuth クライアント作成 → `backup setup` → `rbw login && backup unlock-key` → `rbw generate 40 restic-home` → `backup run` を実行する。
+4. **ヒラギノフォント（任意）**:
+   `/home/mitac/Documents/hiragino-otf/` に OTF ファイルを配置し、`rebuild` を実行する（ディレクトリが存在すると `rebuild` が自動で `--impure` を付けて同梱します）。
+5. **Vivaldi × ChatGPT 拡張（利用する場合）**:
+   Vivaldi で Web Store 版を入れた後、`vivaldi-chatgpt-extension-patch` が `~/.local/share/vivaldi-chatgpt-extension` を生成するため、`vivaldi://extensions` で Store 版を無効化し、Developer mode → Load unpacked で同ディレクトリを読み込む。
+6. **その他の任意設定と実機確認**:
+   - **リモートビルダー**（`modules/nixos/remote-builder.nix`）: 利用する場合は `/home/mitac/.ssh/id_wsl_builder`（パスフレーズなし）を配置し、公開鍵を `galleria-mitac` 側へ登録する（未配置でもタイムアウト後にローカルビルドへフォールバック。待ち時間を省くなら `sudo nixos-rebuild switch --flake .#vaio --option builders ""` を実行）。
+   - **dsh-TUI**: `npm i -g @deepseek-ai/dsh @deepseek-harness-tui/dsh-tui`
+   - **ハードウェア確認**: 下記「VAIO オーディオ確認」「Chromebook オーディオ確認」「VA-API / Parsec 確認」を実行する。
+
 ## 適用手順
 
-既存バックアップからデータを戻す場合は、先に「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」を実行してください。
+新しく USB から環境を構築する場合は、先に「[USB からの新規インストールと初回設定](#usb-からの新規インストールと初回設定)」を参照してください。既存バックアップからデータを戻す場合は、先に「[OS ビルド前に実機へ復元](#os-ビルド前に実機へ復元)」を実行してください。
 
 ```bash
 # NixOS マシン上で、このリポジトリから:
 git checkout main
 
-# ハードウェア設定を差し替え（必須）:
-sudo nixos-generate-config --show-hardware-config > hosts/mitac/hardware-configuration.nix
+# 1) VAIO（Intel 第8世代以降）の場合 — 初回はハードウェア設定の差し替えが必須:
+sudo nixos-generate-config --show-hardware-config > hosts/vaio/hardware-configuration.nix
+sudo nixos-rebuild switch --flake .#vaio
 
-# ビルドして切り替え:
-sudo nixos-rebuild switch --flake .#mitac
-# または（Home Manager 適用後）どのディレクトリからでも:
-#   rebuild
-# → sudo nixos-rebuild switch --flake /home/mitac/MySettings#mitac
+# 2) Chromebook（ASUS CX5500FE / delbin）の場合（別個体では再生成）:
+# sudo nixos-generate-config --show-hardware-config > hosts/chromebook/hardware-configuration.nix
+sudo nixos-rebuild switch --flake .#chromebook
+# ※ 後方互換エイリアス `.#mitac` も `.#chromebook` を指します
+
+# Home Manager 適用後は、どのディレクトリからでも:
+#   rebuild          # 現在のホストターゲット（vaio / chromebook）を再ビルド
+#   rebuild vaio     # 引数でターゲット明示も可能
 
 # 必要なら:
 passwd mitac
 ```
 
-`flake.lock` はリポジトリに含まれます。シェル関数 `rebuild`（先に `sudo` 認証、通常表示のままビルド中だけ `nom` ETA）とエイリアス `generations` は `home/shell.nix` で定義されます。flake の作業コピーは `lib/machine.nix` の `repoPath`（既定 `/home/mitac/MySettings`）だけです。Home Manager の `mitac.repoPath` で上書きできます。`rebuild` / `flake-update` はそのパスの `flake.nix` を使います。スクリプト本体は Nix ストアのコマンドで、チェックアウトの `scripts/` を直接実行しません。
+`flake.lock` はリポジトリに含まれます。シェル関数 `rebuild`（既定ターゲットは各ホストの `flakeTarget`／未指定時のフォールバックは `lib/machine.nix` の `flakeHost`、引数で `.#vaio` / `.#chromebook` の切り替え可。先に `sudo` 認証、通常表示のままビルド中だけ `nom` ETA）とエイリアス `generations` は `home/shell.nix` で定義されます。flake の作業コピーは `lib/machine.nix` の `repoPath`（既定 `/home/mitac/MySettings`）だけです。Home Manager の `mitac.repoPath` / `mitac.flakeHost` で上書きできます。`rebuild` / `flake-update` はそのパスの `flake.nix` を使います。スクリプト本体は Nix ストアのコマンドで、チェックアウトの `scripts/` を直接実行しません。
 
 ## flake の更新
 
@@ -176,86 +295,66 @@ Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行�
 
 `cliphist`（systemd user の `wl-paste --watch`）+ `clipboard-history`（rofi → 選択で貼り付け）。呼び出しは **Super+V**。
 
-## Encrypted /home backup
+## /home の暗号化バックアップ
 
-`modules/nixos/backup.nix` backs up the user's home **and selected system state** to
-**Google Drive**, encrypted:
+`modules/nixos/backup.nix` は、ユーザーのホームと**一部のシステム状態**を暗号化して **Google Drive** へバックアップします。
 
-- **restic** — encrypted, deduplicated, snapshot backups of `/home/mitac` plus staged
-  copies of NetworkManager Wi-Fi profiles, Bluetooth pairings, Cloudflare WARP
-  state, and Tailscale node state.
-- **rclone** — Google Drive backend (restic repo `rclone:gdrive:restic/mitac-home`).
-- **Bitwarden (`rbw`)** — holds the restic encryption key. restic fetches it at
-  runtime via `RESTIC_PASSWORD_COMMAND=rbw get restic-home`, so **no key material is
-  written to disk or into the Nix store**. `rbw` itself is configured declaratively in
-  `home/mitac.nix` (`programs.rbw`).
+- **restic** — `/home/mitac` に加え、NetworkManager の Wi-Fi プロファイル・Bluetooth ペアリング・Cloudflare WARP 状態・Tailscale ノード状態の一時コピー（staged）を暗号化・重複排除してスナップショット保存します。
+- **rclone** — Google Drive バックエンド（restic リポジトリ: `rclone:gdrive:restic/mitac-home`）。
+- **Bitwarden (`rbw`)** — restic の暗号化鍵を保持します。実行時に `RESTIC_PASSWORD_COMMAND=rbw get restic-home` 経由で鍵を取得するため、**鍵データはディスク上にも Nix ストアにも書き込まれません**。`rbw` 自体の宣言的設定は `home/programs.nix`（`programs.rbw`）にあります。
 
-A daily `systemd` timer (`restic-backups-home.timer`) runs the backup and prunes old
-snapshots (`--keep-daily 7 --keep-weekly 5 --keep-monthly 12`). While a graphical
-session is logged in, **Sway waybar** shows live progress (`バックアップ N%`) via
-`$XDG_RUNTIME_DIR/restic-home-status`, and mako notifications cover start / finish
-(or failure).
+日次の `systemd` タイマー（`restic-backups-home.timer`）がバックアップを実行し、古いスナップショットを整理します（`--keep-daily 7 --keep-weekly 5 --keep-monthly 12`）。グラフィカルセッションへのログイン中は **Sway の waybar** に進捗（`バックアップ N%`、`$XDG_RUNTIME_DIR/restic-home-status` 経由）が表示され、開始・完了（または失敗）が mako 通知で知らされます。
 
-### One-time setup (secrets stay out of git / the Nix store)
+### 初回セットアップ（秘密情報は git / Nix ストアに含めない）
 
-1. **Edit your identifiers** before rebuilding:
-   - `home/programs.nix`: `programs.rbw.settings.email` → your Bitwarden email.
-   - `modules/nixos/backup.nix` (optional): `repository`, `bitwardenItem`, `paths`.
-2. **Rebuild**: `sudo nixos-rebuild switch --flake .#mitac`.
-3. **Create your own Google Drive OAuth client** (required: rclone's shared client_id is being retired in 2026, and the shared quota is what makes restore crawl). See [Making your own client_id](https://rclone.org/drive/#making-your-own-client-id):
-   1. [Google Cloud Console](https://console.cloud.google.com/) → new project (e.g. `rclone-mitac`).
-   2. **APIs & Services → Library** → enable **Google Drive API**.
-   3. **OAuth consent screen** → User type **External** → app name + your email.
-   4. **Data Access** → add scopes:
+1. rebuild の前に**識別子を編集**します。
+   - `home/programs.nix`: `programs.rbw.settings.email` → 自分の Bitwarden メールアドレス。
+   - `modules/nixos/backup.nix`（任意）: `repository`、`bitwardenItem`、`paths`。
+2. **rebuild**: `sudo nixos-rebuild switch --flake .#vaio`（または `.#chromebook`）。
+3. **自分専用の Google Drive OAuth クライアントを作成**（必須: rclone 共有の `client_id` は 2026 年に廃止予定であり、共有クォータでは復元が極端に遅くなるため）。[Making your own client_id](https://rclone.org/drive/#making-your-own-client-id) も参照してください。
+   1. [Google Cloud Console](https://console.cloud.google.com/) → 新規プロジェクトを作成（例: `rclone-mitac`）。
+   2. **APIs & Services → Library**（API とサービス → ライブラリ）→ **Google Drive API** を有効化。
+   3. **OAuth consent screen**（OAuth 同意画面）→ User type で **External**（外部）を選択 → アプリ名とメールアドレスを設定。
+   4. **Data Access**（データアクセス）→ 次のスコープを追加:
       - `https://www.googleapis.com/auth/docs`
       - `https://www.googleapis.com/auth/drive`
       - `https://www.googleapis.com/auth/drive.metadata.readonly`
-   5. **Audience** → **+ Add users** → add your Google account as a test user.
-   6. **Clients → Create OAuth client** → Application type **Desktop app** → Create.
-      Note the **Client ID** and **Client secret** (keep them private; never commit).
-   7. **Audience → Publish app** (move out of Testing). **Required for unattended
-      backups** — Testing issues refresh tokens that die about every **7 days**
-      (`invalid_grant` / `rclone config reconnect gdrive:`). Publishing does **not**
-      require Google verification for personal single-user use (you'll see an
-      "unverified app" warning once at reconnect; that is fine).
-      If **Publish** is greyed out, Google wants Branding on a **domain you own**
-      (Search Console verified). `github.io` is often rejected — use:
-      - App name (exact): `restic Home Backup`
-      - Home: https://restic-oauth.mitac.f5.si/
-      - Privacy: https://restic-oauth.mitac.f5.si/privacy.html
-      - Authorized domain: `mitac.f5.si` (verify in
-        [Search Console](https://search.google.com/search-console) as a Domain
-        property with the same Google account as the GCP project)
-      After saving, wait up to 24h if ownership was just verified, then request
-      branding re-check with **「問題は修正した」** (the findings are real —
-      do not pick “issues are incorrect”). Then Audience → Publish.
-      See [rclone: Making your own client_id](https://rclone.org/drive/#making-your-own-client-id).
-4. **Run the interactive setup** (rclone `gdrive` OAuth → Bitwarden key → first backup):
+   5. **Audience**（対象）→ **+ Add users** → テストユーザーに自分の Google アカウントを追加。
+   6. **Clients → Create OAuth client**（クライアント → OAuth クライアントを作成）→ Application type で **Desktop app**（デスクトップ アプリ）を選択して作成。
+      表示された **Client ID** と **Client secret** を控えます（秘密情報のため絶対にコミットしない）。
+   7. **Audience → Publish app**（対象 → アプリを公開、Testing から移行）。**無人バックアップには必須です** — Testing 状態のままだとリフレッシュトークンが約 **7 日ごと** に失効します（`invalid_grant` / `rclone config reconnect gdrive:`）。個人利用（単一ユーザー）であれば公開にあたって Google の審査（Verification）は不要です（再接続時に一度「未確認のアプリ」警告が出ますがそのまま進めて問題ありません）。
+      **Publish** がグレーアウトされている場合、Google は**自身が所有するドメイン**（Search Console で所有権確認済み）でのブランディング設定を要求します。`github.io` は拒否されることが多いため、次のように設定します。
+      - アプリ名（完全一致）: `restic Home Backup`
+      - ホームページ: https://restic-oauth.mitac.f5.si/
+      - プライバシーポリシー: https://restic-oauth.mitac.f5.si/privacy.html
+      - 承認済みドメイン: `mitac.f5.si`（GCP プロジェクトと同じ Google アカウントで [Search Console](https://search.google.com/search-console) のドメインプロパティとして所有権を確認）
+      保存後、所有権確認直後の場合は最大 24 時間待ち、ブランディング再審査を **「問題は修正した」** でリクエストしてください（指摘事項は実際の設定不備によるものなので、「指摘に誤りがある」は選ばないこと）。その後 **Audience → Publish** を押します。
+      参考: [rclone: Making your own client_id](https://rclone.org/drive/#making-your-own-client-id)
+4. **対話式セットアップを実行**（rclone `gdrive` OAuth → Bitwarden 鍵 → 初回バックアップ）:
    ```bash
-   backup setup          # same as restic-home-setup
+   backup setup          # restic-home-setup と同じ
    ```
-   When rclone asks for `client_id` / `client_secret`, paste the values from step 3
-   (do **not** leave them blank). Or configure / reconnect manually:
+   rclone から `client_id` / `client_secret` を尋ねられたら、手順 3 で取得した値を貼り付けます（**空欄のままにしないこと**）。手動で設定／再接続する場合は次のとおりです。
    ```bash
-   # New remote
+   # 新規リモート作成
    rclone config
    # n → name: gdrive → storage: drive
-   # client_id>   <your Client ID>
-   # client_secret> <your Client secret>
-   # scope> 1 (full drive) → browser OAuth
+   # client_id>   <自分の Client ID>
+   # client_secret> <自分の Client secret>
+   # scope> 1 (full drive) → ブラウザで OAuth 認証
 
-   # Token dead / weekly invalid_grant (after Publishing the OAuth app):
+   # トークン失効 / 週次の invalid_grant 時（OAuth アプリ公開後に実施）:
    backup reconnect
-   backup about          # smoke check
+   backup about          # 疎通確認
 
-   # Existing remote that still uses the shared client_id:
+   # 既存リモートが共有 client_id のままの場合:
    backup reconnect
-   # or: rclone config → e (edit) → gdrive → set client_id/secret → replace token (Y)
+   # または: rclone config → e (edit) → gdrive → client_id/secret を設定 → replace token (Y)
    ```
-   Then Bitwarden + first backup:
+   続いて Bitwarden の解錠と初回バックアップを実行します。
    ```bash
    rbw login && backup unlock-key
-   rbw generate 40 restic-home   # password field = restic encryption key
+   rbw generate 40 restic-home   # パスワード欄 = restic 暗号化鍵
    backup run
    backup log
    ```
@@ -296,21 +395,19 @@ exit
 
 実際の `/home` や `/etc` への反映は、復元内容と現在のファイルを確認してから行います。ヒラギノを使うなら、OS ビルド前に OTF を `/home/mitac/Documents/hiragino-otf` に置き、`rebuild`（ディレクトリがあるとき `--impure`）してください。置かない場合の既定は Noto CJK です。復元対象はバックアップに含まれる範囲で、`MySettings`、キャッシュ、ゲーム本体などの除外対象や `/etc/shadow` は含まれません。使い方は `./scripts/restore-on-nixos.sh --help` でも確認できます。
 
-### Restore / inspect（適用済みの環境）
+### 復元・確認（適用済みの環境）
 
-The module installs a `backup` CLI for setup, the systemd unit, rclone checks, and
-restic (repo / Bitwarden password command preloaded). `restic-home-setup` remains as
-an alias of `backup setup`:
+このモジュールはセットアップ、systemd ユニット、rclone 確認、および restic（リポジトリ／Bitwarden パスワードコマンド設定済み）をまとめて扱う `backup` CLI を導入します。`restic-home-setup` も `backup setup` のエイリアスとして残っています。
 
 ```bash
-backup                 # usage
+backup                 # 使い方
 backup setup
 backup run && backup log
 backup snapshots
 backup restore latest --target /tmp/restore
 ```
 
-System state lands under `/tmp/restore/run/restic-backups-home/system/`:
+システム状態は `/tmp/restore/run/restic-backups-home/system/` 配下に展開されます。
 
 ```bash
 # Wi-Fi
@@ -320,26 +417,26 @@ sudo chown root:root /etc/NetworkManager/system-connections/*
 sudo chmod 600 /etc/NetworkManager/system-connections/*
 sudo nmcli connection reload
 
-# Bluetooth pairings
+# Bluetooth ペアリング情報
 sudo cp -a /tmp/restore/run/restic-backups-home/system/bluetooth/. \
   /var/lib/bluetooth/
 sudo chown -R root:root /var/lib/bluetooth
 sudo systemctl restart bluetooth
 
-# Cloudflare WARP device registration
+# Cloudflare WARP デバイス登録情報
 sudo cp -a /tmp/restore/run/restic-backups-home/system/cloudflare-warp/. \
   /var/lib/cloudflare-warp/
 sudo chown -R root:root /var/lib/cloudflare-warp
 sudo systemctl restart cloudflare-warp 2>/dev/null || true
 
-# Tailscale node state (login / keys)
+# Tailscale ノード状態（ログイン／鍵）
 sudo cp -a /tmp/restore/run/restic-backups-home/system/tailscale/. \
   /var/lib/tailscale/
 sudo chown -R root:root /var/lib/tailscale
 sudo systemctl restart tailscaled
 ```
 
-If Drive restore is still rate-limited, copy the repo locally first, then restore from disk:
+Google Drive からの復元でレート制限にかかる場合は、先にリポジトリをローカルへコピーしてからディスクから復元します。
 
 ```bash
 rclone copy gdrive:restic/mitac-home /var/tmp/restic-mitac-home \
@@ -350,25 +447,13 @@ restic restore latest \
   --target /tmp/restore
 ```
 
-### Notes
+### 注意事項
 
-- The backup runs as user `mitac`; `rbw` must be **unlocked/reachable** for a run to
-  succeed. Prefer keeping an unlocked `rbw-agent` in your graphical session. If the
-  vault is locked when the timer fires, the password command imports your session
-  D-Bus / Wayland (or X11) so `pinentry-qt` can prompt; with no session, unlock first
-  (`backup unlock-key`) and start with `backup run`.
-- Root-only trees (Wi-Fi, Bluetooth, Cloudflare WARP, Tailscale) are staged by a
-  root `ExecStartPre` into `/run/restic-backups-home/system/…`, then cleared on
-  stop. `/etc/shadow` (login password) is **not** backed up. `~/MySettings`
-  (flake checkout, including `.git` and uncommitted work) **is** included with
-  the rest of `/home/mitac`; after restore it lands under
-  `/tmp/restore/home/mitac/MySettings`.
-- Excluded regenerable bulk includes Steam client/runtime + game installs (saves in
-  `userdata` / `compatdata` stay), Cursor agent-worker binaries and caches, Vivaldi
-  caches / extensions / WebStorage, and Firefox `storage`.
-- To back up **all** of `/home` (multiple users), change the service to run as `root`
-  and configure root's `rclone`/`rbw` instead.
-- The rclone OAuth token and Bitwarden login live under `~/.config` — never in this repo.
+- バックアップはユーザー `mitac` で実行されるため、成功させるには `rbw` が**ロック解除済み／到達可能**である必要があります。グラフィカルセッション内で `rbw-agent` をアンロック状態に保っておくのが推奨です。タイマー実行時に Vault がロックされている場合、パスワードコマンドはセッションの D-Bus / Wayland（または X11）を取り込んで `pinentry-qt` で入力を促します。セッションがない環境では先に `backup unlock-key` でアンロックしてから `backup run` を実行してください。
+- root のみ読める領域（Wi-Fi、Bluetooth、Cloudflare WARP、Tailscale）は root 権限の `ExecStartPre` で `/run/restic-backups-home/system/…` へ一時コピーされ、停止時に削除されます。`/etc/shadow`（ログインパスワード）は**バックアップされません**。`~/MySettings`（`.git` や未コミットの作業を含む flake チェックアウト一式）は `/home/mitac` の他のファイルと**一緒に含まれ**、復元後は `/tmp/restore/home/mitac/MySettings` に展開されます。
+- 再生成可能な大容量データは除外されます（Steam クライアント／ランタイムとゲーム本体 ※ `userdata` / `compatdata` のセーブデータは保持、Cursor の agent-worker バイナリとキャッシュ、Vivaldi のキャッシュ／拡張機能／WebStorage、Firefox の `storage`）。
+- `/home` **全体**（複数ユーザー）をバックアップしたい場合は、サービスの実行ユーザーを `root` に変更し、`root` 側の `rclone` / `rbw` を設定してください。
+- rclone の OAuth トークンと Bitwarden ログイン情報は `~/.config` 配下に保存され、このリポジトリには一切含まれません。
 
 ## Neovim 設定
 
@@ -385,19 +470,44 @@ restic restore latest \
 - treesitter のパーサは `nvim-treesitter.withPlugins` の `parser/*.so` を `install_dir`（`~/.local/share/nvim/nix/treesitter`）に置く。LazyVim はそこにある言語を `TS.install` しない。言語を足すときは `home/lazy-plugins.nix` のリストを変える
 - LSP / formatter は Mason ではなく `programs.neovim.extraPackages`（`lua-language-server`、`stylua`、`ripgrep`、`fd`）。Mason は無効のまま
 
+## VAIO（Intel 第8世代以降）
+
+| 項目 | 詳細 |
+|------|------|
+| Flake ターゲット | `.#vaio`（`hosts/vaio/default.nix`） |
+| CPU / GPU | Intel 第8世代以降（Core i / Core Ultra iGPU）。`intel-media-driver` + `LIBVA_DRIVER_NAME=iHD` + `sof-firmware`（`modules/nixos/laptop/graphics.nix`） |
+| オーディオ | **PipeWire + WirePlumber**（ALSA / 32bit ALSA / `pipewire-pulse` / JACK 互換）+ Bluetooth（`modules/nixos/vaio/audio.nix`）。Chromebook 用の PulseAudio / `hw:0,0` 固定・`max98373` ミキサは不使用 |
+| キーボード・OOM | `keyd` により **Ctrl+Alt+Del**（**Ctrl+Alt+Backspace** も可）で手動 OOM killer（SysRq-f）＋ libinput 内部キーボード扱い。Chromebook 用 `cros` 最上段変換は適用しないため、`F1`–`F12` は通常のファンクションキーとして動作（`modules/nixos/laptop/input.nix`） |
+| 電源・コード | `zram`（100% / zstd）・`thermald`・`auto-cpufreq`・`power-chords`（全 `"Power Button"` ACPI ノードを監視: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+F1=強制ログアウト** / **電源+F2=再起動**）。Chromebook 専用 `/dev/cros_ec` Type-C 制御はロードしない |
+| バックライト | Waybar `backlight` はデバイス名固定なし（`intel_backlight` 等を自動検出） |
+
+### VAIO オーディオ確認
+
+```bash
+pactl info | grep 'Server Name'
+# "Server Name: PulseAudio (on PipeWire ...)" を期待
+
+pactl list short sinks
+# スピーカー／HDMI／Bluetooth シンクが見えること
+
+# 緊急停止（ミュート + PipeWire / WirePlumber 再起動）:
+audio-panic
+```
+
 ## Chromebook — ASUS CX5500FE / delbin
 
 | 項目 | 詳細 |
 |------|------|
+| Flake ターゲット | `.#chromebook`（`hosts/chromebook/default.nix`。後方互換エイリアス `.#mitac` も同一） |
 | ボード | `delbin`（`DELBIN_XHVI`） |
 | プラットフォーム | `volteer`（Intel Tiger Lake） |
-| GPU | Iris Xe（i3-1115G4）。`intel-media-driver` + `LIBVA_DRIVER_NAME=iHD`（Parsec 等の VA-API） |
+| GPU | Iris Xe（i3-1115G4）。`intel-media-driver` + `LIBVA_DRIVER_NAME=iHD`（`modules/nixos/laptop/graphics.nix`） |
 | オーディオ | SOF + `sof-rt5682` / `max98373`（`alsa-ucm-conf-cros` + `sof-firmware`） |
-| キーボード | [cros-keyboard-map](https://github.com/WeirdTreeThing/cros-keyboard-map) 相当の `keyd`（delbin physmap）。最上段は ChromeOS キー。**Search+最上段**で F1–F10。tuigreet セッション一覧は **Search+3つ目のキー（zoom/全画面）**。**Ctrl+Alt+Del**（内蔵は **Ctrl+Alt+Backspace**）で手動 OOM killer。電源コード: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+Back=強制ログアウト** / **電源+Refresh=再起動**（`chromebook-power-chords`） |
+| キーボード | [cros-keyboard-map](https://github.com/WeirdTreeThing/cros-keyboard-map) 相当の `keyd`（delbin physmap）。最上段は ChromeOS キー。**Search+最上段**で F1–F10。tuigreet セッション一覧は **Search+3つ目のキー（zoom/全画面）**。**Ctrl+Alt+Del**（内蔵は **Ctrl+Alt+Backspace**）で手動 OOM killer。電源コード: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+Back=強制ログアウト** / **電源+Refresh=再起動**（`power-chords`） |
 | Flip | タブレットモード向け libinput quirk `ModelTabletModeNoSuspend=1` |
 | USB-C 電力 | `chromebook-typec-prefer-sink`: 空きポートは FORCE_SINK（壁充電器／モババッ受電）、スマホ(UFP)→ source、AC給電中の他ポート→ source。udev は partner 追加時のみ（typec CHANGE はループ防止で除外） |
 
-### オーディオ確認
+### Chromebook オーディオ確認
 
 ```bash
 aplay -l
@@ -425,7 +535,11 @@ speaker-test -c 2 -t wav -l 1
 
 dmesg の `DMIC16kHz` IPC `-22` は NHLT に DMIC が無い場合の既知ノイズで、スピーカー不具合とは別件です。
 
-### VA-API / Parsec 確認
+### Chromebook キーボード確認
+
+最上段キーは Back / Forward / Refresh / Fullscreen / Brightness / Volume として動作するはずです（単なる F1–F10 ではありません）。
+
+## VA-API / Parsec 確認（Chromebook / VAIO 共通）
 
 ```bash
 vainfo
@@ -461,31 +575,31 @@ ts-home-routes off        # 帰宅後は必ず off（オンのまま自宅 Wi-Fi
 
 常時 `--accept-routes` は入れない（自宅で同じ `192.168.1.0/24` を受けて Wi-Fi が死ぬため）。
 
-### キーボード確認
-
-最上段キーは Back / Forward / Refresh / Fullscreen / Brightness / Volume として動作するはずです（単なる F1–F10 ではありません）。
-
-### モジュール
-
-`modules/nixos/chromebook.nix` は `hosts/mitac/default.nix` から import され、`modules/nixos/chromebook/` 配下の audio / power / graphics / input を束ねます。
-
 ## 構成
 
 ```
 flake.nix
-hosts/mitac/
+lib/machine.nix                   # 作業コピー・フォールバックホスト・ヒラギノパス設定
+hosts/chromebook/                 # delbin Chromebook エントリ + hardware-configuration.nix
+hosts/vaio/                       # VAIO エントリ + hardware-configuration.nix（要実機生成）
 modules/nixos/common.nix          # locale、ユーザー、Meltype/Fcitx5、フォント
 modules/nixos/desktop.nix         # sway + greetd + console-gui + portals + XKB/印刷
-modules/nixos/sway.nix            # Sway（waybar/mako 等）
+modules/nixos/sway.nix            # Sway システム側（greetd 既定セッション等）
 modules/nixos/greetd.nix          # tuigreet（Sway のみ）
 modules/nixos/console-gui.nix     # gui / apps（Sway ランチャー等）
-modules/nixos/chromebook.nix      # delbin 集約（./chromebook/*）
-modules/nixos/chromebook/         # audio / power / graphics / input
-modules/nixos/backup.nix          # encrypted /home → Google Drive (restic/rclone/rbw)
+modules/nixos/laptop.nix          # ノート PC 共通ハードウェア集約（./laptop/*）
+modules/nixos/laptop/             # graphics（Intel iHD + SOF）/ input（keyd OOM）/ power（zram + thermald + auto-cpufreq + power-chords）
+modules/nixos/vaio.nix            # VAIO 固有集約（./vaio/*）
+modules/nixos/vaio/               # audio（PipeWire + WirePlumber + Bluetooth）
+modules/nixos/chromebook.nix      # delbin Chromebook 固有集約（./chromebook/*）
+modules/nixos/chromebook/         # audio（PulseAudio + UCM）/ power（Type-C EC）/ input（cros keyd + Flip）
+modules/nixos/backup.nix          # 暗号化 /home → Google Drive バックアップ（restic / rclone / rbw）
 modules/nixos/release.nix         # system.nixos.tags（世代ラベルのスラッグ）
 home/mitac.nix                    # HM エントリ（identity + imports）
-home/shell.nix                    # bash エイリアス / runbtop
+home/flake-tools.nix              # repoPath / flakeHost / scripts（ストア経由）
+home/shell.nix                    # bash エイリアス / rebuild / audio-panic / runbtop
 home/programs.nix                 # git / rbw / neovim / mime / 起動音 / 共通パッケージ
+home/lazy-plugins.nix             # nixpkgs 由来 LazyVim プラグイン + treesitter パーサ
 home/clipboard.nix                # cliphist + clipboard-history
 home/sway.nix                     # Sway（waybar/mako/swayidle・rofi・jp・チートシート）
 home/nvim/

@@ -19,5 +19,5 @@
 
   security.pam.services.swaylock.enable = true;
 
-  # Chromebook audio stays on PulseAudio; power-profiles-daemon stays off.
+  # Audio (PulseAudio on Chromebook, PipeWire on VAIO) and power-profiles-daemon stay host-managed.
 }

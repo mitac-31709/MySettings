@@ -2,13 +2,15 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }:
 
 let
-  # One option (default lib/machine.nix). Works from any cwd, not only inside
-  # the checkout. The flake-update* commands are store paths.
-  flakeUri = "${config.mitac.repoPath}#${config.mitac.flakeHost}";
+  # One option (default lib/machine.nix + flakeTarget). Works from any cwd,
+  # not only inside the checkout. The flake-update* commands are store paths.
+  repoPath = config.mitac.repoPath;
+  defaultHost = config.mitac.flakeHost;
   hiraginoDir = (import ../lib/machine.nix).hiraginoDir;
 in
 {
@@ -27,9 +29,8 @@ in
       flake-update-cursor = lib.getExe config.mitac.scripts.flakeUpdateCursor;
       # Waybar upd indicator: compare pinned debs + GitHub flake tips (no mutate).
       flake-update-check = lib.getExe config.mitac.scripts.flakeUpdateCheck;
-      # Emergency: stop looping SOF amp playback (Broken pipe / stuck buffer).
-      # Mute levels via the shared chromebook-speaker-levels helper (systemPackages).
-      audio-panic = "chromebook-speaker-levels mute && systemctl --user restart pulseaudio.service 2>/dev/null; systemctl --user restart pipewire.service wireplumber.service 2>/dev/null; true";
+      # Emergency: mute speakers/sink and restart audio stack (PulseAudio on Chromebook, PipeWire on VAIO).
+      audio-panic = "if command -v chromebook-speaker-levels >/dev/null 2>&1; then chromebook-speaker-levels mute || true; else ${pkgs.pulseaudio}/bin/pactl set-sink-mute @DEFAULT_SINK@ 1 2>/dev/null || true; fi; for u in pulseaudio.service pipewire.service pipewire-pulse.service wireplumber.service; do systemctl --user restart $u 2>/dev/null || true; done";
       # When no display is up, gui wraps with cage; otherwise passthrough.
       vivaldi = "gui vivaldi";
       cursor = "gui cursor";
@@ -61,6 +62,9 @@ in
       }
 
       rebuild() {
+        local defaultTarget=${lib.escapeShellArg defaultHost}
+        local target="''${1:-$defaultTarget}"
+        local flakeUri=${lib.escapeShellArg repoPath}"#$target"
         # Ask for the password on the real TTY (|& nom swallows/hides the prompt).
         sudo -v || return $?
         # Resolve nom at call time (PATH) so GC of an old store path cannot break
@@ -73,7 +77,7 @@ in
         # Human-readable mode: pass-through eval/activation; ETA only while building.
         # pathExists of the Hiragino directory is false in pure eval. Pass
         # --impure only when the OTFs are actually on disk.
-        local -a rebuildArgs=(--flake ${lib.escapeShellArg flakeUri})
+        local -a rebuildArgs=(--flake "$flakeUri")
         if [ -d ${lib.escapeShellArg hiraginoDir} ]; then
           rebuildArgs+=(--impure)
         fi
