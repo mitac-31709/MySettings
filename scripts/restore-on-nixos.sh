@@ -470,13 +470,16 @@ restore_system_state() {
     if [[ -n $fmode ]]; then
       run_sudo find "$dest" -type f -exec chmod "$fmode" {} +
     fi
-    if [[ $reload_target == nmcli ]]; then
-      if command -v nmcli >/dev/null && [[ -d /run/systemd/system ]] &&
-         systemctl is-active --quiet NetworkManager.service 2>/dev/null; then
-        run_sudo nmcli connection reload || true
+    # Only reload/restart live host daemons when restoring directly into /.
+    if [[ -z $root_prefix ]]; then
+      if [[ $reload_target == nmcli ]]; then
+        if command -v nmcli >/dev/null && [[ -d /run/systemd/system ]] &&
+           systemctl is-active --quiet NetworkManager.service 2>/dev/null; then
+          run_sudo nmcli connection reload || true
+        fi
+      elif [[ -n $reload_target ]]; then
+        reload_unit_if_active "$reload_target"
       fi
-    elif [[ -n $reload_target ]]; then
-      reload_unit_if_active "$reload_target"
     fi
   done
 }

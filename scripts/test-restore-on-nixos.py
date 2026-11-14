@@ -21,6 +21,48 @@ SCRIPT = Path(__file__).resolve().with_name("restore-on-nixos.sh")
 SUCCESS = "復元と検証が完了しました。"
 
 
+def write_sudo_shim(shim_dir: Path, *, allow_service_reloads: bool = False) -> Path:
+    """Create a sudo test shim that logs calls and blocks accidental host reloads."""
+    sudo_shim = shim_dir / "sudo"
+    if allow_service_reloads:
+        sudo_shim.write_text(
+            '#!/usr/bin/env bash\n'
+            'set -euo pipefail\n'
+            'printf "%s\\n" "$*" >> "$SUDO_LOG"\n'
+            'case ${1:-} in\n'
+            '  mkdir|chmod|cp|chown|find|systemctl|nmcli)\n'
+            '    exit 0\n'
+            '    ;;\n'
+            '  *)\n'
+            '    printf "unexpected command via sudo shim: %s\\n" "$*" >&2\n'
+            '    exit 97\n'
+            '    ;;\n'
+            'esac\n',
+            encoding="utf-8",
+        )
+    else:
+        sudo_shim.write_text(
+            '#!/usr/bin/env bash\n'
+            'set -euo pipefail\n'
+            'printf "%s\\n" "$*" >> "$SUDO_LOG"\n'
+            'case ${1:-} in\n'
+            '  chown)\n'
+            '    exit 0\n'
+            '    ;;\n'
+            '  mkdir|chmod|cp|find)\n'
+            '    exec "$@"\n'
+            '    ;;\n'
+            '  *)\n'
+            '    printf "unexpected live host command via sudo shim: %s\\n" "$*" >&2\n'
+            '    exit 97\n'
+            '    ;;\n'
+            'esac\n',
+            encoding="utf-8",
+        )
+    sudo_shim.chmod(0o700)
+    return sudo_shim
+
+
 def run_in_pty(command, *, cwd, env, steps, timeout=15):
     """Drive an interactive bash invocation through a real PTY."""
     master, slave = pty.openpty()
@@ -287,17 +329,7 @@ class RestoreIntegrationTest(unittest.TestCase):
         sudo_log = self.case_directory / "sudo.log"
         shim_bin = self.case_directory / "bin"
         shim_bin.mkdir()
-        sudo_shim = shim_bin / "sudo"
-        sudo_shim.write_text(
-            '#!/usr/bin/env bash\n'
-            'printf "%s\\n" "$*" >> "$SUDO_LOG"\n'
-            'if [[ ${1:-} == chown ]]; then\n'
-            '  exit 0\n'
-            'fi\n'
-            'exec "$@"\n',
-            encoding="utf-8",
-        )
-        sudo_shim.chmod(0o700)
+        write_sudo_shim(shim_bin)
 
         env = dict(
             self.environment,
@@ -334,6 +366,8 @@ class RestoreIntegrationTest(unittest.TestCase):
         self.assertEqual(list(stage_parent.iterdir()), [])
         sudo_calls = sudo_log.read_text(encoding="utf-8")
         self.assertIn(f"chown -R root:root -- {restore_root}/etc/NetworkManager/system-connections", sudo_calls)
+        self.assertNotIn("systemctl", sudo_calls)
+        self.assertNotIn("nmcli", sudo_calls)
 
     def test_restore_failure_preserves_exit_status(self):
         # Keep real repository discovery/stats, but force an interrupted restore.
@@ -437,18 +471,7 @@ class RestorePromptTest(unittest.TestCase):
         return self.rbw_log.read_text(encoding="utf-8").splitlines()
 
     def install_shims(self):
-        sudo_shim = self.bin / "sudo"
-        sudo_shim.write_text(
-            '#!/usr/bin/env bash\n'
-            'set -euo pipefail\n'
-            'printf "%s\\n" "$*" >> "$SUDO_LOG"\n'
-            'if [[ ${1:-} == chown ]]; then\n'
-            '  exit 0\n'
-            'fi\n'
-            'exec "$@"\n',
-            encoding="utf-8",
-        )
-        sudo_shim.chmod(0o700)
+        write_sudo_shim(self.bin)
 
         for pin_name in ("pinentry-qt", "pinentry-curses"):
             pin_shim = self.bin / pin_name
@@ -1162,6 +1185,8 @@ class RestorePromptTest(unittest.TestCase):
         self.assertIn(f"chown -R root:root -- {restore_root}/var/lib/bluetooth", sudo_calls)
         self.assertIn(f"chown -R root:root -- {restore_root}/var/lib/tailscale", sudo_calls)
         self.assertNotIn("cloudflare-warp", sudo_calls)
+        self.assertNotIn("systemctl", sudo_calls)
+        self.assertNotIn("nmcli", sudo_calls)
         self.assertEqual(list(self.stage_parent.iterdir()), [])
 
     def test_pty_oauth_reconnect_in_place_preserves_reconnected_rclone(self):
@@ -2327,6 +2352,97 @@ class RestorePromptTest(unittest.TestCase):
         args = nix_args_file.read_text(encoding="utf-8").splitlines()
         self.assertIn("nixpkgs#python3", args)
         self.assertTrue(any("python3" in line for line in args), args)
+
+
+class RestoreSystemStateTest(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix="restore-sys-state-")
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        self.bin = self.root / "bin"
+        self.bin.mkdir()
+        self.sudo_log = self.root / "sudo.log"
+
+        write_sudo_shim(self.bin, allow_service_reloads=True)
+        systemctl_shim = self.bin / "systemctl"
+        systemctl_shim.write_text(
+            '#!/usr/bin/env bash\n'
+            'if [[ ${1:-} == is-active && ${2:-} == --quiet ]]; then\n'
+            '  case ${3:-} in\n'
+            '    NetworkManager.service|bluetooth.service|tailscaled.service) exit 0 ;;\n'
+            '    *) exit 1 ;;\n'
+            '  esac\n'
+            'fi\n'
+            'exit 0\n',
+            encoding="utf-8",
+        )
+        systemctl_shim.chmod(0o700)
+        nmcli_shim = self.bin / "nmcli"
+        nmcli_shim.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+        nmcli_shim.chmod(0o700)
+
+        self.stage_sys = self.root / "stage-sys"
+        (self.stage_sys / "nm-connections").mkdir(parents=True)
+        (self.stage_sys / "nm-connections" / "wifi.nmconnection").write_text(
+            "[connection]\n", encoding="utf-8"
+        )
+        (self.stage_sys / "bluetooth" / "AA:BB").mkdir(parents=True)
+        (self.stage_sys / "bluetooth" / "AA:BB" / "info").write_text(
+            "[General]\n", encoding="utf-8"
+        )
+        (self.stage_sys / "cloudflare-warp").mkdir(parents=True)
+        (self.stage_sys / "cloudflare-warp" / "reg.json").write_text(
+            "{}\n", encoding="utf-8"
+        )
+        (self.stage_sys / "tailscale").mkdir(parents=True)
+        (self.stage_sys / "tailscale" / "tailscaled.state").write_text(
+            "ts\n", encoding="utf-8"
+        )
+
+    def run_restore_system_state(self, root_prefix: str) -> list[str]:
+        if self.sudo_log.exists():
+            self.sudo_log.unlink()
+        env = dict(
+            os.environ,
+            PATH=f"{self.bin}:{os.environ['PATH']}",
+            SUDO_LOG=str(self.sudo_log),
+        )
+        result = subprocess.run(
+            [
+                "bash",
+                "-c",
+                'source "$1"; run_sudo() { sudo "$@"; }; restore_system_state "$2" "$3"',
+                "restore-system-state-test",
+                str(SCRIPT),
+                str(self.stage_sys),
+                root_prefix,
+            ],
+            cwd=self.root,
+            env=env,
+            stdin=subprocess.DEVNULL,
+            text=True,
+            capture_output=True,
+            timeout=15,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        return self.sudo_log.read_text(encoding="utf-8").splitlines()
+
+    def test_non_root_prefix_skips_live_host_service_reloads(self):
+        alt_root = self.root / "alt-root"
+        calls = self.run_restore_system_state(str(alt_root))
+        self.assertTrue(any(f"chown -R root:root -- {alt_root}/var/lib/bluetooth" == c for c in calls))
+        self.assertFalse(any(c.startswith(("systemctl ", "nmcli ")) for c in calls), calls)
+
+    def test_live_root_reloads_only_active_units(self):
+        calls = self.run_restore_system_state("")
+        self.assertIn("chown -R root:root -- /var/lib/bluetooth", calls)
+        if Path("/run/systemd/system").is_dir():
+            self.assertIn("nmcli connection reload", calls)
+            self.assertIn("systemctl restart bluetooth.service", calls)
+            self.assertIn("systemctl restart tailscaled.service", calls)
+            self.assertNotIn("systemctl restart cloudflare-warp.service", calls)
+        else:
+            self.assertFalse(any(c.startswith(("systemctl ", "nmcli ")) for c in calls), calls)
 
 
 if __name__ == "__main__":
