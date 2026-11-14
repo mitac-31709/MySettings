@@ -556,6 +556,12 @@ let
     }
     {
       section = "開発";
+      label = "Antigravity（全許可）";
+      run = "agy --dangerously-skip-permissions";
+      mode = "term";
+    }
+    {
+      section = "開発";
       label = "dsh-TUI";
       run = "dsh-tui";
       mode = "term";
