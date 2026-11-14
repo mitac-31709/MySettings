@@ -1029,9 +1029,25 @@ let
     }
     {
       section = "シークレット";
+      label = "更新: rclone 再取込（reconnect 後）";
+      run = "secrets import-rclone && rebuild";
+      mode = "term";
+    }
+    {
+      section = "シークレット";
+      label = "更新: Wi-Fi / gh / SSH 再取込";
+      run = "secrets import-wifi";
+      mode = "term";
+    }
+    {
+      section = "シークレット";
       label = "secrets bootstrap（新端末へ Bitwarden 鍵導入）";
       run = "secrets bootstrap";
       mode = "show";
+    }
+    {
+      section = "シークレット";
+      label = "注: 日常は rebuild 後 /run/agenix 自動展開。変更時のみ import-* → git add → rebuild";
     }
     {
       section = "シークレット";
@@ -1043,6 +1059,24 @@ let
       label = "輝度 40%（消費の主因を下げる）";
       run = "${brightnessctl} set 40%";
       mode = "exec";
+    }
+    {
+      section = powerSection;
+      label = "バッテリー状態（健康度・W・残り）";
+      run = "awk -v en=$(cat /sys/class/power_supply/BAT1/energy_now) -v ef=$(cat /sys/class/power_supply/BAT1/energy_full) -v ed=$(cat /sys/class/power_supply/BAT1/energy_full_design) -v pw=$(cat /sys/class/power_supply/BAT1/power_now) -v cap=$(cat /sys/class/power_supply/BAT1/capacity) -v st=$(cat /sys/class/power_supply/BAT1/status) 'BEGIN{printf \"%s %s%%  now=%.2fWh full=%.2fWh design=%.2fWh health=%.0f%%  %.2fW  ETA=%.1fh\\n\", st,cap,en/1e6,ef/1e6,ed/1e6,100*ef/ed,pw/1e6,(pw>0?en/pw:0)}'";
+      mode = "term";
+    }
+    {
+      section = powerSection;
+      label = "CPU消費プロセス上位";
+      run = "ps -eo pcpu,pmem,rss,comm --sort=-pcpu | head -25";
+      mode = "term";
+    }
+    {
+      section = powerSection;
+      label = "iowait / 負荷（vmstat）";
+      run = "vmstat 1 5";
+      mode = "term";
     }
     {
       section = powerSection;
