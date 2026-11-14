@@ -63,3 +63,23 @@ the daemon is not running — do step 1.
 
 Do all work on `main` (commits, PRs). Do not develop on `chromebook`. See
 `.cursor/rules/branch-workflow.mdc`.
+
+### Project rules (`.cursor/rules`)
+
+Agents that do not auto-load `.cursor/rules/*.mdc` (such as Antigravity `agy` or
+Codex) **must** check `.cursor/rules/` at the start of work and read all
+`alwaysApply: true` rules (plus glob-scoped rules like `frontend-design.mdc`
+when editing matching files):
+
+- `avoid-premature-workarounds.mdc` — investigate root causes instead of switching to workarounds
+- `backup-staging.mdc` — prefer declarative Nix config; stage only machine-specific state in `backup.nix` + `README.md`
+- `branch-workflow.mdc` — develop and commit only on `main`, never `chromebook`
+- `cheatsheet-expand.mdc` — also update `cheatsheetEntries` in `home/sway.nix` for reusable answers
+- `commit-before-next-unit.mdc` — commit coherent finished units before starting the next unit
+- `committing-changes-with-git.mdc` — git safety protocol, HEREDOC commit messages, push boundaries
+- `communication-style.mdc` — concise, direct responses with minimal bolding
+- `creating-pull-requests.mdc` — PR creation steps using `gh`
+- `graphify-knowledge-graph.mdc` — hybrid use of `graphify-out/` and native search
+- `investigate-before-conclude.mdc` — read logs, configs, and source before concluding
+- `nix-eval-avoid-options.mdc` — avoid heavy `options` evals; use narrow `config.` or source reads
+- `prefer-native-tools.mdc` — prefer native CLI / `nix run` over ad-hoc Python for simple tasks
