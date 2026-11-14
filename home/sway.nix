@@ -757,19 +757,19 @@ let
     {
       section = "ネット・BT・WARP";
       label = "warp-cli connect";
-      run = "warp-cli connect";
+      run = "warp-cli --accept-tos connect";
       mode = "exec";
     }
     {
       section = "ネット・BT・WARP";
       label = "warp-cli disconnect";
-      run = "warp-cli disconnect";
+      run = "warp-cli --accept-tos disconnect";
       mode = "exec";
     }
     {
       section = "ネット・BT・WARP";
       label = "warp-cli status";
-      run = "warp-cli status";
+      run = "warp-cli --accept-tos status";
       mode = "term";
     }
     {
@@ -1068,7 +1068,7 @@ let
     {
       section = powerSection;
       label = "warp disconnect";
-      run = "warp-cli disconnect";
+      run = "warp-cli --accept-tos disconnect";
       mode = "exec";
     }
     {
