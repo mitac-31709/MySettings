@@ -21,8 +21,19 @@ in
   # keyd drops privileges to group "keyd"; NixOS module never creates it.
   users.groups.keyd = { };
 
-  # NixOS keyd sets ProcSubset=pid, which hides /proc/sysrq-trigger.
-  systemd.services.keyd.serviceConfig.ProcSubset = lib.mkForce "all";
+  # nixpkgs keyd.nix: RestrictSUIDSGID + missing CAP_SETGID break setgid("keyd")
+  # ("setgid: Operation not permitted"); ProcSubset=pid and
+  # ProtectKernelTunables hide/RO-mount /proc/sysrq-trigger (sysrqOom).
+  systemd.services.keyd.serviceConfig = {
+    CapabilityBoundingSet = lib.mkForce [
+      "CAP_SYS_NICE"
+      "CAP_IPC_LOCK"
+      "CAP_SETGID"
+    ];
+    RestrictSUIDSGID = lib.mkForce false;
+    ProtectKernelTunables = lib.mkForce false;
+    ProcSubset = lib.mkForce "all";
+  };
 
   services.keyd = {
     enable = true;
