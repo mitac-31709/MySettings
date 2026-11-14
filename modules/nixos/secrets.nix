@@ -103,6 +103,18 @@ let
     )
     print(f"nm-agenix-profiles: loaded {written} declarative profile(s)")
   '';
+
+  nmSyncScript = pkgs.writeShellApplication {
+    name = "nm-agenix-sync";
+    runtimeInputs = [
+      pkgs.age
+      pkgs.coreutils
+      pkgs.python3
+    ];
+    text = ''
+      exec python3 ${../../scripts/nm-agenix-sync.py} "$@"
+    '';
+  };
 in
 {
   age.identityPaths = [ "/etc/agenix/master.key" ];
@@ -179,6 +191,30 @@ in
         mode = "0400";
       };
     })
+    (lib.optionalAttrs (hasSecretFile "wol-pc-env.age") {
+      "wol-pc-env" = {
+        file = secretsDir + "/wol-pc-env.age";
+        owner = user;
+        group = "users";
+        mode = "0400";
+      };
+    })
+    (lib.optionalAttrs (hasSecretFile "adbkey.age") {
+      "adbkey" = {
+        file = secretsDir + "/adbkey.age";
+        owner = user;
+        group = "users";
+        mode = "0400";
+      };
+    })
+    (lib.optionalAttrs (hasSecretFile "opencode-service.json.age") {
+      "opencode-service.json" = {
+        file = secretsDir + "/opencode-service.json.age";
+        owner = user;
+        group = "users";
+        mode = "0400";
+      };
+    })
   ];
 
   # Keep /etc/agenix strictly root-only even before the first key is written.
@@ -199,6 +235,37 @@ in
       Type = "oneshot";
       RemainAfterExit = true;
       ExecStart = "${nmProfilesScript}";
+    };
+  };
+
+  # Automatically sync imperative Wi-Fi additions/edits (nmcli / nmtui) back
+  # into secrets/nm-connections.age without needing interactive unlock.
+  systemd.services.nm-agenix-sync = {
+    description = "Sync local NetworkManager Wi-Fi profiles into secrets/nm-connections.age";
+    wantedBy = [ "multi-user.target" ];
+    after = [
+      "NetworkManager.service"
+      "nm-agenix-profiles.service"
+    ];
+    unitConfig = {
+      ConditionPathExists = "/home/${user}/MySettings/secrets/master-pubkey.txt";
+      ConditionDirectoryNotEmpty = "/etc/NetworkManager/system-connections";
+    };
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${nmSyncScript}/bin/nm-agenix-sync --secrets-dir /home/${user}/MySettings/secrets --master-key /etc/agenix/master.key --skip-if-locked";
+    };
+  };
+
+  systemd.paths.nm-agenix-sync = {
+    description = "Watch NetworkManager profiles and sync Wi-Fi changes into secrets/nm-connections.age";
+    wantedBy = [ "multi-user.target" ];
+    unitConfig = {
+      ConditionPathExists = "/home/${user}/MySettings/secrets/master-pubkey.txt";
+    };
+    pathConfig = {
+      PathChanged = "/etc/NetworkManager/system-connections";
+      Unit = "nm-agenix-sync.service";
     };
   };
 

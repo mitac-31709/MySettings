@@ -19,6 +19,8 @@ let
   hasAnySshSecret = hasBuilderSecret || hasPersonalSshSecret;
   hasGhHostsSecret = ageSecrets ? "gh-hosts.yml";
   hasUserEnvSecret = ageSecrets ? "user-env";
+  hasAdbKeySecret = ageSecrets ? "adbkey";
+  hasOpenCodeServiceSecret = ageSecrets ? "opencode-service.json";
 
   importUserEnvScript = pkgs.writeShellScript "mitac-import-user-env" ''
     set -eu
@@ -46,6 +48,12 @@ in
     ''
   );
 
+  home.activation.ensureAndroidDir = lib.mkIf hasAdbKeySecret (
+    lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+      ${pkgs.coreutils}/bin/install -d -m 750 "${config.home.homeDirectory}/.android"
+    ''
+  );
+
   home.file = lib.mkMerge [
     (lib.optionalAttrs hasBuilderSecret {
       ".ssh/id_wsl_builder".source =
@@ -61,11 +69,24 @@ in
     (lib.optionalAttrs (hasPersonalSshSecret && builtins.pathExists (secretsDir + "/id-ed25519.pub")) {
       ".ssh/id_ed25519.pub".source = secretsDir + "/id-ed25519.pub";
     })
+    (lib.optionalAttrs hasAdbKeySecret {
+      ".android/adbkey".source = config.lib.file.mkOutOfStoreSymlink ageSecrets."adbkey".path;
+    })
+    (lib.optionalAttrs (hasAdbKeySecret && builtins.pathExists (secretsDir + "/adbkey.pub")) {
+      ".android/adbkey.pub".source = secretsDir + "/adbkey.pub";
+    })
   ];
 
-  xdg.configFile = lib.optionalAttrs hasGhHostsSecret {
-    "gh/hosts.yml".source = config.lib.file.mkOutOfStoreSymlink ageSecrets."gh-hosts.yml".path;
-  };
+  xdg.configFile = lib.mkMerge [
+    (lib.optionalAttrs hasGhHostsSecret {
+      "gh/hosts.yml".source = config.lib.file.mkOutOfStoreSymlink ageSecrets."gh-hosts.yml".path;
+    })
+    (lib.optionalAttrs hasOpenCodeServiceSecret {
+      "opencode/service.json".source =
+        config.lib.file.mkOutOfStoreSymlink
+          ageSecrets."opencode-service.json".path;
+    })
+  ];
 
   programs.bash.initExtra = lib.mkIf hasUserEnvSecret ''
     if [ -r ${lib.escapeShellArg ageSecrets."user-env".path} ]; then

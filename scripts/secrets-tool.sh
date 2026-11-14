@@ -758,12 +758,87 @@ cmd_import_all() {
     cmd_set_tailscale_key
   fi
   say ""
+  if confirm "任意の Wake-on-LAN 設定 (~/Projects/wol-pc/config.env 等) を secrets/wol-pc-env.age へ取り込みますか？"; then
+    cmd_import_wol
+  fi
+  say ""
+  if confirm "任意の ADB 鍵 (~/.android/adbkey) を secrets/adbkey.age へ取り込みますか？"; then
+    cmd_import_adb
+  fi
+  say ""
+  if confirm "任意の OpenCode 設定 (~/.config/opencode/service.json) を secrets/opencode-service.json.age へ取り込みますか？"; then
+    cmd_import_opencode
+  fi
+  say ""
   if confirm "任意: 個人 API キー等 (secrets/user-env.age) を編集しますか？"; then
     cmd_edit "user-env.age"
   fi
   say ""
   say "次の手順:"
   say "  cd $REPO_ROOT && git add secrets/ && secrets check --decrypt && rebuild"
+}
+
+cmd_import_wol() {
+  require_pubkeys >/dev/null
+  local src="" candidate
+  for candidate in \
+    "${XDG_CONFIG_HOME:-$HOME/.config}/wol-pc/config.env" \
+    "$HOME/Projects/wol-pc/config.env"; do
+    if [[ -f $candidate && ! -L $candidate ]]; then
+      src=$candidate
+      break
+    fi
+  done
+  [[ -n $src ]] || die "WOL 設定ファイルが見つかりません (~/.config/wol-pc/config.env または ~/Projects/wol-pc/config.env)。"
+  encrypt_stdin_to_age "wol-pc-env.age" <"$src"
+  say "ヒント: \`git add secrets/wol-pc-env.age && rebuild\` 後、\`wake-pc\` が /run/agenix/wol-pc-env を自動参照します。"
+  say "      動作確認後に元の平文 config.env は削除できます。"
+}
+
+cmd_import_adb() {
+  require_pubkeys >/dev/null
+  local adb_priv="$HOME/.android/adbkey"
+  local adb_pub="$HOME/.android/adbkey.pub"
+  if [[ -L $adb_priv ]]; then
+    say "$adb_priv は既に agenix シンボリックリンクです。"
+    return 0
+  fi
+  [[ -f $adb_priv ]] || die "$adb_priv が見つかりません。"
+  encrypt_stdin_to_age "adbkey.age" <"$adb_priv"
+  if [[ -f $adb_pub && ! -L $adb_pub ]]; then
+    install -m 0644 "$adb_pub" "${SECRETS_DIR}/adbkey.pub"
+    say "公開鍵をコピーしました: secrets/adbkey.pub"
+  fi
+  say "ヒント: \`git add secrets/adbkey.age secrets/adbkey.pub && rebuild\` 後に ~/.android/adbkey が自動リンクされます。"
+  say "      Home Manager 競合で残った ~/.android/*.backup があれば動作確認後に削除してください。"
+}
+
+cmd_import_opencode() {
+  require_pubkeys >/dev/null
+  local src="${XDG_CONFIG_HOME:-$HOME/.config}/opencode/service.json"
+  if [[ -L $src ]]; then
+    say "$src は既に agenix シンボリックリンクです。"
+    return 0
+  fi
+  [[ -f $src ]] || die "$src が見つかりません。"
+  jq -e 'type == "object"' "$src" >/dev/null 2>&1 || die "$src が有効な JSON オブジェクトではありません。"
+  encrypt_stdin_to_age "opencode-service.json.age" <"$src"
+  say "ヒント: \`git add secrets/opencode-service.json.age && rebuild\` 後に service.json が自動リンクされます。"
+}
+
+cmd_sync_wifi() {
+  require_pubkeys >/dev/null
+  local sync_py="${REPO_ROOT}/scripts/nm-agenix-sync.py"
+  [[ -f $sync_py ]] || die "同期スクリプトが見つかりません: $sync_py"
+  run_sudo python3 "$sync_py" \
+    --secrets-dir "$SECRETS_DIR" \
+    --master-key "$HOST_KEY_PATH" \
+    "$@"
+  if command -v git >/dev/null 2>&1 && git -C "$REPO_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    if [[ -n $(git -C "$REPO_ROOT" status --porcelain -- "secrets/nm-connections.age" 2>/dev/null || true) ]]; then
+      say "ヒント: secrets/nm-connections.age が更新されました。確認後 \`git add secrets/nm-connections.age && rebuild\` してください。"
+    fi
+  fi
 }
 
 usage() {
@@ -777,6 +852,7 @@ secrets — Bitwarden (rbw) × agenix 宣言的シークレット管理 CLI
   secrets edit <name>             暗号化シークレットを作成・編集（rbw/ホスト鍵を透過利用）
   secrets rekey                   全 .age を最新の公開鍵ルールで再暗号化
   secrets check [--decrypt]       全 .age のヘッダ（--decrypt で復号）検証
+  secrets sync-wifi [--dry-run]   ローカルの Wi-Fi 設定を既存 nm-connections.age へマージ同期
 
 既存環境からの暗号化取り込み:
   secrets import                  対話式ウィザードで全項目を順に取り込む
@@ -784,7 +860,10 @@ secrets — Bitwarden (rbw) × agenix 宣言的シークレット管理 CLI
   secrets import-rclone           ~/.config/rclone/rclone.conf → secrets/rclone-conf.age
   secrets import-ssh              ~/.ssh/id_wsl_builder 等 → secrets/id-wsl-builder.age
   secrets import-gh               gh auth token → secrets/gh-hosts.yml.age
-  secrets import-wifi             NetworkManager 接続 → secrets/nm-connections.age
+  secrets import-wifi             NetworkManager 接続 → secrets/nm-connections.age（対話選択）
+  secrets import-wol              wol-pc/config.env → secrets/wol-pc-env.age
+  secrets import-adb              ~/.android/adbkey → secrets/adbkey.age (+ .pub)
+  secrets import-opencode         ~/.config/opencode/service.json → secrets/opencode-service.json.age
   secrets set-tailscale-key       Tailscale 事前認証/OAuth キー → secrets/tailscale-authkey.age
 EOF
 }
@@ -846,6 +925,22 @@ case "$cmd" in
   import-wifi)
     ensure_live_tools "$cmd" "$@"
     cmd_import_wifi "$@"
+    ;;
+  sync-wifi)
+    ensure_live_tools "$cmd" "$@"
+    cmd_sync_wifi "$@"
+    ;;
+  import-wol)
+    ensure_live_tools "$cmd" "$@"
+    cmd_import_wol "$@"
+    ;;
+  import-adb)
+    ensure_live_tools "$cmd" "$@"
+    cmd_import_adb "$@"
+    ;;
+  import-opencode)
+    ensure_live_tools "$cmd" "$@"
+    cmd_import_opencode "$@"
     ;;
   set-tailscale-key)
     ensure_live_tools "$cmd" "$@"

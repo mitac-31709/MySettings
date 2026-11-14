@@ -21,4 +21,7 @@ in
   "id-ed25519.age".publicKeys = masterKeys;
   "gh-hosts.yml.age".publicKeys = masterKeys;
   "user-env.age".publicKeys = masterKeys;
+  "wol-pc-env.age".publicKeys = masterKeys;
+  "adbkey.age".publicKeys = masterKeys;
+  "opencode-service.json.age".publicKeys = masterKeys;
 }
