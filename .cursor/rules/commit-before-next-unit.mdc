@@ -1,0 +1,32 @@
+---
+description: 次の作業単位に移る前に、完了した変更をコミットする
+alwaysApply: true
+---
+
+# Commit before next unit for readable history
+
+Do not leave many unrelated edits uncommitted until the end of a task. Before starting the next unit of work (or switching concerns), commit any coherent finished changes first so the history stays readable and the working tree starts clean.
+
+## When to commit (before work)
+
+Commit before you begin the next unit, when the current changes already stand alone in `git log` / `git blame`, for example:
+
+- A feature slice or bugfix is complete and consistent — commit it before starting the next slice
+- A refactor is finished — commit before starting behavioral changes
+- Config / docs / code for the same concern are ready together — commit before switching concerns
+- You are about to start a different concern in the same request — commit first
+
+Also, before starting a new request’s edits: if there are already coherent, finished changes in the working tree from prior work, commit those first rather than mixing them into the new work.
+
+Skip a pre-work commit only when the change is still broken, half-wired, or would not build/test meaningfully alone.
+
+## How to commit
+
+- Prefer small, focused commits (one concern each) over one large catch-all commit
+- Message: short, why-focused (1–2 sentences); match the repo’s existing style
+- Follow the usual git safety: no secrets, no force push, no config edits, no `--no-verify` unless the user asks
+- Stage only the files that belong to that unit; leave unrelated dirty files out
+
+## Relation to “ask before commit”
+
+These before-next-unit commits of finished logical units do not require a separate “please commit” from the user. Still ask first if the user said not to commit, if the unit is ambiguous, or if the commit would include secrets / generated lock churn they may not want.

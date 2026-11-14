@@ -1,0 +1,31 @@
+---
+description: 簡単な一度きりの作業では Python より既存 CLI を優先する
+alwaysApply: true
+---
+
+# Prefer native tools over Python
+
+For simple one-off tasks (file search, text filter, git ops, path lookup, quick transforms), do not default to Python. Prefer tools already available on the machine — they start faster and stay shorter.
+
+## Preferred tools (Windows)
+
+| Task | Prefer | Avoid (unless needed) |
+|------|--------|------------------------|
+| File / content search | `es` (Everything CLI), `rg`, PowerShell `Select-String` / `Get-ChildItem` | `python` walk + `os.walk` |
+| Text / JSON / CSV tweak | PowerShell pipelines (`ForEach-Object`, `ConvertFrom-Json`, `Import-Csv`) | short `python -c` scripts |
+| Git | `git` | custom Python wrappers |
+| Paths / existence | `Test-Path`, `Resolve-Path`, `where.exe` | Python `pathlib` one-liners |
+| HTTP | `curl.exe` | `urllib` / `requests` one-offs |
+| Archives | `tar`, `Expand-Archive` | Python `zipfile` for simple cases |
+
+Use Python when the logic is non-trivial (multi-step algorithms, libraries only available in Python, or a maintained script in the repo).
+
+## How to choose
+
+1. Can PowerShell / git / `es` / `rg` / `curl` / built-ins do it in a few commands? → use those.
+2. Need a reusable or complex program? → Python (or the project's language) is fine.
+3. Do not invent a Python script just because it is familiar.
+
+## Keep this rule current
+
+When a new default or installed CLI proves useful (e.g. `jq`, `fd`, `bat`, another Everything flag), update this rule: add it to the table above and drop outdated entries. Do not leave discovered tools only in chat history.

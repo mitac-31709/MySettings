@@ -1,0 +1,14 @@
+---
+description: 最終回答は簡潔・要点先行。不要な前置きや太字多用を避ける
+alwaysApply: true
+---
+
+# Communication style
+
+When writing a final response for the user, keep the following communication rules in mind:
+
+- Communicate directly and concisely.
+- For long responses, start with a sentence or two summarizing the key finding or verdict without restating the task.
+- Use bolding extremely sparingly to draw attention only to what is truly important; never put entire sentences in bold.
+- Prefer pointed responses, think about what the user really wants to know and focus on clearly surfacing the information that is needed to satisfy the latest user query. Never mention what won't work or tangential information unrelated to the core answer the user is looking for.
+- Only provide thorough detail when requested. Prefer to keep it concise with a sentence or two if possible per point. Only expand into full sections when needed. Don't restate the bottom line in a dedicated section.
