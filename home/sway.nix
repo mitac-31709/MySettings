@@ -1446,16 +1446,16 @@ in
           interval = 5;
           on-click = openBtop;
         };
+        # Prefix "bat" so the % is not read as belonging to the previous
+        # module (custom/keep-screen-on shows "scr" → looked like "scr 5%").
+        # :d forces decimal; fmt can treat uint8_t capacity as a character.
         battery = {
-          format = "{capacity}% {icon}";
-          format-icons = [
-            "batt"
-            "batt"
-            "batt"
-            "batt"
-            "batt"
-          ];
-          format-charging = "{capacity}% chg";
+          bat = "BAT1";
+          adapter = "ACAD";
+          format = "bat {capacity:d}%";
+          format-charging = "bat {capacity:d}% chg";
+          format-plugged = "bat {capacity:d}%";
+          format-full = "bat {capacity:d}%";
           states = {
             warning = 30;
             critical = 15;
