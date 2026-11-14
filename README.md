@@ -346,7 +346,7 @@ nix flake update nixpkgs-cursor
   Wine ビルドはキャッシュが外れると数時間かかることがあります。RTC が NTP より遅れていると、このキャッシュの証明書エラーで他の取得まで止まります
 - **LocalSend** — LAN ファイル転送（`programs.localsend`、ファイアウォール 53317）
 - **RQuickShare** — Google Quick Share / Nearby Share の Linux クライアント（`rquickshare`）
-- **wol-pc** — Wake-on-LAN クライアント（`~/Projects/wol-pc`）。依存: `sshpass` / `zenity`（`home.packages`）。設定は同ディレクトリの `config.env`。ソースはこのリポジトリの外なので、ここではパッケージ化していない。TODO: ソースをこの flake に置く（`pkgs/wol-pc` にスクリプトを追加するか、公開リポジトリなら `fetchFromGitHub`）→ `callPackage` で `home.packages` に足す。`config.env` のホスト名やパスワードは秘密なのでストアに入れず、今どおりリポジトリ外のファイルのまま読む
+- **wol-pc** — Wake-on-LAN クライアント（`pkgs/wol-pc` により `github:mitac-31709/wol-pc` をパッケージ化し、`wake-pc` / `wake-pc-relay` / `.desktop` を同梱。依存 `sshpass` / `zenity` 等をラップ済み）。設定は `WOL_PC_CONFIG` → `/run/agenix/wol-pc-env`（`secrets import-wol`）→ `~/.config/wol-pc/config.env` → `~/Projects/wol-pc/config.env` の順に読み込み、秘密値はストアへ含めない
 - **7-Zip** — `_7zip-zstd`（コマンド `7z` / `7zz`、Zstd ほか対応）+ GUI `peazip`（PeaZip）
 - **tmux** — `runbtop <cmd>` で上部に実行出力（約 10 行）、下部に `btop`
 - **Meltype** — Fcitx5 エンジン（日本語／英語の自動打ち分け。Linux プレビュー。IME は Meltype のみ）
@@ -419,12 +419,15 @@ Nerd Font のアイコンが空白に見える場合: `fc-cache -rf` を実行�
 |-----------------------------|----------------------|------|
 | `restic-home-password.age` | `/run/agenix/restic-home-password` | `restic-backups-home` の自動実行用パスワード（Bitwarden `restic-home` にも同一パスワードを保持） |
 | `rclone-conf.age` | `/run/agenix/rclone-conf` | `rclone` 用 Google Drive 設定（実行時に書き込み可能な `/run/restic-backups-home/rclone.conf` 等へコピーし OAuth 自動更新に対応） |
-| `nm-connections.age` | `/run/agenix/nm-connections` | NetworkManager Wi-Fi プロファイル群（`nm-agenix-profiles.service` が `interface-name=` / `mac-address=` を除いて `/run/NetworkManager/system-connections/agenix-*.nmconnection` へ展開） |
+| `nm-connections.age` | `/run/agenix/nm-connections` | NetworkManager Wi-Fi プロファイル群（`nm-agenix-profiles.service` が `interface-name=` / `mac-address=` を除いて `/run/NetworkManager/system-connections/agenix-*.nmconnection` へ展開。さらに `nm-agenix-sync.{path,service}` と `secrets sync-wifi` が `nmcli` / `nmtui` で追加・編集された Wi-Fi を既存プロファイルを保持したまま自動マージ同期） |
 | `tailscale-authkey.age` | `/run/agenix/tailscale-authkey` | Tailscale 事前認証／OAuth キー（`services.tailscale.authKeyFile`） |
 | `id-wsl-builder.age` | `/run/agenix/id-wsl-builder-{root,user}` | `nix-daemon` 用ビルド鍵（`nix.buildMachines[0].sshKey`）兼 `~/.ssh/id_wsl_builder`（`secrets/id_wsl_builder.pub` があれば `~/.ssh/id_wsl_builder.pub` もリンク） |
 | `id-ed25519.age` | `/run/agenix/id-ed25519` | 個人用 SSH 秘密鍵 `~/.ssh/id_ed25519`（`secrets/id_ed25519.pub` があれば `.pub` もリンク） |
 | `gh-hosts.yml.age` | `/run/agenix/gh-hosts.yml` | GitHub CLI 認証 `~/.config/gh/hosts.yml` |
 | `user-env.age` | `/run/agenix/user-env` | `export KEY=...` 形式の API トークン等（`bash` 初期化時読込 + `mitac-agenix-user-env.service` で `systemd --user` へ反映） |
+| `wol-pc-env.age` | `/run/agenix/wol-pc-env` | Wake-on-LAN 設定（`wake-pc` が参照する `config.env`） |
+| `adbkey.age` | `/run/agenix/adbkey` | ADB USB デバッグ秘密鍵 `~/.android/adbkey`（`secrets/adbkey.pub` があれば `~/.android/adbkey.pub` もリンク） |
+| `opencode-service.json.age` | `/run/agenix/opencode-service.json` | OpenCode ローカルサービスパスワード `~/.config/opencode/service.json` |
 
 ### 初回セットアップ・日常運用（`secrets` CLI）
 
@@ -438,6 +441,7 @@ secrets init
 secrets import
 # 個別に取り込む場合:
 #   secrets import-restic / import-rclone / import-ssh / import-gh / import-wifi
+#   secrets import-wol / import-adb / import-opencode / sync-wifi
 #   secrets set-tailscale-key
 
 # 3. 暗号化ファイルをステージして複号検証し、OS に反映
@@ -449,8 +453,9 @@ rebuild
 - **新端末／再インストール時の展開**:
   - `./scripts/restore-on-nixos.sh --agenix-only`（または既存バックアップ復元と同時の `./scripts/restore-on-nixos.sh --from ... --new-device`）
   - すでに環境適用後なら `secrets bootstrap`（インストーラ等の `/mnt` 配下には `secrets bootstrap /mnt`）→ `rebuild`
-- **個別編集・鍵ローテーション・状態確認**:
+- **個別編集・Wi-Fi 自動同期・鍵ローテーション・状態確認**:
   - `secrets edit <name>`（例: `secrets edit user-env`、`name` は `secrets/agenix-rules.nix` の定義名または `.age` ファイル名）
+  - `secrets sync-wifi`（`nmcli` / `nmtui` 変更を既存 `secrets/nm-connections.age` へ非破壊マージ同期；通常は `nm-agenix-sync.path` が自動実行）
   - `secrets status` / `secrets rekey` / `secrets check [--decrypt]`
 - **リポジトリ公開設定・セキュリティ注意**:
   - 平文鍵ファイル（`secrets/*.key`, `secrets/*.plain`, `secrets/*.tmp`, `secrets/*~`）は `.gitignore` で除外しています。
@@ -461,7 +466,8 @@ rebuild
 
 `modules/nixos/backup.nix` は、ユーザーのホームと**一部のシステム状態**を暗号化して **Google Drive** へバックアップします。
 
-- **restic** — `/home/mitac` に加え、NetworkManager の Wi-Fi プロファイル・Bluetooth ペアリング・Cloudflare WARP 状態・Tailscale ノード状態の一時コピー（staged）を暗号化・重複排除してスナップショット保存します。
+- **restic** — `/home/mitac`（PlatformIO/Arduino/npm/pnpm store や Electron/browser キャッシュ、`.cache`、Steam ランタイム等の再取得可能な巨大ディレクトリは `modules/nixos/backup.nix` で除外）に加え、NetworkManager の Wi-Fi プロファイル・Bluetooth ペアリング・Cloudflare WARP 状態・Tailscale ノード状態の一時コピー（staged）を暗号化・重複排除してスナップショット保存します。
+  なお、起動・編集で都度書き換わる Writable アプリ設定の一部（Cursor `settings.json` / `argv.json`、Lan Mouse 承認済み指紋、JQuake 設定既定値など）は Flake でも宣言的に再現されるため、`restic` バックアップは「日々の未反映変更や動的状態・OAuth トークンの保険」として機能します。
 - **rclone** — Google Drive バックエンド（ホスト別 restic リポジトリ: `rclone:gdrive:restic/<host>-home` — `.#chromebook` は `chromebook-home`、`.#vaio` は `vaio-home`。旧単一構成の移行前バックアップは `mitac-home` に残ります）。各端末は共通の `gdrive:` リモートと下記の暗号化鍵を共有しつつリポジトリ自体が分かれているため、複数端末を同時起動してもロック競合や世代削除（`forget`）の干渉は起きません。
 - **agenix × Bitwarden (`rbw`)** — `secrets/restic-home-password.age` と `secrets/rclone-conf.age` が有効な環境では `/run/agenix/restic-home-password`・`/run/agenix/rclone-conf` から復号して自動バックアップを実行するため、**タイマー実行に `rbw` のアンロック状態や GUI を要しません**（平文は `/run` のみで、`rclone.conf` は OAuth リフレッシュ対応のため一時ファイルへコピーして使用）。同一のパスワードと Google OAuth の `client_id` / `client_secret` / `refresh_token` は他端末復旧用として Bitwarden の **`restic-home`** にも引き続き保持します。未移行環境（`.age` 未配置時）は従来どおり `RESTIC_PASSWORD_COMMAND=rbw get restic-home` へフォールバックします。`rbw` 自体の宣言的設定は `home/programs.nix`（`programs.rbw`）にあります。
 

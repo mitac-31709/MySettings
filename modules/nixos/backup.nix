@@ -762,6 +762,7 @@ in
       # Cursor: agent worker binaries + editor caches/logs.
       "/home/${user}/.config/Cursor/User/globalStorage/anysphere.cursor-agent-worker"
       "/home/${user}/.config/Cursor/CachedData"
+      "/home/${user}/.config/Cursor/CachedExtensionVSIXs"
       "/home/${user}/.config/Cursor/CachedProfilesData"
       "/home/${user}/.config/Cursor/Cache"
       "/home/${user}/.config/Cursor/Code Cache"
@@ -770,6 +771,64 @@ in
       "/home/${user}/.config/Cursor/DawnGraphiteCache"
       "/home/${user}/.config/Cursor/IndexedDB"
       "/home/${user}/.config/Cursor/logs"
+
+      # Codex / ChatGPT Desktop: Chromium component/DRM/GPU/service caches.
+      "/home/${user}/.config/Codex/CertificateRevocation"
+      "/home/${user}/.config/Codex/Crash Reports"
+      "/home/${user}/.config/Codex/GPUPersistentCache"
+      "/home/${user}/.config/Codex/OnDeviceHeadSuggestModel"
+      "/home/${user}/.config/Codex/WasmTtsEngine"
+      "/home/${user}/.config/Codex/WidevineCdm"
+      "/home/${user}/.config/Codex/component_crx_cache"
+      "/home/${user}/.config/Codex/Default/Cache"
+      "/home/${user}/.config/Codex/Default/Code Cache"
+      "/home/${user}/.config/Codex/Default/GPUCache"
+      "/home/${user}/.config/Codex/Default/Service Worker"
+      "/home/${user}/.config/Codex/Default/DawnGraphiteCache"
+      "/home/${user}/.config/Codex/Default/DawnWebGPUCache"
+
+      # Grok Bot: Electron/Chromium runtime caches.
+      "/home/${user}/.config/Grok Bot/Cache"
+      "/home/${user}/.config/Grok Bot/Code Cache"
+      "/home/${user}/.config/Grok Bot/v8-code-cache"
+      "/home/${user}/.config/Grok Bot/GPUCache"
+      "/home/${user}/.config/Grok Bot/DawnGraphiteCache"
+      "/home/${user}/.config/Grok Bot/DawnWebGPUCache"
+      "/home/${user}/.config/Grok Bot/Crashpad"
+      "/home/${user}/.config/Grok Bot/attachment-image-cache"
+      "/home/${user}/.config/Grok Bot/link-preview-cache"
+      "/home/${user}/.config/Grok Bot/plugin-logo-cache"
+      "/home/${user}/.config/Grok Bot/link-favicon-cache"
+
+      # Discord: Electron/Chromium runtime caches & logs.
+      "/home/${user}/.config/discord/Cache"
+      "/home/${user}/.config/discord/Code Cache"
+      "/home/${user}/.config/discord/GPUCache"
+      "/home/${user}/.config/discord/DawnGraphiteCache"
+      "/home/${user}/.config/discord/DawnWebGPUCache"
+      "/home/${user}/.config/discord/Crashpad"
+      "/home/${user}/.config/discord/logs"
+      "/home/${user}/.config/discord/discord_asset_cache"
+
+      # OrcaSlicer: regenerable caches/logs/OTA (keep OrcaSlicer.conf, user/, printers/).
+      "/home/${user}/.config/OrcaSlicer/cache"
+      "/home/${user}/.config/OrcaSlicer/log"
+      "/home/${user}/.config/OrcaSlicer/ota"
+
+      # Development toolchains / package caches (re-downloadable).
+      "/home/${user}/.platformio/packages"
+      "/home/${user}/.platformio/penv"
+      "/home/${user}/.platformio/.cache"
+      "/home/${user}/.arduino15/packages"
+      "/home/${user}/.arduino15/tmp"
+      "/home/${user}/.arduino15/library_index.json*"
+      "/home/${user}/.arduino15/package_index.json*"
+      "/home/${user}/.npm"
+      "/home/${user}/.local/share/pnpm/store"
+
+      # Auto-downloaded binaries / old upgrade backups (apps are packaged in Nix).
+      "/home/${user}/.local/share/cursor-agent/versions"
+      "/home/${user}/.local/share/app.uniclipboard.desktop-upgrade-backups"
 
       # Vivaldi: regenerable caches, DRM/components, site WebStorage.
       # Keep Default/Extensions — Preferences still lists installs, and excluding

@@ -750,6 +750,12 @@ let
     }
     {
       section = "ネット・BT・WARP";
+      label = "PC を起動（Wake-on-LAN）";
+      run = "wake-pc";
+      mode = "exec";
+    }
+    {
+      section = "ネット・BT・WARP";
       label = "全 IF の IP";
       run = "ip -br addr";
       mode = "term";
@@ -1012,13 +1018,19 @@ let
     }
     {
       section = "シークレット";
+      label = "Wi-Fi を agenix へマージ同期（nmcli 後など）";
+      run = "secrets sync-wifi";
+      mode = "term";
+    }
+    {
+      section = "シークレット";
       label = "secrets bootstrap（新端末へ Bitwarden 鍵導入）";
       run = "secrets bootstrap";
       mode = "show";
     }
     {
       section = "シークレット";
-      label = "注: 日常は rebuild 後 /run/agenix 自動展開。変更時のみ import-* → git add → rebuild";
+      label = "注: 日常は nmcli/nmtui の Wi-Fi 変更も自動同期。その他変更時のみ import-* → git add → rebuild";
     }
     {
       section = "シークレット";
