@@ -129,6 +129,8 @@
                     opencode = final.callPackage ./pkgs/opencode { };
                     # Google Antigravity CLI (`agy`; binary from antigravity-public).
                     antigravity = final.callPackage ./pkgs/antigravity { };
+                    # Wake-on-LAN SSH relay client (`wake-pc`) & desktop entry.
+                    wol-pc = final.callPackage ./pkgs/wol-pc { };
                   }
                 )
               ];
