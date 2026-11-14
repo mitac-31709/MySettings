@@ -680,6 +680,11 @@ in
 
       # Steam: game installs + client/runtime (re-downloadable). Keep config
       # (minus htmlcache), userdata, and Proton compatdata.
+      # Also exclude steam.sh (and bootstrap.tar.xz): bin_steam.sh treats
+      # executable steam.sh as "already bootstrapped" and skips extracting
+      # ubuntu12_32, causing startup to fail if ubuntu12_32 is excluded.
+      "/home/${user}/.local/share/Steam/steam.sh"
+      "/home/${user}/.local/share/Steam/bootstrap.tar.xz"
       "/home/${user}/.local/share/Steam/steamapps/common"
       "/home/${user}/.local/share/Steam/steamapps/downloading"
       "/home/${user}/.local/share/Steam/steamapps/temp"
