@@ -11,8 +11,6 @@
     ./lan-mouse.nix
     ./taildrop.nix
     ./uniclipboard.nix
-    ./chatgpt-cua-indicator.nix
-    ./ai-status-chips.nix
     ./vivaldi-chatgpt-extension.nix
     ./vivaldi-extensions-repair.nix
     ./vivaldi-pwa-desktop.nix

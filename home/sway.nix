@@ -17,7 +17,6 @@ let
   repoPath = config.mitac.repoPath;
   flakeUpdateCheck = lib.getExe config.mitac.scripts.flakeUpdateCheck;
   flakeUpdate = lib.getExe config.mitac.scripts.flakeUpdate;
-  waybarAiStatus = lib.getExe config.mitac.scripts.waybarAiStatus;
   # Family string from nerd-fonts.jetbrains-mono (same as Ghostty).
   # CSS does not name a CJK face. Missing glyphs go through fontconfig's
   # defaultFonts (Hiragino, then Noto Sans CJK JP).
@@ -188,8 +187,7 @@ let
     }
     {
       section = "ウィンドウ・WS";
-      label = "WS2 Cursor+Grok / WS3 Vivaldi（WS1 空き）";
-      keys = "起動時";
+      label = "Cursor/Grok → WS2、Vivaldi → WS3（手動起動時）";
     }
     {
       section = "ウィンドウ・WS";
@@ -450,33 +448,6 @@ let
       section = "Waybar・日常";
       label = "パッチ版パス (~/.local/share/…)";
       keys = "vivaldi-chatgpt-extension";
-    }
-    {
-      section = "Waybar・日常";
-      label = "AI稼働（左バー中央）";
-      keys = "作/●作業 ○起動 ·待機／ホバーでチップ・クリックで詳細";
-    }
-    {
-      section = "Waybar・日常";
-      label = "AI完了音（Windows Me）";
-      keys = "チップ末尾の「完了音」で ON/OFF／作業終了時に再生";
-    }
-    {
-      section = "Waybar・日常";
-      label = "画面操作中（ChatGPT CUA / Cursorブラウザ）";
-      keys = "青枠＋バナー＋チャット";
-    }
-    {
-      section = "Waybar・日常";
-      label = "画面操作HUDを非表示（エージェントは継続）";
-      keys = "非表示";
-    }
-    {
-      section = "Waybar・日常";
-      label = "画面操作を停止";
-      keys = "Esc / Super+Esc / 停止";
-      run = "agent-screen-stop";
-      mode = "exec";
     }
     # Cursor 進捗（他アプリ使用中）
     {
@@ -1249,8 +1220,7 @@ in
       terminal = ghosttyBin;
       menu = rofiLauncher;
 
-      # Fixed autostart apps: place by criteria (Grok Bot is Electron/ozone).
-      # Leave WS1 empty for ad-hoc windows; session apps land on 2/3.
+      # Manual launches: Cursor / Grok Bot → WS2, Vivaldi → WS3 (WS1 stays free).
       assigns = {
         "2" = [
           { app_id = "cursor"; }
@@ -1379,12 +1349,6 @@ in
         { command = polkitAgent; }
         { command = "fcitx5 -d --replace"; }
         # cliphist store: home/clipboard.nix systemd user units
-        # Fixed session apps (assigns: WS2 cursor/Grok Bot, WS3 vivaldi; WS1 empty).
-        # NIXOS_OZONE_WL enables Cursor's --enable-wayland-ime (Meltype/fcitx5).
-        { command = "env NIXOS_OZONE_WL=1 cursor"; }
-        { command = "vivaldi"; }
-        { command = "grok-bot"; }
-        { command = "swaymsg 'workspace number 1'"; }
         # waybar: programs.waybar.systemd (MemoryMax / Restart)
         {
           command = ''
@@ -1409,14 +1373,6 @@ in
       # --inhibited: work even when Cursor/Electron inhibit compositor shortcuts.
       bindsym --inhibited --to-code Mod4+slash exec ${showCheatsheet}
       bindsym --inhibited --to-code Mod4+Shift+slash exec ${showCheatsheet}
-
-      # Entered by agent-screen HUD while ChatGPT/Cursor is driving the screen.
-      mode "agent-screen" {
-        bindsym Escape exec ${pkgs.chatgpt-cua-indicator}/bin/agent-screen-stop
-        bindsym --inhibited Escape exec ${pkgs.chatgpt-cua-indicator}/bin/agent-screen-stop
-      }
-      # Always-available stop (works even if mode switch failed).
-      bindsym --inhibited Mod4+Escape exec ${pkgs.chatgpt-cua-indicator}/bin/agent-screen-stop
     '';
   };
 
@@ -1574,15 +1530,14 @@ in
           on-click = openTimeIs;
         };
       };
-      # Left vertical bar: updates (top), AI status (center), tray (bottom).
+      # Left vertical bar: updates (top), tray (bottom).
       sideBar = {
         name = "side";
         layer = "top";
         position = "left";
-        # Icon column (Nerd Font); AI module stacks icon + usage %.
+        # Icon column (Nerd Font).
         width = 34;
         modules-left = [ "custom/updates" ];
-        modules-center = [ "custom/ai" ];
         modules-right = [ "tray" ];
         "custom/updates" = {
           exec = pkgs.writeShellScript "waybar-flake-updates" ''
@@ -1599,16 +1554,6 @@ in
           signal = 9;
           tooltip = true;
           on-click = openFlakeUpdate;
-        };
-        # Compact AI icons + %; details via ai-status-chips hover overlay.
-        "custom/ai" = {
-          exec = waybarAiStatus;
-          return-type = "json";
-          interval = 5;
-          # Native tooltip replaced by slide-in chips (pkgs/ai-status-chips).
-          tooltip = false;
-          # Keep pango <span> colors from the script.
-          escape = false;
         };
         tray = {
           icon-size = 16;
@@ -1700,9 +1645,8 @@ in
         color: #e06c75;
         background: #3a1a1e;
       }
-      /* Side bar: updates (top), AI status (center), tray (bottom). */
+      /* Side bar: updates (top), tray (bottom). */
       window.side #custom-updates,
-      window.side #custom-ai,
       window.side #tray {
         padding: 4px 0;
         color: #9fe7e7;
@@ -1722,23 +1666,6 @@ in
         color: #9fe7e7;
         background: #15383a;
         border-top: 2px solid #33c5c5;
-      }
-      window.side #custom-ai {
-        font-family: "${waybarFont}", sans-serif;
-        font-size: 13px;
-        min-width: 34px;
-        padding: 8px 0;
-      }
-      window.side #custom-ai.busy {
-        background: #15383a;
-        border-left: 2px solid #33c5c5;
-      }
-      window.side #custom-ai.warning {
-        border-left: 2px solid #e5c07b;
-      }
-      window.side #custom-ai.critical {
-        background: #3a1a1e;
-        border-left: 2px solid #e06c75;
       }
       window.side #tray {
         padding-top: 8px;

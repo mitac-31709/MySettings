@@ -23,7 +23,6 @@ let
       doCheck = false;
     } (builtins.readFile file);
 
-  waybarAiStatus = pyBin "waybar-ai-status" ../scripts/waybar-ai-status.py;
   flakeUpdateCheckPy = pyBin "flake-update-check-flake" ../scripts/flake-update-check-flake.py;
 
   wrap =
@@ -98,7 +97,6 @@ in
         flakeUpdateCursor
         flakeUpdateCheck
         secretsTool
-        waybarAiStatus
         ;
     };
 
@@ -107,7 +105,6 @@ in
       flakeUpdateCursor
       flakeUpdateCheck
       secretsTool
-      waybarAiStatus
     ];
   };
 }
