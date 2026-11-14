@@ -8,7 +8,9 @@
     ./shell.nix
     ./programs.nix
     ./clipboard.nix
+    ./cursor.nix
     ./lan-mouse.nix
+    ./rquickshare.nix
     ./taildrop.nix
     ./uniclipboard.nix
     ./vivaldi-chatgpt-extension.nix

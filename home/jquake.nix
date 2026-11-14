@@ -63,6 +63,108 @@ let
         fi
       }
 
+      # Defaults for user preferences (only set when missing so GUI tweaks stick).
+      set_default_prop() {
+        local key="$1" val="$2"
+        if [[ ! -f "$props" ]] || ! grep -q "^''${key}=" "$props"; then
+          printf '%s=%s\n' "$key" "$val" >>"$props"
+        fi
+      }
+
+      # Location / initial map view (Tokyo) & UI layout.
+      set_default_prop firstOpen false
+      set_default_prop userLatitude 35.68952
+      set_default_prop userLongitude 139.74409
+      set_default_prop userVisible true
+      set_default_prop includeUserInZoom false
+      set_default_prop homeViewNW "45.62207;126.89925"
+      set_default_prop homeViewSE "29.92448;146.10139"
+      set_default_prop fixedMode false
+      set_default_prop resetViewAfterEvent true
+      set_default_prop displayPrefList true
+      set_default_prop displayCityNames true
+      set_default_prop displayEQScrollBar true
+      set_default_prop displayMiniMap true
+      set_default_prop roundRectangles true
+      set_default_prop intensityIcon true
+      set_default_prop useSmallIcons false
+      set_default_prop useShindoColor true
+      set_default_prop showClosestSation true
+      set_default_prop langChoice 0
+      set_default_prop serverChoice 0
+      set_default_prop displayChoice 2
+      set_default_prop displayChoiceSub 3
+      set_default_prop interfaceDisplayChoice 0
+      set_default_prop interfaceDisplayChoiceSub 0
+      set_default_prop interfaceScale 1.00000
+      set_default_prop mapScale 1.00000
+      set_default_prop useSystemProxy true
+
+      # Dark theme colors.
+      set_default_prop bg "51;52;57"
+      set_default_prop mapBg "31;32;37"
+      set_default_prop polyColor "63;64;69"
+      set_default_prop fontColor "255;255;255"
+
+      # Audio.
+      set_default_prop mute false
+      set_default_prop volume -15.00000
+      set_default_prop soundPeripheral 0
+      set_default_prop eqSpeakerChoice 0
+      set_default_prop soundEEW1 true
+      set_default_prop soundEEW2 true
+      set_default_prop soundEQInfo true
+      set_default_prop soundTsunami true
+      set_default_prop teleseismicSound true
+      set_default_prop soundShindo0 true
+      set_default_prop soundShindo1 true
+      set_default_prop soundShindo2 true
+      set_default_prop soundPGA1 true
+      set_default_prop soundPGA2 true
+
+      # Alerts, tsunami, local thresholds & radii.
+      set_default_prop advancedEEW false
+      set_default_prop forceForecastOnDeep false
+      set_default_prop EQInfoIntensity 5
+      set_default_prop EEW1ShindoMin 0
+      set_default_prop EEW1ShindoMinLoc 1
+      set_default_prop EEW2ShindoMinLoc 0
+      set_default_prop EEW2ShindoMinNat 0
+      set_default_prop tsunamiChoice 0
+      set_default_prop showTsunami true
+      set_default_prop tsunamiBrowser true
+      set_default_prop popEEW1 true
+      set_default_prop popEEW2 true
+      set_default_prop popShindo0 true
+      set_default_prop popShindo1 true
+      set_default_prop popShindo2 true
+      set_default_prop popPGA1 true
+      set_default_prop popPGA2 true
+      set_default_prop localEEW1 true
+      set_default_prop localEEW2 false
+      set_default_prop localShindo0 true
+      set_default_prop localShindo1 true
+      set_default_prop localShindo2 false
+      set_default_prop localPGA1 true
+      set_default_prop localPGA2 false
+      set_default_prop localShindo0Radius 45.00000
+      set_default_prop localShindo1Radius 60.00000
+      set_default_prop localShindo2Radius 115.00000
+      set_default_prop localPGA1Radius 75.00000
+      set_default_prop localPGA2Radius 120.00000
+      set_default_prop level0ShindoIndex 4
+      set_default_prop level1ShindoIndex 2
+      set_default_prop level2ShindoIndex 2
+      set_default_prop level1PGAIndex 2
+      set_default_prop level2PGAIndex 5
+      set_default_prop zoomEEW1 6
+      set_default_prop zoomEEW2 6
+      set_default_prop zoomShindo0 6
+      set_default_prop zoomShindo1 6
+      set_default_prop zoomShindo2 6
+      set_default_prop zoomPGA1 6
+      set_default_prop zoomPGA2 6
+
       # Tray/window: icon + minimize-on-close (stay resident in background).
       set_prop winChoice 2
       # Alerts: raise above other windows; wake DPMS; do not suppress pops.

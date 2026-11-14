@@ -256,5 +256,65 @@ in
 
   hardware.enableRedistributableFirmware = true;
 
+  # Pre-populate verified SSH host public keys in /etc/ssh/ssh_known_hosts
+  # so clients don't rely solely on mutable ~/.ssh/known_hosts.
+  programs.ssh.knownHosts =
+    let
+      knownHostSpecs = {
+        galleria-mitac-wsl = {
+          hostNames = [
+            "[galleria-mitac]:2222"
+            "[100.102.102.53]:2222"
+          ];
+          keys = {
+            ed25519 = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID+Dgx7oDIHOa5CPTkDbeGqIjGsCf2evYSI/pRIjz7H0";
+            ecdsa = "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBFLPfYzIfOIyrYtT8tObRvQO1vb/XMCTkcNUs4PnviQ4iVJ6BRxLScfMAYikqlyeVTcCzNEy+FQ3/kFTBd92LSY=";
+            rsa = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDfpApYB38avxk4++jCX2neAP6Yv4/oKafbO2ROlTVilSXGookWRRv5TM7W2bq0TstgKd0P7Jvg/Q1U9WzssAGNzdgWsCAYKeMItcxsx2V6WRTs/GFaduPCnPSlqovFjLG6gHzXUXAnaWc2eT78tPfFsLPCVscv1s3jrakHcUMOJDcX1IaThlrPsSNVRJ/IZC4SUi2M3JWWNi16y/LX5WHLV9YTFBy9D6pJnf8+/llDK3Q0J/5daOHscTTrVuP/6i1eAK9dlcUJqcGyW0qcnPCH5RfPaY5ezBYjhjHefgjOS8P9nK3lqD0r4dEKX2wupZ2GFF8TDAYAqncAozjx+9LJCo5VMTbcqkSqUFFfIOqybg3wCv8UvIdVjlKQf98v4POPWhPuyijgsHCO0+ICuiLoHs/7P8/yKs3GpEC/W/7jZqbYao0X2jRxmSUjER1YolYiUegR6a/Tye4QwUjSDWxK2DmTSonF1rfyAugY7MyJE+h2Zte49Jb1JYxmdPLJ07k=";
+          };
+        };
+        ubuntu = {
+          hostNames = [
+            "100.124.196.22"
+            "ubuntu"
+          ];
+          keys = {
+            ed25519 = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHSTbPRFFlZw/Lc0o4CPsaSZpFNnP2/+B67QuwcWkSEH";
+            ecdsa = "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBOy8Dq6p16YoLs701NKMCp3p9vWeWyn+t97uJMTOdcH+K/qIRPxlY5mjCgDJK4Vxt3Fgap6tZZldbRCGECDGfTA=";
+            rsa = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCy0KxAon1lH6rjQKYFzPM9eOQ+y9Rd+aNlSiq7JhwrUd9qhxRpl0yRJA1DfC/Vbt9EgpWFAgSlh+NW9hdzYfr80jS8h/xrUUsMwoP4Sxb1FLtdqW3DTt3c/uuMdkNjpG0PDNdomHyfxU5HZUBwRmWU7Kyfx1whYQEF+RPJxI/BiXxmyfbQ97HlOG+oggaufH7Amoeqv3UXgfggA9xLONjmyeo7/TXYZKzvjyEN6yElgjI0zAzigz79OzQsqLHYllMTYsoTlY9v1oDjU8yGACDbUsYOqN08g0tTsPIDRDb4e81HdQJ3T/tNw2JvwcjR+wZJLjK1D9HbzpIIEiIqnDIg2PTuFAQBu9Prlm63QnLFytSbEGBhUWqkFYZv+3HjSuwSJxGVZozaTMG4LpyFGql+Iv2ZJASqMBgMd/U56JXc+yAPdx0pg65coHRYcqfjH9+3RlHYW62V1x/ShLuMTyKx4/BE8Uy9B2+jcqGBfbuYLR+Mk1RBiI4A59JdYvl8tAc=";
+          };
+        };
+        raspberrypi = {
+          hostNames = [
+            "100.71.240.112"
+            "raspberrypi"
+            "172.18.46.146"
+          ];
+          keys = {
+            ed25519 = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJvCFYDYl5bZWqCpJzrjKzrnJSk2mjGQJ/1xHad1PvsN";
+            ecdsa = "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBBeL6WwcmX4K/r5aY6Lhh2kyj3ri82rqjlWvYEmNTIQq/JZIjE8ra2+0gm38cG99LwdVDAXtBV6tsJb8vhCKJLw=";
+            rsa = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCcPNwgD4BRwMxXcBEWxyXMvMH18IQPXhQ1x4xt0mruJYfH7i0ZB0bwWeKXpLL0tvCcfRFtMRV+JJa2ilyLE8W3SVu1WXhpQab1F/uFqa+Ck6pY3XWj+kb42nkpRxXNVmmv3RFYLPQTaWeuq71lD5WXa4RsIvHsM4RxvlxdojNxYz8dxc3HM58onAZLHYZ6JfZxDwAuXV6zM5+m6L+jbZi1jipsLOSa/pDm1/JlZYNwsLlbCavp50r+fGZjSGCexXgfHiR0D5GuLYV7jw+VIewuWzEHff7SwUyyojrUSdThbWpQs1QLMxe9ecUxzBQfTavEHecL19DnpzMRSc21SUUGdfOI56I8rhcIZGmtx14d+th3cesxp6ToM4Ehn8+cAvP21JRlxbkKKI5lOKcwSwsWtYa6XnPf2n9NfMPO/NUknu/12K7eZhrIskTv44YuYhcUCeNE/HQNgQ7r1cgG+thmLxU6s8Jnfs72jIBc7MEPgHnrdWgC7KgjCOwCioeOBG0=";
+          };
+        };
+        lan-172-18-43-172 = {
+          hostNames = [ "172.18.43.172" ];
+          keys = {
+            ed25519 = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIQYPYm11vnHbWzIx+nVFmOBIgGtuNLdb83dSK7H3j3a";
+            ecdsa = "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBB0gRCxomoetliuRS12CIoNQE40RdsXKa47Emn4/GCHKRXtdJhmfMbuEGENmbQ9CVIJcDjp+iw8QfUfCwa7adY8=";
+            rsa = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC9cmaJZK/Lj3LhXjX4G5CS4zf7j+fzr4OXrmsCz1ZSmRWPt4TP+aeFC8MWloW0sbj/f4DlkvpDB9prvflsAUkPKVaRowq30HvonTofr+u49RrSwNl5lUp8VXztjwIdWmFCQSPry8rgHtbsooNfM/ebWrggnnr7Wbd791Thn2F8NqtU9v4MkP6XsOIgZBr2tB5muWzJXLUYjzhKJ7htGSNpQOvi3v6+IIV9f7+t+CEg5B+M8yKOM4sTFkLpj0HYmXTwF1r+/ENzalYKAgzYRRSNEOD6kDIad5NIkGz/MQV/84ozFYI5PiKFRRsCFlqUjkaN/zBTQ/1X8+PHAXPR66oWyCZJ5QiRy5M7HwZlOIeZE6bz9zA3wkO56VEbmupIWzhy7LsB9fKhK9W6K4D3RIVHNM72eT2Xzs21tLxuXOK0z+8RGqFl4TjlZf/uwn8Kfs2Wo1Fz/HWgFLfEMWIi2WFU67W0lpCutO5hNgugULaKdYUkX7gM7EkjYeaOlToxQi0=";
+          };
+        };
+      };
+    in
+    pkgs.lib.concatMapAttrs (
+      host: spec:
+      pkgs.lib.mapAttrs' (algo: key: {
+        name = "${host}-${algo}";
+        value = {
+          inherit (spec) hostNames;
+          publicKey = key;
+        };
+      }) spec.keys
+    ) knownHostSpecs;
+
   services.openssh.enable = false;
 }

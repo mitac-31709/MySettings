@@ -43,9 +43,22 @@ in
   # name/email, so root and a recovery shell can still run git.
   programs.git = {
     enable = true;
-    settings.user = {
-      name = "mitac";
-      inherit email;
+    settings = {
+      user = {
+        name = "mitac";
+        inherit email;
+      };
+      # Origin CLI credential helper (also mirrored by `origin login` in ~/.gitconfig).
+      credential = {
+        "https://origin.cursor.com".helper = [
+          ""
+          "!${config.home.homeDirectory}/.local/bin/origin credential-helper"
+        ];
+        "https://origin.cursor.com/git".helper = [
+          ""
+          "!${config.home.homeDirectory}/.local/bin/origin credential-helper"
+        ];
+      };
     };
   };
 
@@ -207,6 +220,12 @@ in
     "org/gnome/desktop/interface" = {
       color-scheme = "prefer-dark";
     };
+    # Keystroke overlay preferences (JP keyboard layout, interactive mode).
+    "one/alynx/showmethekey" = {
+      clickable = true;
+      first-time = false;
+      layout = "jp";
+    };
   };
 
   # Stub: leftover light colors.css @import breaks waybar module chrome.
@@ -319,6 +338,7 @@ in
       "x-scheme-handler/https" = [ "vivaldi-stable.desktop" ];
       "x-scheme-handler/about" = [ "vivaldi-stable.desktop" ];
       "x-scheme-handler/unknown" = [ "vivaldi-stable.desktop" ];
+      "x-scheme-handler/codex" = [ "chatgpt.desktop" ];
     };
   };
 
@@ -397,8 +417,19 @@ in
     };
   };
 
+  # Resource monitor (btop; installed via programs.btop.package).
+  # save_config_on_exit = false avoids write-on-exit noise against RO store link.
+  programs.btop = {
+    enable = true;
+    settings = {
+      shown_boxes = "net proc cpu mem";
+      update_ms = 400;
+      proc_sorting = "pid";
+      save_config_on_exit = false;
+    };
+  };
+
   home.packages = with pkgs; [
-    btop
     nix-output-monitor
     # Cat clone with syntax highlighting (`bat`; Debian package name is batcat).
     bat
