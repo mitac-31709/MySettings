@@ -1051,6 +1051,18 @@ let
     }
     {
       section = powerSection;
+      label = "iowait を CPU 別に見る";
+      run = "nix run nixpkgs#sysstat -- mpstat -P ALL 1 5";
+      mode = "term";
+    }
+    {
+      section = powerSection;
+      label = "NVMe/zram の待ち（iostat）";
+      run = "nix run nixpkgs#sysstat -- iostat -xz -p ALL 1 5";
+      mode = "term";
+    }
+    {
+      section = powerSection;
       label = "warp disconnect";
       run = "warp-cli disconnect";
       mode = "exec";
