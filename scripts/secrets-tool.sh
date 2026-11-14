@@ -648,7 +648,20 @@ for idx, (p, cid, ctype, ssid, km, _) in enumerate(entries, start=1):
     print(f"  {idx:2d}) {cid} [{ctype}; {extra}] ({p.name})")
 
 print("入力例: all / wifi / 1,3,5 / q(中止)")
-choice = input("選択 [wifi]: ").strip() or "wifi"
+# Script is fed on stdin via heredoc (`python3 - <<'PY'`), so input() would
+# hit EOF. Read the interactive choice from the controlling terminal instead.
+sys.stdout.write("選択 [wifi]: ")
+sys.stdout.flush()
+try:
+    with open("/dev/tty", encoding="utf-8") as tty:
+        choice = tty.readline()
+except OSError as exc:
+    print(f"エラー: 端末から選択を読めません: {exc}", file=sys.stderr)
+    sys.exit(1)
+if choice == "":
+    print("エラー: 選択入力が空です（非対話実行では番号を渡せません）。", file=sys.stderr)
+    sys.exit(1)
+choice = choice.strip() or "wifi"
 if choice.lower() in {"q", "quit"}:
     sys.exit(2)
 
@@ -656,7 +669,8 @@ selected = []
 if choice.lower() == "all":
     selected = entries
 elif choice.lower() == "wifi":
-    selected = [e for e in entries if e[2] == "802-11-wireless"]
+    # NM keyfile may use legacy "802-11-wireless" or short "wifi".
+    selected = [e for e in entries if e[2] in {"wifi", "802-11-wireless"}]
 else:
     idxs = set()
     for part in choice.split(","):
