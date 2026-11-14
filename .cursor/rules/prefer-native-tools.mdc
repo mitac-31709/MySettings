@@ -1,5 +1,5 @@
 ---
-description: 簡単な一度きりの作業では Python より既存 CLI を優先する
+description: 簡単な一度きりの作業では Python より既存 CLI／一時 nix ツールを優先する
 alwaysApply: true
 ---
 
@@ -7,25 +7,36 @@ alwaysApply: true
 
 For simple one-off tasks (file search, text filter, git ops, path lookup, quick transforms), do not default to Python. Prefer tools already available on the machine — they start faster and stay shorter.
 
-## Preferred tools (Windows)
+## Preferred tools (NixOS / Linux)
 
 | Task | Prefer | Avoid (unless needed) |
 |------|--------|------------------------|
-| File / content search | `es` (Everything CLI), `rg`, PowerShell `Select-String` / `Get-ChildItem` | `python` walk + `os.walk` |
-| Text / JSON / CSV tweak | PowerShell pipelines (`ForEach-Object`, `ConvertFrom-Json`, `Import-Csv`) | short `python -c` scripts |
+| File / content search | `rg`, `find`, `fd` | `python` walk + `os.walk` |
+| Text / JSON / CSV tweak | `jq`, `sed`, `awk`, shell pipelines | short `python -c` scripts |
 | Git | `git` | custom Python wrappers |
-| Paths / existence | `Test-Path`, `Resolve-Path`, `where.exe` | Python `pathlib` one-liners |
-| HTTP | `curl.exe` | `urllib` / `requests` one-offs |
-| Archives | `tar`, `Expand-Archive` | Python `zipfile` for simple cases |
+| Paths / existence | `test`, `realpath`, `which` | Python `pathlib` one-liners |
+| HTTP | `curl` | `urllib` / `requests` one-offs |
+| Archives | `tar`, `unzip` | Python `zipfile` for simple cases |
+
+## Temporary tools on NixOS
+
+PATH に無くても、インストールせず一時利用してよい:
+
+- `nix-shell -p <pkg> --run '…'` — 対話や複数コマンド向け
+- `nix run nixpkgs#<pkg> -- …` — 単発実行向け（例: `nix run nixpkgs#jq -- .`）
+- `nix shell nixpkgs#<pkg> -c …` — シェルに一時追加して実行
+
+一度きりの調査・整形なら flake / Home Manager に足さず、上記で足りる。常用するなら設定に宣言する。
 
 Use Python when the logic is non-trivial (multi-step algorithms, libraries only available in Python, or a maintained script in the repo).
 
 ## How to choose
 
-1. Can PowerShell / git / `es` / `rg` / `curl` / built-ins do it in a few commands? → use those.
-2. Need a reusable or complex program? → Python (or the project's language) is fine.
-3. Do not invent a Python script just because it is familiar.
+1. Can `rg` / `jq` / `git` / `curl` / built-ins do it in a few commands? → use those.
+2. Missing CLI but available in nixpkgs? → `nix run` / `nix-shell -p`（永続インストールしない）.
+3. Need a reusable or complex program? → Python (or the project's language) is fine.
+4. Do not invent a Python script just because it is familiar.
 
 ## Keep this rule current
 
-When a new default or installed CLI proves useful (e.g. `jq`, `fd`, `bat`, another Everything flag), update this rule: add it to the table above and drop outdated entries. Do not leave discovered tools only in chat history.
+When a new default or installed CLI proves useful (e.g. `jq`, `fd`, `bat`), update this rule: add it to the table above and drop outdated entries. Do not leave discovered tools only in chat history.
