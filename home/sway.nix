@@ -1063,6 +1063,10 @@ let
     }
     {
       section = powerSection;
+      label = "注: 偽 iowait → i915_flip D 張り付き（PSR）。boot: i915.enable_psr=0";
+    }
+    {
+      section = powerSection;
       label = "warp disconnect";
       run = "warp-cli disconnect";
       mode = "exec";
