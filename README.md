@@ -659,7 +659,7 @@ restic restore latest \
 | CPU / GPU | Intel 第8世代以降（Core i / Core Ultra iGPU）。`intel-media-driver` + `LIBVA_DRIVER_NAME=iHD` + `sof-firmware`（`modules/nixos/laptop/graphics.nix`） |
 | オーディオ | **PipeWire + WirePlumber**（ALSA / 32bit ALSA / `pipewire-pulse` / JACK 互換）+ Bluetooth（`modules/nixos/vaio/audio.nix`）。Chromebook 用の PulseAudio / `hw:0,0` 固定・`max98373` ミキサは不使用 |
 | キーボード・OOM | `keyd` により **Ctrl+Alt+Del**（**Ctrl+Alt+Backspace** も可）で手動 OOM killer（SysRq-f）＋ libinput 内部キーボード扱い。Chromebook 用 `cros` 最上段変換は適用しないため、`F1`–`F12` は通常のファンクションキーとして動作（`modules/nixos/laptop/input.nix`） |
-| 電源・コード | `zram`（100% / zstd）・`thermald`・`auto-cpufreq`・`power-chords`（全 `"Power Button"` ACPI ノードを監視: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+F1=強制ログアウト** / **電源+F2=再起動**）。Chromebook 専用 `/dev/cros_ec` Type-C 制御はロードしない |
+| 電源・コード | `zram`（100% / zstd）・`thermald`・`auto-cpufreq`・`power-chords`（全 `"Power Button"` ACPI ノードを監視: 短押し=suspend / 長押し≈2.5s=poweroff / **電源+F1=強制ログアウト** / **電源+F2=再起動**）。Ice Lake eDP は `i915.enable_psr=0`（PSR2 の flip 張り付き＝偽 iowait 回避）。Chromebook 専用 `/dev/cros_ec` Type-C 制御はロードしない |
 | バックライト | Waybar `backlight` はデバイス名固定なし（`intel_backlight` 等を自動検出） |
 
 ### VAIO オーディオ確認
@@ -773,7 +773,7 @@ modules/nixos/sway.nix            # Sway システム側（greetd 既定セッ�
 modules/nixos/greetd.nix          # tuigreet（Sway のみ）
 modules/nixos/console-gui.nix     # gui / apps（Sway ランチャー等）
 modules/nixos/laptop.nix          # ノート PC 共通ハードウェア集約（./laptop/*）
-modules/nixos/laptop/             # graphics（Intel iHD + SOF）/ input（keyd OOM）/ power（zram + thermald + auto-cpufreq + power-chords）
+modules/nixos/laptop/             # graphics（Intel iHD + SOF + i915.enable_psr=0）/ input（keyd OOM）/ power（zram + thermald + auto-cpufreq + power-chords）
 modules/nixos/vaio.nix            # VAIO 固有集約（./vaio/*）
 modules/nixos/vaio/               # audio（PipeWire + WirePlumber + Bluetooth）
 modules/nixos/chromebook.nix      # delbin Chromebook 固有集約（./chromebook/*）
