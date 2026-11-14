@@ -14,3 +14,10 @@ graphify-out/
 # Python bytecode from scripts/*.py
 __pycache__/
 *.py[cod]
+
+# Guard against accidentally staging plaintext agenix keys or decrypted secrets.
+# Encrypted ciphertext files (`secrets/*.age`) and `secrets/master-pubkey.txt` ARE tracked.
+secrets/*.key
+secrets/*.plain
+secrets/*.tmp
+secrets/*~

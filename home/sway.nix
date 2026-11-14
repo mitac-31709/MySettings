@@ -426,6 +426,17 @@ let
     }
     {
       section = "Waybar・日常";
+      label = "Vivaldi 拡張が全部壊れている";
+      keys = "Extensions 欠落 → Vivaldi終了後に vivaldi-extensions-repair";
+    }
+    {
+      section = "Waybar・日常";
+      label = "Vivaldi 拡張を CRX キャッシュから復旧";
+      run = "vivaldi-extensions-repair";
+      mode = "term";
+    }
+    {
+      section = "Waybar・日常";
       label = "Vivaldi ChatGPT 拡張が真っ白";
       keys = "setOptions 非対応 → パッチ版を Load unpacked";
     }
@@ -917,7 +928,7 @@ let
     }
     {
       section = "バックアップ";
-      label = "backup unlock-key";
+      label = "backup unlock-key（rbw 解錠・手動確認用）";
       run = "backup unlock-key";
       mode = "term";
     }
@@ -959,6 +970,12 @@ let
     }
     {
       section = "バックアップ";
+      label = "別端末から新端末復元（--from --new-device）";
+      run = "cd ~/MySettings && ./scripts/restore-on-nixos.sh --from vaio --new-device";
+      mode = "show";
+    }
+    {
+      section = "バックアップ";
       label = "backup reconnect";
       run = "backup reconnect";
       mode = "term";
@@ -975,11 +992,50 @@ let
     }
     {
       section = "バックアップ";
-      label = "注: ~/MySettings 含む（復元先 …/home/mitac/MySettings）";
+      label = "注: リポジトリは端末別 (<host>-home)。他参照は RESTIC_REPOSITORY=…";
     }
     {
       section = "バックアップ";
-      label = "注: restic-home に鍵+ID/secret/token保存→全体復元はrbw自動入力";
+      label = "注: --new-device は既存 ~/MySettings 保持＆端末ID/認証を再サインイン化";
+    }
+    {
+      section = "バックアップ";
+      label = "注: agenix 有効時は rbw 解錠不要で自動実行（他端末用に restic-home も Bitwarden 保持）";
+    }
+    # シークレット（Bitwarden × agenix）
+    {
+      section = "シークレット";
+      label = "secrets status（鍵・/run/agenix 状態）";
+      run = "secrets status";
+      mode = "term";
+    }
+    {
+      section = "シークレット";
+      label = "secrets check --decrypt（暗号・復号検証）";
+      run = "secrets check --decrypt";
+      mode = "term";
+    }
+    {
+      section = "シークレット";
+      label = "secrets edit user-env（API キー・環境変数）";
+      run = "secrets edit user-env";
+      mode = "term";
+    }
+    {
+      section = "シークレット";
+      label = "secrets import（既存認証を一括暗号化）";
+      run = "secrets import";
+      mode = "show";
+    }
+    {
+      section = "シークレット";
+      label = "secrets bootstrap（新端末へ Bitwarden 鍵導入）";
+      run = "secrets bootstrap";
+      mode = "show";
+    }
+    {
+      section = "シークレット";
+      label = "注: 共通鍵は Bitwarden (agenix-master-key) + /etc/agenix/master.key";
     }
     # 電源（Chromebook: 電源・Type-C / VAIO: 電源・省電力）
     {

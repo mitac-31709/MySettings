@@ -10,6 +10,7 @@ from pathlib import Path
 import pty
 import select
 import shutil
+import sqlite3
 import stat
 import subprocess
 import tempfile
@@ -163,6 +164,7 @@ class RestoreIntegrationTest(unittest.TestCase):
             RESTIC_CACHE_DIR=str(cls.root / "restic-cache"),
             RESTIC_PASSWORD="disposable-local-fixture-password",
             RESTORE_NO_RBW="1",
+            RESTORE_HOST="mitac",
             TZ="UTC",
         )
         cls.run_restic("init")
@@ -221,7 +223,10 @@ class RestoreIntegrationTest(unittest.TestCase):
         self.case_directory = Path(tempfile.mkdtemp(dir=self.root, prefix="case-"))
         self.target = self.case_directory / "restored"
 
-    def restore(self, *, environment=None):
+    def restore(self, *args, environment=None, include_default_target=True):
+        cmd_args = list(args)
+        if include_default_target:
+            cmd_args.append(str(self.target))
         # The real script runs unchanged; only its machine/user prerequisite is
         # replaced so the local transport can be exercised on the test host.
         return subprocess.run(
@@ -231,10 +236,11 @@ class RestoreIntegrationTest(unittest.TestCase):
                 'source "$1"; check_platform() { :; }; shift; main "$@"',
                 "restore-integration",
                 str(SCRIPT),
-                str(self.target),
+                *cmd_args,
             ],
             cwd=self.root,
             env=environment or self.environment,
+            stdin=subprocess.DEVNULL,
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -396,6 +402,459 @@ class RestoreIntegrationTest(unittest.TestCase):
         self.assertFalse((self.target / ".restored-snapshot-id").exists())
         self.assertNotIn(SUCCESS, result.stdout)
 
+    def _build_multi_device_snapshot(self, repo_name="vaio-home"):
+        repo_path = self.root / "restic" / repo_name
+        fixture_root = self.case_directory / "multi-src"
+        fixture_root.mkdir(parents=True, exist_ok=True)
+        src_home = fixture_root / "home" / "mitac"
+        src_sys = fixture_root / "run" / "restic-backups-home" / "system"
+
+        def write_bytes(rel_path, content, mode=0o600):
+            p = fixture_root / rel_path
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_bytes(content)
+            p.chmod(mode)
+            return p
+
+        def write_text(rel_path, text, mode=0o600):
+            return write_bytes(rel_path, text.encode("utf-8"), mode=mode)
+
+        # System state: Tailscale, WARP, Bluetooth (must drop on --new-device), NM (sanitize interface/mac)
+        write_text("run/restic-backups-home/system/tailscale/tailscaled.state", "vaio-nodekey")
+        write_text("run/restic-backups-home/system/cloudflare-warp/reg.json", '{"reg":"vaio"}')
+        write_text("run/restic-backups-home/system/bluetooth/AA:BB:CC:DD/info", "bt-key")
+        write_text(
+            "run/restic-backups-home/system/nm-connections/corp.nmconnection",
+            "[connection]\nid=corp\nuuid=1111\ntype=wifi\ninterface-name=wlp1s0\n\n"
+            "[wifi]\nmode=infrastructure\nssid=CorpWiFi\nmac-address=AA:BB:CC:DD:EE:FF\n\n"
+            "[wifi-security]\nkey-mgmt=wpa-psk\npsk=super-secret-psk\n",
+            mode=0o600,
+        )
+
+        # Portable / personal data (must keep)
+        write_text("home/mitac/Documents/notes.txt", "vaio-note\n", mode=0o644)
+        write_text("home/mitac/.ssh/id_ed25519", "SSH-KEY\n", mode=0o600)
+        write_text("home/mitac/.config/gh/hosts.yml", "github.com:\n  oauth_token: keep\n")
+        write_text("home/mitac/.local/share/keyrings/login.keyring", "keyring-bytes")
+        write_text("home/mitac/MySettings/hosts/chromebook/hardware-configuration.nix", "# old-snapshot-hw\n", mode=0o644)
+
+        # rbw snapshot state (must drop device_id/cache)
+        write_text("home/mitac/.local/share/rbw/device_id", "vaio-device-uuid")
+        write_text("home/mitac/.cache/rbw/vault.json", "{}")
+        write_text("home/mitac/.config/rbw/config.json", '{"email":"old@example.com"}')
+
+        # P2P / KVM / Remote
+        write_text("home/mitac/.local/share/app.uniclipboard.desktop/peer.json", "{}")
+        write_text("home/mitac/.local/state/app.uniclipboard.desktop/state", "{}")
+        write_text("home/mitac/.config/lan-mouse/lan-mouse.pem", "VAIO-TLS-KEY")
+        write_text("home/mitac/.config/lan-mouse/config.toml", "port = 4242\n", mode=0o644)
+        write_text("home/mitac/.local/share/org.localsend.localsend_app/shared_preferences.json", '{"ls_alias":"vaio"}')
+        write_text("home/mitac/.local/share/dev.mandre.rquickshare/.settings.json", '{"visibility":1}', mode=0o644)
+        write_text("home/mitac/.local/share/dev.mandre.rquickshare/storage/salt", "12345678")
+        write_text("home/mitac/.local/share/dev.mandre.rquickshare/mediakeys/v1/salt", "abcdefgh")
+        write_text("home/mitac/.parsec-persistent", "old-id")
+        write_text("home/mitac/.parsec/user.bin", "parsec-token")
+        write_text("home/mitac/.parsec/appdata.json", '{"peer":"vaio"}')
+        write_text("home/mitac/.parsec/config.json", '{"decoder_h265":true}', mode=0o644)
+
+        # Vivaldi
+        write_text(
+            "home/mitac/.config/vivaldi/Local State",
+            json.dumps({
+                "user_experience_metrics": {"client_id": "vaio-metrics"},
+                "signin": {"allowed": True},
+                "vivaldi": {"unique_user_id": "vaio-viv-id", "stats": {"foo": 1}, "translate": {}},
+                "profile": {"info_cache": {"Default": {"name": "mitac"}}},
+            }),
+        )
+        write_text(
+            "home/mitac/.config/vivaldi/Default/Preferences",
+            json.dumps({
+                "sync": {"gaia_id": "12345"},
+                "invalidation": {"per_sender_registered_for_invalidation": {}},
+                "gcm": {"push_messaging_application_id_map": {}},
+                "gaia_cookie": {"hash": "abc"},
+                "vivaldi": {"vivaldi_account": {"username": "mitac"}, "tabs": {"vertical": True}},
+                "browser": {"theme": {"color_scheme": 2}},
+            }),
+        )
+        write_text("home/mitac/.config/vivaldi/Default/Bookmarks", '{"roots":{}}')
+        write_text("home/mitac/.config/vivaldi/Default/Notes", '{"children":[]}')
+        write_text("home/mitac/.config/vivaldi/Default/Cookies", "cookie-db")
+        write_text("home/mitac/.config/vivaldi/Default/Login Data", "login-db")
+        write_text("home/mitac/.config/vivaldi/Default/GCM Store/key", "gcm-key")
+        write_text("home/mitac/.config/vivaldi/Default/Sync Data/LevelDB/LOCK", "")
+        write_text("home/mitac/.config/vivaldi/Default/trusted_vault.pb", "vault")
+        write_text("home/mitac/.config/vivaldi/Default/AccountBookmarks", "acct")
+        write_text("home/mitac/.config/vivaldi/Default/Sessions/Session_1", "tab")
+
+        # Cursor (JSON + real SQLite DB + SingletonLock symlink)
+        write_text("home/mitac/.config/Cursor/machineid", "vaio-machine-id")
+        write_text("home/mitac/.config/Cursor/Cookies", "cursor-cookies")
+        write_text("home/mitac/.config/Cursor/Local Storage/leveldb/CURRENT", "1")
+        write_text("home/mitac/.config/Cursor/User/settings.json", '{"editor.fontSize":14}', mode=0o644)
+        write_text("home/mitac/.config/Cursor/User/globalStorage/anysphere.cursor-agent-host/host.key", "secret")
+        write_text("home/mitac/.config/Cursor/User/globalStorage/mcp-oauth-attempts/1.json", "{}")
+        write_text(
+            "home/mitac/.config/Cursor/User/globalStorage/storage.json",
+            json.dumps({
+                "telemetry.machineId": "vaio-m",
+                "telemetry.macMachineId": "vaio-mm",
+                "telemetry.devDeviceId": "vaio-dd",
+                "telemetry.sqmId": "vaio-sqm",
+                "theme": "Default Dark+",
+            }),
+        )
+        db_path = src_home / ".config" / "Cursor" / "User" / "globalStorage" / "state.vscdb"
+        con = sqlite3.connect(str(db_path))
+        con.execute("CREATE TABLE ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB)")
+        con.executemany(
+            "INSERT INTO ItemTable VALUES (?, ?)",
+            [
+                ("cursorAuth/accessToken", "tok-access"),
+                ("cursorAuth/refreshToken", "tok-refresh"),
+                ("secret://cursorAuth/openAIKey", "enc-secret"),
+                ("mcpOAuth.global.abc", "mcp-tok"),
+                ("remoteAgentHost.targetId", "vaio-target"),
+                ("adminSettings.cachedAuthId", "user-1"),
+                ("glass.lastSignedInAuthId", "user-1"),
+                ("anysphere.remote-ssh", '{"kept":true}'),
+                ("workbench.colorTheme", "Keep Me"),
+            ],
+        )
+        con.commit()
+        con.close()
+        (src_home / ".config" / "Cursor" / "SingletonLock").symlink_to("vaio-1234")
+
+        # Codex / ChatGPT / Grok Bot / Discord / Steam / CLIs / Firefox
+        write_text("home/mitac/.codex/auth.json", '{"token":"vaio"}')
+        write_text("home/mitac/.codex/installation_id", "codex-uuid")
+        write_text("home/mitac/.codex/state_5.sqlite", "db")
+        write_text("home/mitac/.codex/..codex-global-state.json.tmp-1", "{}")
+        write_text("home/mitac/.codex/config.toml", 'model = "gpt-5"\n', mode=0o644)
+        write_text("home/mitac/.codex/skills/custom/SKILL.md", "# skill\n", mode=0o644)
+        write_text("home/mitac/.config/Codex/.codex-tpp-local-executor-installation-id", "exec-id")
+        write_text("home/mitac/.config/Codex/Cookies", "c")
+        write_text("home/mitac/.config/Codex/Default/Cookies", "c2")
+        write_text("home/mitac/.config/Grok Bot/sand-secrets.json", '{"s":"x"}')
+        write_text("home/mitac/.config/Grok Bot/sand-client-persistence/state", "1")
+        write_text("home/mitac/.config/Grok Bot/Cookies", "gc")
+        write_text("home/mitac/.config/discord/settings.json", '{"SKIP_HOST_UPDATE":true}', mode=0o644)
+        write_text("home/mitac/.config/discord/Cookies", "dc")
+        write_text("home/mitac/.config/discord/Local Storage/leveldb/LOG", "tok")
+        write_text("home/mitac/.local/share/Steam/ssfn123456", "guard")
+        write_text("home/mitac/.local/share/Steam/config/loginusers.vdf", '"users" { "1" {} }')
+        write_text("home/mitac/.local/share/Steam/config/libraryfolders.vdf", '"libraryfolders" {}', mode=0o644)
+        write_text(
+            "home/mitac/.local/share/Steam/config/config.vdf",
+            '"InstallConfigStore"\n'
+            '{\n'
+            '\t"Software"\n'
+            '\t{\n'
+            '\t\t"Valve"\n'
+            '\t\t{\n'
+            '\t\t\t"Steam"\n'
+            '\t\t\t{\n'
+            '\t\t\t\t"ShaderCacheManager"\n'
+            '\t\t\t\t{\n'
+            '\t\t\t\t\t"Keep"\t\t"1"\n'
+            '\t\t\t\t}\n'
+            '\t\t\t\t"Accounts"\n'
+            '\t\t\t\t{\n'
+            '\t\t\t\t\t"mitac"\n'
+            '\t\t\t\t\t{\n'
+            '\t\t\t\t\t\t"SteamID"\t\t"76561198000000000"\n'
+            '\t\t\t\t\t}\n'
+            '\t\t\t\t}\n'
+            '\t\t\t\t"ConnectCache"\n'
+            '\t\t\t\t{\n'
+            '\t\t\t\t\t"tok"\t\t"secret"\n'
+            '\t\t\t\t}\n'
+            '\t\t\t\t"depots"\n'
+            '\t\t\t\t{\n'
+            '\t\t\t\t\t"4183111"\t\t"kept"\n'
+            '\t\t\t\t}\n'
+            '\t\t\t}\n'
+            '\t\t}\n'
+            '\t}\n'
+            '}\n',
+        )
+        write_text("home/mitac/.gemini/antigravity-cli/installation_id", "agy-uuid")
+        write_text("home/mitac/.gemini/antigravity-cli/settings.json", '{"keep":true}')
+        write_text("home/mitac/.local/share/opencode/auth.json", '{"k":"v"}')
+        write_text("home/mitac/.local/share/opencode/opencode.db", "db")
+        write_text("home/mitac/.mozilla/firefox/abc.default-release/signedInUser.json", '{"email":"a"}')
+        write_text("home/mitac/.mozilla/firefox/abc.default-release/cookies.sqlite", "c")
+        write_text("home/mitac/.mozilla/firefox/abc.default-release/places.sqlite", "bookmarks")
+
+        if not repo_path.exists():
+            subprocess.run(
+                [self.restic, "--repo", str(repo_path), "init"],
+                cwd=fixture_root,
+                env=self.environment,
+                check=True,
+                capture_output=True,
+                timeout=30,
+            )
+        subprocess.run(
+            [
+                self.restic,
+                "--repo",
+                str(repo_path),
+                "backup",
+                "--host",
+                repo_name.removesuffix("-home"),
+                "home/mitac",
+                "run/restic-backups-home/system",
+            ],
+            cwd=fixture_root,
+            env=self.environment,
+            check=True,
+            capture_output=True,
+            timeout=60,
+        )
+        return repo_path
+
+    def test_repo_resolution_flags_and_hostname_fallback(self):
+        # Argument validation errors
+        bad_cases = [
+            ("--from", "../escape"),
+            ("--from", "vaio", "--repo", "/tmp/some-repo"),
+            ("--no-such-flag",),
+        ]
+        for bad_args in bad_cases:
+            res = self.restore(*bad_args)
+            self.assertNotEqual(res.returncode, 0, f"Expected failure for {bad_args}")
+
+        # Real restore using --repo (without [gdrive] in rclone.conf!)
+        vaio_repo = self._build_multi_device_snapshot("vaio-home")
+        empty_rclone = self.case_directory / "empty-rclone.conf"
+        empty_rclone.write_text("", encoding="utf-8")
+        no_gdrive_env = dict(self.environment, RCLONE_CONFIG=str(empty_rclone))
+        repo_target = self.case_directory / "by-repo"
+        res_repo = self.restore(
+            "--repo", str(vaio_repo), str(repo_target), include_default_target=False, environment=no_gdrive_env
+        )
+        self.assertEqual(res_repo.returncode, 0, res_repo.stdout + res_repo.stderr)
+        self.assertTrue((repo_target / "home" / "mitac" / "Documents" / "notes.txt").is_file())
+
+        # Hostname resolution when RESTORE_HOST is absent
+        res_script = (
+            'source "$1"; '
+            'resolve_repository "" ""; echo "|"; '
+            'RESTORE_HOST=NixOS resolve_repository "" ""; echo "|"; '
+            'RESTORE_HOST=chromebook resolve_repository "" ""; echo "|"; '
+            'RESTORE_HOST=chromebook resolve_repository "vaio" ""'
+        )
+        shim_bin = self.case_directory / "uname-bin"
+        shim_bin.mkdir(exist_ok=True)
+        uname_shim = shim_bin / "uname"
+        uname_shim.write_text("#!/usr/bin/env bash\necho NixOS\n", encoding="utf-8")
+        uname_shim.chmod(0o700)
+        clean_env = {k: v for k, v in self.environment.items() if k != "RESTORE_HOST"}
+        clean_env["PATH"] = f"{shim_bin}:{clean_env['PATH']}"
+        res_u = subprocess.run(
+            ["bash", "-c", res_script, "resolve-test", str(SCRIPT)],
+            env=clean_env,
+            text=True,
+            capture_output=True,
+            timeout=15,
+        )
+        self.assertEqual(res_u.returncode, 0, res_u.stderr)
+        parts = [line for line in res_u.stdout.replace("|\n", "|").split("|") if line]
+        self.assertEqual(
+            parts,
+            [
+                "rclone:gdrive:restic/mitac-home",
+                "rclone:gdrive:restic/mitac-home",
+                "rclone:gdrive:restic/chromebook-home",
+                "rclone:gdrive:restic/vaio-home",
+            ],
+        )
+
+    def test_new_device_extract_dir_scrubs_collisions_and_keeps_portable_data(self):
+        self._build_multi_device_snapshot("vaio-home")
+        result = self.restore("--from", "vaio", "--new-device")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(SUCCESS, result.stdout)
+        self.assertIn("新規端末 (--new-device)", result.stdout)
+        self.assertIn("rclone:gdrive:restic/vaio-home", result.stderr)
+
+        t_home = self.target / "home" / "mitac"
+        t_sys = self.target / "run" / "restic-backups-home" / "system"
+
+        # System VPN / BT removed; NM profile sanitized but SSID/PSK intact
+        for dropped_sys in ("tailscale", "cloudflare-warp", "bluetooth"):
+            self.assertFalse((t_sys / dropped_sys).exists(), dropped_sys)
+        nm_text = (t_sys / "nm-connections" / "corp.nmconnection").read_text(encoding="utf-8")
+        self.assertNotIn("interface-name=", nm_text)
+        self.assertNotIn("mac-address=", nm_text)
+        self.assertIn("ssid=CorpWiFi", nm_text)
+        self.assertIn("psk=super-secret-psk", nm_text)
+
+        # Portable / preserved paths
+        for kept in (
+            "Documents/notes.txt",
+            ".ssh/id_ed25519",
+            ".config/gh/hosts.yml",
+            ".local/share/keyrings/login.keyring",
+            ".config/lan-mouse/config.toml",
+            ".local/share/dev.mandre.rquickshare/.settings.json",
+            ".parsec/config.json",
+            ".config/vivaldi/Default/Bookmarks",
+            ".config/vivaldi/Default/Notes",
+            ".config/Cursor/User/settings.json",
+            ".codex/config.toml",
+            ".codex/skills/custom/SKILL.md",
+            ".config/discord/settings.json",
+            ".local/share/Steam/config/libraryfolders.vdf",
+            ".gemini/antigravity-cli/settings.json",
+            ".local/share/opencode/opencode.db",
+            ".mozilla/firefox/abc.default-release/places.sqlite",
+        ):
+            self.assertTrue((t_home / kept).exists(), f"Missing preserved path: {kept}")
+
+        # Scrubbed paths
+        for removed in (
+            ".local/share/rbw",
+            ".cache/rbw",
+            ".config/rbw",
+            ".local/share/app.uniclipboard.desktop",
+            ".local/state/app.uniclipboard.desktop",
+            ".config/lan-mouse/lan-mouse.pem",
+            ".local/share/org.localsend.localsend_app/shared_preferences.json",
+            ".local/share/dev.mandre.rquickshare/storage",
+            ".local/share/dev.mandre.rquickshare/mediakeys",
+            ".parsec-persistent",
+            ".parsec/user.bin",
+            ".parsec/appdata.json",
+            ".config/vivaldi/Default/Cookies",
+            ".config/vivaldi/Default/Login Data",
+            ".config/vivaldi/Default/GCM Store",
+            ".config/vivaldi/Default/Sync Data",
+            ".config/vivaldi/Default/trusted_vault.pb",
+            ".config/vivaldi/Default/AccountBookmarks",
+            ".config/vivaldi/Default/Sessions",
+            ".config/Cursor/machineid",
+            ".config/Cursor/Cookies",
+            ".config/Cursor/Local Storage",
+            ".config/Cursor/SingletonLock",
+            ".config/Cursor/User/globalStorage/anysphere.cursor-agent-host",
+            ".config/Cursor/User/globalStorage/mcp-oauth-attempts",
+            ".codex/auth.json",
+            ".codex/installation_id",
+            ".codex/state_5.sqlite",
+            ".codex/..codex-global-state.json.tmp-1",
+            ".config/Codex/.codex-tpp-local-executor-installation-id",
+            ".config/Codex/Cookies",
+            ".config/Codex/Default/Cookies",
+            ".config/Grok Bot/sand-secrets.json",
+            ".config/Grok Bot/sand-client-persistence",
+            ".config/Grok Bot/Cookies",
+            ".config/discord/Cookies",
+            ".config/discord/Local Storage",
+            ".local/share/Steam/ssfn123456",
+            ".local/share/Steam/config/loginusers.vdf",
+            ".gemini/antigravity-cli/installation_id",
+            ".local/share/opencode/auth.json",
+            ".mozilla/firefox/abc.default-release/signedInUser.json",
+            ".mozilla/firefox/abc.default-release/cookies.sqlite",
+        ):
+            self.assertFalse((t_home / removed).exists(), f"Should be removed: {removed}")
+
+        # Structured JSON / SQLite / VDF verification
+        viv_ls = json.loads((t_home / ".config/vivaldi/Local State").read_text(encoding="utf-8"))
+        self.assertNotIn("user_experience_metrics", viv_ls)
+        self.assertNotIn("signin", viv_ls)
+        self.assertNotIn("unique_user_id", viv_ls["vivaldi"])
+        self.assertIn("profile", viv_ls)
+
+        viv_pref = json.loads((t_home / ".config/vivaldi/Default/Preferences").read_text(encoding="utf-8"))
+        for k in ("sync", "invalidation", "gcm", "gaia_cookie"):
+            self.assertNotIn(k, viv_pref)
+        self.assertNotIn("vivaldi_account", viv_pref["vivaldi"])
+        self.assertTrue(viv_pref["vivaldi"]["tabs"]["vertical"])
+
+        cur_store = json.loads((t_home / ".config/Cursor/User/globalStorage/storage.json").read_text(encoding="utf-8"))
+        self.assertFalse(any(k.startswith("telemetry.") for k in cur_store))
+        self.assertEqual(cur_store["theme"], "Default Dark+")
+
+        con = sqlite3.connect(str(t_home / ".config/Cursor/User/globalStorage/state.vscdb"))
+        keys = {row[0] for row in con.execute("SELECT key FROM ItemTable").fetchall()}
+        con.close()
+        self.assertEqual(keys, {"anysphere.remote-ssh", "workbench.colorTheme"})
+
+        vdf = (t_home / ".local/share/Steam/config/config.vdf").read_text(encoding="utf-8")
+        self.assertNotIn('"Accounts"', vdf)
+        self.assertNotIn('"ConnectCache"', vdf)
+        self.assertIn('"ShaderCacheManager"', vdf)
+        self.assertIn('"depots"', vdf)
+
+    def test_new_device_in_place_preserves_mysettings_rbw_rclone_and_skips_vpn_bt(self):
+        self._build_multi_device_snapshot("vaio-home")
+
+        restore_root = self.case_directory / "new-chromebook-root"
+        target_home = restore_root / "home" / "mitac"
+        target_home.mkdir(parents=True)
+        # Fresh btrfs hardware-configuration & git checkout on target Chromebook
+        (target_home / "MySettings" / ".git").mkdir(parents=True)
+        (target_home / "MySettings" / ".git" / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+        hw_cfg = target_home / "MySettings" / "hosts" / "chromebook" / "hardware-configuration.nix"
+        hw_cfg.parent.mkdir(parents=True)
+        hw_cfg.write_text("# fresh-btrfs-chromebook\n", encoding="utf-8")
+
+        # Existing rbw device_id and rclone.conf on target machine
+        rbw_dev = target_home / ".local" / "share" / "rbw" / "device_id"
+        rbw_dev.parent.mkdir(parents=True)
+        rbw_dev.write_text("fresh-chromebook-rbw-id", encoding="utf-8")
+        rclone_conf = target_home / ".config" / "rclone" / "rclone.conf"
+        rclone_conf.parent.mkdir(parents=True)
+        rclone_conf.write_text("[gdrive]\ntype = local\n# chromebook-rclone\n", encoding="utf-8")
+        rclone_conf.chmod(0o600)
+
+        # Pre-existing target tailscale dir stays untouched (not overwritten by VAIO state)
+        ts_local = restore_root / "var" / "lib" / "tailscale" / "local.state"
+        ts_local.parent.mkdir(parents=True)
+        ts_local.write_text("chromebook-ts", encoding="utf-8")
+
+        shim_dir = self.case_directory / "sudo-bin"
+        shim_dir.mkdir()
+        sudo_log = self.case_directory / "sudo.log"
+        write_sudo_shim(shim_dir)
+        stage_parent = self.case_directory / "stage"
+        stage_parent.mkdir()
+
+        env = dict(
+            self.environment,
+            PATH=f"{shim_dir}:{self.environment['PATH']}",
+            RCLONE_CONFIG=str(rclone_conf),
+            RESTORE_ROOT=str(restore_root),
+            RESTORE_STAGE_PARENT=str(stage_parent),
+            SUDO_LOG=str(sudo_log),
+        )
+        res = self.restore("--from", "vaio", "--new-device", include_default_target=False, environment=env)
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+        self.assertIn(SUCCESS, res.stdout)
+
+        # Critical in-place protections
+        self.assertEqual(hw_cfg.read_text(encoding="utf-8"), "# fresh-btrfs-chromebook\n")
+        self.assertEqual(rbw_dev.read_text(encoding="utf-8"), "fresh-chromebook-rbw-id")
+        self.assertIn("chromebook-rclone", rclone_conf.read_text(encoding="utf-8"))
+        self.assertEqual(ts_local.read_text(encoding="utf-8"), "chromebook-ts")
+        self.assertFalse((restore_root / "var" / "lib" / "tailscale" / "tailscaled.state").exists())
+        self.assertFalse((restore_root / "var" / "lib" / "cloudflare-warp").exists())
+        self.assertFalse((restore_root / "var" / "lib" / "bluetooth").exists())
+
+        # Restored home data + sanitized Wi-Fi profile
+        self.assertEqual((target_home / "Documents" / "notes.txt").read_text(encoding="utf-8"), "vaio-note\n")
+        nm_restored = restore_root / "etc" / "NetworkManager" / "system-connections" / "corp.nmconnection"
+        self.assertEqual(stat.S_IMODE(nm_restored.stat().st_mode), 0o600)
+        self.assertNotIn("interface-name=", nm_restored.read_text(encoding="utf-8"))
+        sudo_calls = sudo_log.read_text(encoding="utf-8")
+        self.assertIn(f"chown -R root:root -- {restore_root}/etc/NetworkManager/system-connections", sudo_calls)
+        self.assertNotIn("systemctl", sudo_calls)
+        self.assertNotIn("nmcli", sudo_calls)
+
 
 class RestorePromptTest(unittest.TestCase):
     """Exercise interactive rbw/rclone/password setup without requiring real Google/Bitwarden/restic."""
@@ -442,6 +901,7 @@ class RestorePromptTest(unittest.TestCase):
             SUDO_LOG=str(self.sudo_log),
             RESTORE_STAGE_PARENT=str(self.stage_parent),
             RESTORE_NO_RBW="1",
+            RESTORE_HOST="mitac",
             RBW_STATE_DIR=str(self.rbw_state),
             RBW_LOG=str(self.rbw_log),
             FAKE_HASH=self.FAKE_HASH,
@@ -1925,8 +2385,18 @@ class RestorePromptTest(unittest.TestCase):
             for d in os.environ["PATH"].split(os.pathsep)
             if d and not (Path(d) / "rbw").exists() and not (Path(d) / "nix").exists()
         ]
+        extra_bin = self.root / "non-nix-core-bin"
+        extra_bin.mkdir(exist_ok=True)
+        for tool in (
+            "bash", "env", "dirname", "basename", "grep", "cat", "rm", "mv",
+            "cp", "mkdir", "chmod", "stat", "df", "awk", "mktemp", "uname",
+            "find", "jq", "python3", "tr", "sed", "touch", "head", "sort",
+        ):
+            resolved = shutil.which(tool)
+            if resolved and not (extra_bin / tool).exists():
+                (extra_bin / tool).symlink_to(resolved)
         env = self.rbw_env(
-            PATH=f"{self.bin}:{os.pathsep.join(clean_dirs)}",
+            PATH=f"{self.bin}:{extra_bin}:{os.pathsep.join(clean_dirs)}",
             EXPECTED_RESTIC_PASSWORD="no-rbw-manual-pw",
             SIMULATE_ABOUT_REQUIRE_TOKEN="1//no-rbw-rt",
         )
@@ -2353,6 +2823,64 @@ class RestorePromptTest(unittest.TestCase):
         self.assertIn("nixpkgs#python3", args)
         self.assertTrue(any("python3" in line for line in args), args)
 
+    def test_ensure_tools_forwards_flags_and_checks_sqlite3_for_new_device(self):
+        fake_bin = self.root / "minimal-py-bin"
+        fake_bin.mkdir()
+        for tool in ("bash", "dirname", "basename", "grep", "cat", "rm"):
+            resolved = shutil.which(tool)
+            self.assertIsNotNone(resolved)
+            (fake_bin / tool).symlink_to(resolved)
+        for tool in ("rclone", "restic", "jq"):
+            (fake_bin / tool).write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            (fake_bin / tool).chmod(0o700)
+        # Stub python3 that fails `import sqlite3` (simulating python3-minimal)
+        py_stub = fake_bin / "python3"
+        py_stub.write_text("#!/usr/bin/env bash\nexit 1\n", encoding="utf-8")
+        py_stub.chmod(0o700)
+
+        nix_args_file = self.root / "nix-args-flags.txt"
+        nix_shim = fake_bin / "nix"
+        nix_shim.write_text(
+            '#!/usr/bin/env bash\n'
+            'printf "%s\\n" "$@" > "$NIX_ARGS_FILE"\n'
+            'exit 0\n',
+            encoding="utf-8",
+        )
+        nix_shim.chmod(0o700)
+
+        conf = self.home / ".config" / "rclone" / "rclone.conf"
+        conf.parent.mkdir(parents=True)
+        conf.write_text("[gdrive]\ntype = local\n", encoding="utf-8")
+
+        env = dict(
+            self.environment,
+            PATH=str(fake_bin),
+            RESTIC_PASSWORD="pw",
+            NIX_ARGS_FILE=str(nix_args_file),
+        )
+        result = subprocess.run(
+            [
+                str(fake_bin / "bash"),
+                "-c",
+                'source "$1"; parse_args --from vaio --new-device /tmp/out; ensure_tools --from vaio --new-device /tmp/out',
+                "ensure-tools-flags-test",
+                str(SCRIPT),
+            ],
+            cwd=self.root,
+            env=env,
+            stdin=subprocess.DEVNULL,
+            text=True,
+            capture_output=True,
+            timeout=15,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        args = nix_args_file.read_text(encoding="utf-8").splitlines()
+        self.assertIn("nixpkgs#python3", args)
+        self.assertIn("--from", args)
+        self.assertIn("vaio", args)
+        self.assertIn("--new-device", args)
+        self.assertIn("/tmp/out", args)
+
 
 class RestoreSystemStateTest(unittest.TestCase):
     def setUp(self):
@@ -2443,6 +2971,429 @@ class RestoreSystemStateTest(unittest.TestCase):
             self.assertNotIn("systemctl restart cloudflare-warp.service", calls)
         else:
             self.assertFalse(any(c.startswith(("systemctl ", "nmcli ")) for c in calls), calls)
+
+
+SECRETS_TOOL = Path(__file__).resolve().with_name("secrets-tool.sh")
+AGENIX_RULES_SRC = Path(__file__).resolve().parent.parent / "secrets" / "agenix-rules.nix"
+
+
+class AgenixRestoreAndSecretsTest(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix="agenix-restore-test-")
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        self.bin = self.root / "bin"
+        self.bin.mkdir()
+        self.home = self.root / "home"
+        self.home.mkdir()
+        self.rbw_state = self.root / "rbw-state"
+        (self.rbw_state / "items").mkdir(parents=True)
+        self.sudo_log = self.root / "sudo.log"
+        self.restore_root = self.root / "restore-root"
+        self.restore_root.mkdir()
+        self.secrets_host_root = self.root / "secrets-host-root"
+        self.secrets_host_root.mkdir()
+
+        self.write_sudo_install_shim()
+        self.write_multi_item_rbw_shim()
+        for pin_name in ("pinentry-qt", "pinentry-curses"):
+            pin = self.bin / pin_name
+            pin.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            pin.chmod(0o700)
+
+    def write_sudo_install_shim(self):
+        shim = self.bin / "sudo"
+        shim.write_text(
+            '#!/usr/bin/env bash\n'
+            'set -euo pipefail\n'
+            'if [[ -n ${SUDO_LOG:-} ]]; then\n'
+            '  printf "%s\\n" "$*" >> "$SUDO_LOG"\n'
+            'fi\n'
+            'cmd=${1:-}\n'
+            'shift || true\n'
+            'case "$cmd" in\n'
+            '  mkdir|chmod|cp|test|cat|find)\n'
+            '    exec "$cmd" "$@"\n'
+            '    ;;\n'
+            '  chown)\n'
+            '    exit 0\n'
+            '    ;;\n'
+            '  install)\n'
+            '    args=()\n'
+            '    while (( $# > 0 )); do\n'
+            '      case "$1" in\n'
+            '        -o|-g) shift 2 ;;\n'
+            '        *) args+=("$1"); shift ;;\n'
+            '      esac\n'
+            '    done\n'
+            '    exec install "${args[@]}"\n'
+            '    ;;\n'
+            '  *)\n'
+            '    exit 0\n'
+            '    ;;\n'
+            'esac\n',
+            encoding="utf-8",
+        )
+        shim.chmod(0o700)
+
+    def write_multi_item_rbw_shim(self):
+        rbw = self.bin / "rbw"
+        rbw.write_text(
+            '#!/usr/bin/env bash\n'
+            'set -euo pipefail\n'
+            'state=${RBW_STATE_DIR:?}\n'
+            'mkdir -p "$state/items"\n'
+            'conf="$state/config.json"\n'
+            '[[ -f $conf ]] || printf "{}" > "$conf"\n'
+            'cmd=${1:-}\n'
+            'shift || true\n'
+            'case "$cmd" in\n'
+            '  config)\n'
+            '    sub=${1:-}; shift || true\n'
+            '    case "$sub" in\n'
+            '      show) cat "$conf" ;;\n'
+            '      set)\n'
+            '        tmp=$(mktemp "$state/cfg.XXXXXX")\n'
+            '        jq --arg k "${1:-}" --arg v "${2:-}" \'.[$k] = $v\' "$conf" > "$tmp"\n'
+            '        mv -f "$tmp" "$conf"\n'
+            '        ;;\n'
+            '      *) exit 1 ;;\n'
+            '    esac\n'
+            '    ;;\n'
+            '  stop-agent|login) exit 0 ;;\n'
+            '  unlocked) [[ -f "$state/unlocked" ]] ;;\n'
+            '  unlock) touch "$state/unlocked" ;;\n'
+            '  sync) exit 0 ;;\n'
+            '  add)\n'
+            '    item=${1:?}\n'
+            '    [[ -f "$state/unlocked" ]] || exit 1\n'
+            '    tmp=$(mktemp "$state/add.XXXXXX")\n'
+            '    "${VISUAL:-${EDITOR:-cat}}" "$tmp"\n'
+            '    pw=$(head -n1 "$tmp")\n'
+            '    notes=$(tail -n +2 "$tmp")\n'
+            '    jq -n --arg pw "$pw" --arg notes "$notes" \'{data: {password: $pw}, notes: $notes}\' > "$state/items/${item}.json"\n'
+            '    rm -f -- "$tmp"\n'
+            '    ;;\n'
+            '  get)\n'
+            '    raw=0\n'
+            '    if [[ ${1:-} == --raw ]]; then raw=1; shift; fi\n'
+            '    item=${1:-}\n'
+            '    [[ -f "$state/unlocked" ]] || { printf "rbw get: locked\\n" >&2; exit 1; }\n'
+            '    f="$state/items/${item}.json"\n'
+            '    [[ -f $f ]] || { printf "rbw get: not found: %s\\n" "$item" >&2; exit 1; }\n'
+            '    if (( raw == 1 )); then cat "$f"; else jq -r \'.data.password // empty\' "$f"; fi\n'
+            '    ;;\n'
+            '  *)\n'
+            '    printf "unexpected rbw command: %s\\n" "$cmd" >&2\n'
+            '    exit 1\n'
+            '    ;;\n'
+            'esac\n',
+            encoding="utf-8",
+        )
+        rbw.chmod(0o700)
+
+    def write_rbw_item(self, name: str, data: dict):
+        (self.rbw_state / "items" / f"{name}.json").write_text(json.dumps(data), encoding="utf-8")
+
+    def write_rbw_config(self, cfg: dict | None = None):
+        (self.rbw_state / "config.json").write_text(
+            json.dumps(
+                cfg
+                or {
+                    "email": "mitac31709@gmail.com",
+                    "base_url": "https://api.bitwarden.eu",
+                    "pinentry": str(self.bin / "pinentry-curses"),
+                }
+            ),
+            encoding="utf-8",
+        )
+
+    def base_env(self, **extra) -> dict:
+        env = os.environ.copy()
+        env.update(
+            {
+                "HOME": str(self.home),
+                "XDG_CONFIG_HOME": str(self.home / ".config"),
+                "XDG_CACHE_HOME": str(self.home / ".cache"),
+                "XDG_RUNTIME_DIR": str(self.root / "runtime"),
+                "PATH": f"{self.bin}:{os.environ['PATH']}",
+                "RBW_STATE_DIR": str(self.rbw_state),
+                "SUDO_LOG": str(self.sudo_log),
+                "RESTORE_ROOT": str(self.restore_root),
+                "SECRETS_HOST_ROOT": str(self.secrets_host_root),
+                "HOST_ARCH_FAKE": "",
+            }
+        )
+        Path(env["XDG_RUNTIME_DIR"]).mkdir(parents=True, exist_ok=True)
+        env.update(extra)
+        return env
+
+    def run_restore(self, args: list[str], env: dict) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            [
+                "bash",
+                "-c",
+                'source "$1"; check_platform() { :; }; shift; main "$@"',
+                "agenix-restore-test",
+                str(SCRIPT),
+                *args,
+            ],
+            cwd=self.root,
+            env=env,
+            stdin=subprocess.DEVNULL,
+            text=True,
+            capture_output=True,
+            timeout=20,
+        )
+
+    def test_agenix_only_restores_age_key_without_restic_or_rclone(self):
+        for forbidden in ("restic", "rclone"):
+            stub = self.bin / forbidden
+            stub.write_text(
+                f'#!/usr/bin/env bash\nprintf "{forbidden} should not run\\n" >&2\nexit 99\n',
+                encoding="utf-8",
+            )
+            stub.chmod(0o700)
+
+        self.write_rbw_config()
+        (self.rbw_state / "unlocked").touch()
+        secret_key = "AGE-SECRET-KEY-1QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ"
+        self.write_rbw_item("agenix-master-key", {"data": {"password": secret_key}, "notes": ""})
+
+        res = self.run_restore(["--agenix-only"], self.base_env())
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+        key_dest = self.restore_root / "etc" / "agenix" / "master.key"
+        self.assertTrue(key_dest.is_file())
+        self.assertEqual(key_dest.read_text(encoding="utf-8"), secret_key + "\n")
+        self.assertEqual(stat.S_IMODE(key_dest.stat().st_mode), 0o400)
+        self.assertEqual(stat.S_IMODE(key_dest.parent.stat().st_mode), 0o700)
+        self.assertNotIn(secret_key, res.stdout + res.stderr)
+        self.assertTrue(any(f"chown root:root -- {key_dest}" == line for line in self.sudo_log.read_text(encoding="utf-8").splitlines()))
+
+    def test_agenix_only_openssh_notes_and_rejects_extract_dir_and_bad_key(self):
+        self.write_rbw_config()
+        (self.rbw_state / "unlocked").touch()
+
+        bad = self.run_restore(["--agenix-only", str(self.root / "extract")], self.base_env())
+        self.assertNotEqual(bad.returncode, 0)
+
+        self.write_rbw_item("agenix-master-key", {"data": {"password": "not-a-valid-key"}, "notes": ""})
+        bad_key = self.run_restore(["--agenix-only"], self.base_env())
+        self.assertNotEqual(bad_key.returncode, 0)
+        self.assertFalse((self.restore_root / "etc" / "agenix" / "master.key").exists())
+
+        openssh = (
+            "-----BEGIN OPENSSH PRIVATE KEY-----\n"
+            "b3BlbnNzaC1rZXktdjEAAAAABG5vbmU=\n"
+            "-----END OPENSSH PRIVATE KEY-----"
+        )
+        self.write_rbw_item("agenix-master-key", {"data": {"password": ""}, "notes": f"comment\n{openssh}\n"})
+        ok = self.run_restore(["--agenix-only"], self.base_env())
+        self.assertEqual(ok.returncode, 0, ok.stdout + ok.stderr)
+        key_dest = self.restore_root / "etc" / "agenix" / "master.key"
+        self.assertEqual(key_dest.read_text(encoding="utf-8").strip(), openssh)
+        self.assertEqual(stat.S_IMODE(key_dest.stat().st_mode), 0o400)
+
+    def test_normal_restore_with_rbw_bootstraps_agenix_master_key_when_present(self):
+        real_rclone = shutil.which("rclone")
+        if not real_rclone:
+            self.skipTest("rclone is required for normal restore integration")
+
+        rclone_shim = self.bin / "rclone"
+        rclone_shim.write_text(
+            '#!/usr/bin/env bash\n'
+            'set -euo pipefail\n'
+            'if [[ ${1:-} == about && ${2:-} == gdrive: ]]; then\n'
+            '  printf "Total: 100 GiB\\n"; exit 0\n'
+            'fi\n'
+            'exec "$REAL_RCLONE" "$@"\n',
+            encoding="utf-8",
+        )
+        rclone_shim.chmod(0o700)
+
+        stage_tree = self.root / "fixture-stage"
+        (stage_tree / "home" / "mitac").mkdir(parents=True)
+        (stage_tree / "home" / "mitac" / ".bashrc").write_text("# restored\n", encoding="utf-8")
+
+        restic_shim = self.bin / "restic"
+        fake_snap_id = "a" * 64
+        restic_shim.write_text(
+            '#!/usr/bin/env bash\n'
+            'set -euo pipefail\n'
+            'case "${1:-}" in\n'
+            f'  snapshots) printf \'[{{"id":"{fake_snap_id}"}}]\\n\' ;;\n'
+            '  stats) printf \'{"total_size":1024}\\n\' ;;\n'
+            '  restore) cp -a -- "${FIXTURE_STAGE_TREE}/." "$4/" ;;\n'
+            'esac\n',
+            encoding="utf-8",
+        )
+        restic_shim.chmod(0o700)
+
+        self.write_rbw_config()
+        (self.rbw_state / "unlocked").touch()
+        self.write_rbw_item(
+            "restic-home",
+            {
+                "data": {"password": "pw-normal-restore"},
+                "notes": "client_id: cid\nclient_secret: csec\nrefresh_token: 1//rt\n",
+            },
+        )
+        secret_key = "AGE-SECRET-KEY-1QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ"
+        self.write_rbw_item("agenix-master-key", {"data": {"password": secret_key}, "notes": ""})
+
+        stage_parent = self.root / "stage-parent"
+        stage_parent.mkdir(exist_ok=True)
+        env = self.base_env(
+            REAL_RCLONE=real_rclone,
+            FIXTURE_STAGE_TREE=str(stage_tree),
+            RESTORE_STAGE_PARENT=str(stage_parent),
+        )
+        res = self.run_restore(["--from", "vaio", "--new-device"], env)
+        self.assertEqual(res.returncode, 0, res.stdout + res.stderr)
+        self.assertIn(SUCCESS, res.stdout)
+        self.assertEqual(
+            (self.restore_root / "home" / "mitac" / ".bashrc").read_text(encoding="utf-8"),
+            "# restored\n",
+        )
+        key_dest = self.restore_root / "etc" / "agenix" / "master.key"
+        self.assertEqual(key_dest.read_text(encoding="utf-8"), secret_key + "\n")
+        self.assertEqual(stat.S_IMODE(key_dest.stat().st_mode), 0o400)
+
+        # Removing agenix-master-key must not fail normal restore.
+        key_dest.unlink()
+        (self.rbw_state / "items" / "agenix-master-key.json").unlink()
+        res2 = self.run_restore(["--from", "vaio", "--new-device"], env)
+        self.assertEqual(res2.returncode, 0, res2.stdout + res2.stderr)
+        self.assertFalse(key_dest.exists())
+
+    @unittest.skipUnless(
+        shutil.which("age") and shutil.which("age-keygen") and shutil.which("nix-instantiate"),
+        "requires age, age-keygen, and nix-instantiate on PATH",
+    )
+    def test_secrets_tool_end_to_end_init_import_check_and_bootstrap(self):
+        repo = self.root / "repo"
+        (repo / "secrets").mkdir(parents=True)
+        (repo / "flake.nix").write_text("{ outputs = { ... }: {}; }\n", encoding="utf-8")
+        shutil.copy2(AGENIX_RULES_SRC, repo / "secrets" / "agenix-rules.nix")
+        (repo / "secrets" / "master-pubkey.txt").write_text("# empty placeholder\n", encoding="utf-8")
+
+        self.write_rbw_config()
+        (self.rbw_state / "unlocked").touch()
+        restic_pw = "super-secret-restic-passphrase-42"
+        self.write_rbw_item("restic-home", {"data": {"password": restic_pw}, "notes": ""})
+
+        rclone_cfg = self.home / ".config" / "rclone" / "rclone.conf"
+        rclone_cfg.parent.mkdir(parents=True, exist_ok=True)
+        rclone_content = "[gdrive]\ntype = drive\nscope = drive\ntoken = {\"access_token\":\"secret-tok\"}\n"
+        rclone_cfg.write_text(rclone_content, encoding="utf-8")
+
+        ssh_dir = self.home / ".ssh"
+        ssh_dir.mkdir(parents=True, exist_ok=True)
+        ssh_priv_content = "-----BEGIN OPENSSH PRIVATE KEY-----\nfake-builder-key\n-----END OPENSSH PRIVATE KEY-----\n"
+        ssh_pub_content = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITestBuilderKey mitac@builder\n"
+        (ssh_dir / "id_wsl_builder").write_text(ssh_priv_content, encoding="utf-8")
+        (ssh_dir / "id_wsl_builder.pub").write_text(ssh_pub_content, encoding="utf-8")
+
+        gh_token = "gho_fakeSecretGitHubToken12345"
+        gh_shim = self.bin / "gh"
+        gh_shim.write_text(
+            '#!/usr/bin/env bash\n'
+            'case "$1 ${2:-}" in\n'
+            '  "auth token") printf "%s\\n" "$FAKE_GH_TOKEN" ;;\n'
+            '  "auth status") printf "Logged in to github.com account mitac-test (keyring)\\n" ;;\n'
+            '  *) exit 1 ;;\n'
+            'esac\n',
+            encoding="utf-8",
+        )
+        gh_shim.chmod(0o700)
+
+        env = self.base_env(FAKE_GH_TOKEN=gh_token)
+
+        def run_secrets(*args, stdin_text=None):
+            return subprocess.run(
+                ["bash", str(SECRETS_TOOL), str(repo), *args],
+                cwd=repo,
+                env=env,
+                input=stdin_text if stdin_text is not None else "",
+                text=True,
+                capture_output=True,
+                timeout=30,
+            )
+
+        res_init = run_secrets("init")
+        self.assertEqual(res_init.returncode, 0, res_init.stdout + res_init.stderr)
+        self.assertNotIn("AGE-SECRET-KEY-1", res_init.stdout + res_init.stderr)
+
+        host_key = self.secrets_host_root / "etc" / "agenix" / "master.key"
+        self.assertTrue(host_key.is_file())
+        self.assertEqual(stat.S_IMODE(host_key.stat().st_mode), 0o400)
+        master_key_txt = host_key.read_text(encoding="utf-8").strip()
+        self.assertTrue(master_key_txt.startswith("AGE-SECRET-KEY-1"))
+
+        rules_eval = subprocess.check_output(
+            ["nix-instantiate", "--json", "--eval", "--strict", str(repo / "secrets" / "agenix-rules.nix")],
+            env=env,
+            text=True,
+        )
+        rules_obj = json.loads(rules_eval)
+        pubkeys = rules_obj["restic-home-password.age"]["publicKeys"]
+        self.assertEqual(len(pubkeys), 1)
+        self.assertTrue(pubkeys[0].startswith("age1"))
+
+        ts_key = "tskey-auth-fakeSecretTailscaleKey-999"
+        for step_args, stdin_text in [
+            (["import-restic"], None),
+            (["import-rclone"], None),
+            (["import-ssh"], None),
+            (["import-gh"], None),
+            (["set-tailscale-key"], ts_key + "\n"),
+        ]:
+            r = run_secrets(*step_args, stdin_text=stdin_text)
+            self.assertEqual(r.returncode, 0, f"{step_args}: {r.stdout}\n{r.stderr}")
+            for leak in (restic_pw, "secret-tok", "fake-builder-key", gh_token, ts_key, master_key_txt):
+                self.assertNotIn(leak, r.stdout + r.stderr)
+
+        check_res = run_secrets("check", "--decrypt")
+        self.assertEqual(check_res.returncode, 0, check_res.stdout + check_res.stderr)
+        self.assertIn("作成済み 5/8 件", check_res.stdout)
+
+        status_res = run_secrets("status")
+        self.assertEqual(status_res.returncode, 0, status_res.stdout + status_res.stderr)
+        self.assertIn("[あり]", status_res.stdout)
+
+        expected_plaintexts = {
+            "restic-home-password.age": (restic_pw, None),
+            "rclone-conf.age": (rclone_content, "secret-tok"),
+            "id-wsl-builder.age": (ssh_priv_content, "fake-builder-key"),
+            "gh-hosts.yml.age": (
+                f"github.com:\n    git_protocol: https\n    user: mitac-test\n    oauth_token: {gh_token}\n    users:\n        mitac-test:\n",
+                gh_token,
+            ),
+            "tailscale-authkey.age": (ts_key, ts_key),
+        }
+        for filename, (expected_plain, forbidden_cipher) in expected_plaintexts.items():
+            age_path = repo / "secrets" / filename
+            cipher_bytes = age_path.read_bytes()
+            if forbidden_cipher:
+                self.assertNotIn(forbidden_cipher.encode(), cipher_bytes)
+            decrypted = subprocess.check_output(
+                ["age", "--decrypt", "-i", str(host_key), str(age_path)],
+                env=env,
+                text=True,
+            )
+            self.assertEqual(decrypted, expected_plain)
+
+        self.assertEqual(
+            (repo / "secrets" / "id-wsl-builder.pub").read_text(encoding="utf-8"),
+            ssh_pub_content,
+        )
+
+        other_root = self.root / "other-mnt"
+        bs_res = run_secrets("bootstrap", str(other_root))
+        self.assertEqual(bs_res.returncode, 0, bs_res.stdout + bs_res.stderr)
+        other_key = other_root / "etc" / "agenix" / "master.key"
+        self.assertEqual(other_key.read_text(encoding="utf-8").strip(), master_key_txt)
+        self.assertEqual(stat.S_IMODE(other_key.stat().st_mode), 0o400)
 
 
 if __name__ == "__main__":

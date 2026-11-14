@@ -4,6 +4,7 @@
 {
   imports = [
     ./flake-tools.nix
+    ./secrets.nix
     ./shell.nix
     ./programs.nix
     ./clipboard.nix
@@ -13,6 +14,7 @@
     ./chatgpt-cua-indicator.nix
     ./ai-status-chips.nix
     ./vivaldi-chatgpt-extension.nix
+    ./vivaldi-extensions-repair.nix
     ./vivaldi-pwa-desktop.nix
     ./jquake.nix
     ./sway.nix

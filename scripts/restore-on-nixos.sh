@@ -3,22 +3,42 @@
 
 usage() {
   cat <<'EOF'
-使い方: ./scripts/restore-on-nixos.sh [EXTRACT_DIR]
+使い方: ./scripts/restore-on-nixos.sh [OPTIONS] [EXTRACT_DIR]
 
 対象 NixOS マシン上でユーザー mitac として実行します（sudo は付けない）。
 不足ツール（restic / rclone / jq / python3 / rbw / pinentry）は nix shell で自動取得します。
 
-復元元: rclone:gdrive:restic/mitac-home
-既定（引数なし）:
+オプション:
+  --from HOST    別のホスト用リポジトリ（rclone:gdrive:restic/<HOST>-home）から復元
+                 例: --from vaio --new-device / --from chromebook --new-device
+  --repo REPO    restic リポジトリ URI を明示指定（--from と併用不可）
+  --new-device   別端末や初期化後のクリーン構築向けに衝突する端末 ID・P2P 鍵・
+                 VPN/BT 状態・トークン系認証状態を除外/初期化して復元する
+                 （Wi-Fi パスワードの NIC 名/MAC 縛りも自動解除、既存の ~/MySettings
+                 チェックアウト・rbw・rclone.conf は保持）
+  --agenix-only  restic 復元を行わず、Bitwarden (rbw) の 'agenix-master-key'
+                 から ${RESTORE_ROOT:-/}/etc/agenix/master.key (0400 root:root) のみ導入
+  -h, --help     このヘルプを表示
+
+復元元リポジトリの既定値:
+  1. --repo / --from 指定時はそのリポジトリ
+  2. 環境変数 RESTIC_REPOSITORY（設定済みの場合）
+  3. RESTORE_HOST または現在ホスト名に基づく rclone:gdrive:restic/<host>-home
+     （未設定・nixos・localhost の場合は rclone:gdrive:restic/mitac-home）
+
+既定（EXTRACT_DIR なし）:
   一時領域（/home/mitac と同一ファイルシステムを優先: 同一 FS なら /var/tmp、
   別パーティション／Btrfs 別サブボリューム時は /home/mitac 内の隠し領域）で
   restic --verify による検証を完了させた後、元の位置へ上書き復元します:
-    - ホーム: /home/mitac（既存ファイルを上書き。ただし今回の実行中に
-      新規取得・再認証・Bitwarden 反映した rclone.conf のみ保持）
+    - ホーム: /home/mitac（既存ファイルを上書き。今回の実行で新規取得／再認証
+      した rclone.conf、および --new-device 時は既存の rclone.conf・rbw・
+      ~/MySettings も保持）
     - システム状態（必要時のみ sudo）: /etc/NetworkManager/system-connections,
       /var/lib/bluetooth, /var/lib/cloudflare-warp, /var/lib/tailscale
+      （--new-device 時は bluetooth / cloudflare-warp / tailscale を除外）
 EXTRACT_DIR 指定時（未作成の絶対パス）:
-  /home や /etc には触れず、EXTRACT_DIR 配下への展開と検証のみを行います。
+  /home や /etc には触れず、EXTRACT_DIR 配下への展開と検証のみを行います
+  （--new-device 併用時は EXTRACT_DIR 内のステージ領域に同じ初期化処理を適用）。
 
 Bitwarden (rbw) 自動入力とフォールバック:
   - gdrive: リモートまたは暗号化パスワードが未設定の場合、Bitwarden の項目
@@ -35,12 +55,20 @@ Bitwarden (rbw) 自動入力とフォールバック:
 既存の RCLONE_CONFIG（~/.config/rclone/rclone.conf / ~/.rclone.conf）や
 RESTIC_PASSWORD / RESTIC_PASSWORD_FILE / RESTIC_PASSWORD_COMMAND がある場合は
 そちらを優先します（RESTORE_NO_RBW=1 で rbw 利用を抑止可能）。
-環境変数 RBW_ITEM / RBW_EMAIL / RBW_BASE_URL も利用できます。
+環境変数 RBW_ITEM / RBW_EMAIL / RBW_BASE_URL / RESTORE_HOST も利用できます。
 EOF
 }
 
 GDRIVE_CONFIGURED_THIS_RUN=0
+NEW_DEVICE=${NEW_DEVICE:-0}
+AGENIX_ONLY=${AGENIX_ONLY:-0}
+AGENIX_KEY_INSTALLED=0
+FROM_HOST=${FROM_HOST:-}
+EXPLICIT_REPO=${EXPLICIT_REPO:-}
+EXPLICIT_TARGET=""
+HELP_REQUESTED=0
 RBW_ITEM=${RBW_ITEM:-restic-home}
+RBW_AGENIX_ITEM=${RBW_AGENIX_ITEM:-agenix-master-key}
 RBW_FETCHED=0
 RBW_DECLINED=0
 RBW_CLIENT_ID=""
@@ -828,6 +856,100 @@ load_from_rbw() {
   return 0
 }
 
+extract_agenix_master_key_from_rbw() {
+  local out_file=$1 raw_json="" candidate="" notes="" line=""
+  raw_json=$(rbw get --raw "$RBW_AGENIX_ITEM" 2>/dev/null) || return 1
+  jq -e 'type == "object"' >/dev/null 2>&1 <<<"$raw_json" || return 1
+
+  candidate=$(jq -r '.data.password // empty' <<<"$raw_json" 2>/dev/null || true)
+  candidate=$(trim_ws "$candidate")
+  if [[ -n $candidate ]] && { [[ $candidate == AGE-SECRET-KEY-1* ]] || [[ $candidate == *"BEGIN OPENSSH PRIVATE KEY"* ]]; }; then
+    printf '%s\n' "$candidate" >"$out_file"
+    chmod 600 -- "$out_file"
+    return 0
+  fi
+
+  notes=$(jq -r '([.notes, .data.notes] | map(select(type == "string" and length > 0)) | .[0]) // ""' <<<"$raw_json" 2>/dev/null || true)
+  if [[ $notes == *"BEGIN OPENSSH PRIVATE KEY"* ]]; then
+    local in_block=0 found_end=0 block_buf=""
+    while IFS= read -r line || [[ -n $line ]]; do
+      line=${line%$'\r'}
+      if (( in_block == 0 )); then
+        if [[ $line == "-----BEGIN OPENSSH PRIVATE KEY-----" ]]; then
+          in_block=1
+          block_buf="${line}"$'\n'
+        fi
+      else
+        block_buf+="${line}"$'\n'
+        if [[ $line == "-----END OPENSSH PRIVATE KEY-----" ]]; then
+          found_end=1
+          break
+        fi
+      fi
+    done <<<"$notes"
+    if (( found_end == 1 )); then
+      printf '%s' "$block_buf" >"$out_file"
+      chmod 600 -- "$out_file"
+      return 0
+    fi
+  fi
+  while IFS= read -r line || [[ -n $line ]]; do
+    line=${line%$'\r'}
+    line=$(trim_ws "$line")
+    if [[ $line == AGE-SECRET-KEY-1* ]]; then
+      printf '%s\n' "$line" >"$out_file"
+      chmod 600 -- "$out_file"
+      return 0
+    fi
+  done <<<"$notes"
+
+  return 1
+}
+
+install_agenix_master_key() {
+  local src_key=$1 root_prefix=${2%/}
+  local dest_dir="${root_prefix}/etc/agenix"
+  local dest_key="${dest_dir}/master.key"
+  run_sudo mkdir -p -- "$dest_dir"
+  run_sudo chmod 700 -- "$dest_dir"
+  run_sudo chown root:root -- "$dest_dir"
+  run_sudo cp -f --remove-destination -- "$src_key" "$dest_key"
+  run_sudo chown root:root -- "$dest_key"
+  run_sudo chmod 400 -- "$dest_key"
+  AGENIX_KEY_INSTALLED=1
+}
+
+maybe_bootstrap_agenix_from_rbw() {
+  local root_prefix=${1%/} required=${2:-0}
+  [[ ${RESTORE_SKIP_AGENIX:-0} != 1 ]] || return 0
+  if ! has_rbw; then
+    (( required == 0 )) && return 0
+    fail 'rbw が利用できないため agenix マスター鍵を導入できません。'
+  fi
+
+  if (( required == 1 )); then
+    ensure_rbw_unlocked 1 || fail 'Bitwarden (rbw) のロック解除に失敗しました。'
+    rbw sync >/dev/null 2>&1 || true
+  else
+    rbw unlocked >/dev/null 2>&1 || return 0
+  fi
+
+  local tmp_key
+  tmp_key=$(mktemp "${TMPDIR:-/tmp}/restore-agenix-key-XXXXXXXX")
+  chmod 600 -- "$tmp_key"
+  if extract_agenix_master_key_from_rbw "$tmp_key"; then
+    install_agenix_master_key "$tmp_key" "$root_prefix"
+    rm -f -- "$tmp_key"
+    printf "agenix マスター復号鍵 (%s) を %s/etc/agenix/master.key へ配置しました。\n" "$RBW_AGENIX_ITEM" "$root_prefix" >&2
+    return 0
+  fi
+  rm -f -- "$tmp_key"
+  if (( required == 1 )); then
+    fail "Bitwarden に項目 '$RBW_AGENIX_ITEM' が見つからないか、age / SSH 秘密鍵形式ではありません。"
+  fi
+  return 0
+}
+
 probe_gdrive() {
   rclone about gdrive: --contimeout 10s --timeout 30s --retries 1 --low-level-retries 1
 }
@@ -1035,9 +1157,13 @@ ensure_gdrive_remote() {
 
 need_rbw_upfront() {
   [[ ${RESTORE_NO_RBW:-0} != 1 ]] || return 1
+  (( AGENIX_ONLY == 0 )) || return 0
   resolve_rclone_config
+  local resolved_repo=""
+  resolved_repo=$(resolve_repository "$FROM_HOST" "$EXPLICIT_REPO")
   local have_gdrive=0 have_pw=0
-  if [[ -f $RCLONE_CONFIG ]] && grep -Eiq '^[[:space:]]*\[gdrive\][[:space:]]*$' -- "$RCLONE_CONFIG"; then
+  if [[ $resolved_repo != rclone:gdrive:* ]] ||
+     { [[ -f $RCLONE_CONFIG ]] && grep -Eiq '^[[:space:]]*\[gdrive\][[:space:]]*$' -- "$RCLONE_CONFIG"; }; then
     have_gdrive=1
   fi
   if [[ -v RESTIC_PASSWORD || -n ${RESTIC_PASSWORD_FILE:-} || -n ${RESTIC_PASSWORD_COMMAND:-} ]]; then
@@ -1058,7 +1184,11 @@ ensure_tools() {
   fi
 
   local need_core=0 tool
-  for tool in rclone restic jq; do
+  local -a core_tools=(rclone restic jq)
+  if (( AGENIX_ONLY == 1 )); then
+    core_tools=(jq)
+  fi
+  for tool in "${core_tools[@]}"; do
     if ! command -v "$tool" >/dev/null 2>&1; then
       need_core=1
       break
@@ -1066,8 +1196,12 @@ ensure_tools() {
   done
 
   local need_python=0
-  if ! command -v python3 >/dev/null 2>&1; then
-    need_python=1
+  if (( AGENIX_ONLY == 0 )); then
+    if ! command -v python3 >/dev/null 2>&1; then
+      need_python=1
+    elif (( NEW_DEVICE == 1 )) && ! python3 -c 'import sqlite3' >/dev/null 2>&1; then
+      need_python=1
+    fi
   fi
 
   local need_rbw=0 need_pinentry=0
@@ -1093,9 +1227,14 @@ ensure_tools() {
   if (( run_nix == 1 )); then
     local script
     script="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/$(basename -- "${BASH_SOURCE[0]}")"
-    local -a nix_pkgs=(nixpkgs#restic nixpkgs#rclone nixpkgs#jq)
-    local -a verify_cmds=(restic rclone jq)
-    if (( need_python == 1 )) || ! command -v python3 >/dev/null 2>&1; then
+    local -a nix_pkgs=(nixpkgs#jq)
+    local -a verify_cmds=(jq)
+    if (( AGENIX_ONLY == 0 )); then
+      nix_pkgs=(nixpkgs#restic nixpkgs#rclone nixpkgs#jq)
+      verify_cmds=(restic rclone jq)
+    fi
+    if (( AGENIX_ONLY == 0 )) && { (( need_python == 1 )) || ! command -v python3 >/dev/null 2>&1 ||
+       { (( NEW_DEVICE == 1 )) && ! python3 -c 'import sqlite3' >/dev/null 2>&1; }; }; then
       nix_pkgs+=(nixpkgs#python3)
       verify_cmds+=(python3)
     fi
@@ -1132,15 +1271,629 @@ available_bytes_for() {
   printf '%s' "$val"
 }
 
+validate_host_name() {
+  local host=$1
+  [[ -n $host && $host != . && $host != .. && $host =~ ^[A-Za-z0-9._-]+$ ]] ||
+    fail "--from のホスト名が不正です: '$host'（英数字・._- のみ使用可）"
+}
+
+parse_args() {
+  NEW_DEVICE=0
+  AGENIX_ONLY=0
+  FROM_HOST=""
+  EXPLICIT_REPO=""
+  EXPLICIT_TARGET=""
+  HELP_REQUESTED=0
+
+  local -a positionals=()
+  while (( $# > 0 )); do
+    case $1 in
+      -h|--help)
+        HELP_REQUESTED=1
+        return 0
+        ;;
+      --new-device)
+        NEW_DEVICE=1
+        shift
+        ;;
+      --agenix-only)
+        AGENIX_ONLY=1
+        shift
+        ;;
+      --from)
+        (( $# >= 2 )) || fail '--from にはホスト名を指定してください。'
+        FROM_HOST=$(trim_ws "$2")
+        validate_host_name "$FROM_HOST"
+        shift 2
+        ;;
+      --from=*)
+        FROM_HOST=$(trim_ws "${1#--from=}")
+        validate_host_name "$FROM_HOST"
+        shift
+        ;;
+      --repo)
+        (( $# >= 2 )) || fail '--repo にはリポジトリ URI を指定してください。'
+        EXPLICIT_REPO=$(trim_ws "$2")
+        [[ -n $EXPLICIT_REPO ]] || fail '--repo の値は空にできません。'
+        shift 2
+        ;;
+      --repo=*)
+        EXPLICIT_REPO=$(trim_ws "${1#--repo=}")
+        [[ -n $EXPLICIT_REPO ]] || fail '--repo の値は空にできません。'
+        shift
+        ;;
+      --)
+        shift
+        positionals+=("$@")
+        break
+        ;;
+      -*)
+        fail "不明なオプションです: $1（--help を確認してください）。"
+        ;;
+      *)
+        positionals+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  if [[ -n $FROM_HOST && -n $EXPLICIT_REPO ]]; then
+    fail '--from と --repo は同時に指定できません。'
+  fi
+  (( ${#positionals[@]} <= 1 )) || fail '引数が多すぎます。--help を確認してください。'
+  EXPLICIT_TARGET=${positionals[0]:-}
+  if (( AGENIX_ONLY == 1 )) && [[ -n $EXPLICIT_TARGET ]]; then
+    fail '--agenix-only と EXTRACT_DIR は同時に指定できません。'
+  fi
+}
+
+resolve_repository() {
+  local from_host=${1:-} explicit_repo=${2:-}
+  if [[ -n $explicit_repo ]]; then
+    printf '%s' "$explicit_repo"
+    return 0
+  fi
+  if [[ -n $from_host ]]; then
+    printf 'rclone:gdrive:restic/%s-home' "$from_host"
+    return 0
+  fi
+  if [[ -n ${RESTIC_REPOSITORY:-} ]]; then
+    printf '%s' "$RESTIC_REPOSITORY"
+    return 0
+  fi
+
+  local host=${RESTORE_HOST:-}
+  if [[ -z $host ]]; then
+    host=$(uname -n 2>/dev/null || true)
+    host=${host%%.*}
+  fi
+  host=$(trim_ws "$host")
+  host=${host,,}
+  if [[ -z $host || $host == nixos || $host == localhost || ! $host =~ ^[a-z0-9._-]+$ ]]; then
+    printf 'rclone:gdrive:restic/mitac-home'
+  else
+    printf 'rclone:gdrive:restic/%s-home' "$host"
+  fi
+}
+
+remove_staged_path() {
+  local p=$1
+  [[ -e $p || -L $p ]] || return 0
+  if ! rm -rf -- "$p" 2>/dev/null; then
+    chmod -R u+rwX -- "$p" 2>/dev/null || true
+    rm -rf -- "$p"
+  fi
+}
+
+purge_chromium_auth_artifacts() {
+  local dir=$1
+  [[ -d $dir ]] || return 0
+  local -a auth_items=(
+    Cookies
+    Cookies-journal
+    "Extension Cookies"
+    "Extension Cookies-journal"
+    "Safe Browsing Cookies"
+    "Safe Browsing Cookies-journal"
+    "Local Storage"
+    "Session Storage"
+    WebStorage
+    "Web Storage"
+    Partitions
+    SharedStorage
+    SharedStorage-wal
+    DIPS
+    DIPS-wal
+    "Trust Tokens"
+    "Trust Tokens-journal"
+    "Network Persistent State"
+    TransportSecurity
+    "GCM Store"
+    "Sync Data"
+    "Login Data"
+    "Login Data-journal"
+  )
+  local item
+  for item in "${auth_items[@]}"; do
+    remove_staged_path "${dir}/${item}"
+  done
+}
+
+# Older snapshots excluded Default/Extensions while keeping Preferences +
+# extensions_crx_cache. Rebuild missing trees from the CRX cache so extensions
+# are not left pointing at absent paths after restore.
+repair_vivaldi_extensions_from_crx() {
+  local stage_home=${1%/}
+  local vivaldi_dir="${stage_home}/.config/vivaldi"
+  local cache="${vivaldi_dir}/extensions_crx_cache"
+  local pref="${vivaldi_dir}/Default/Preferences"
+  local ext_root="${vivaldi_dir}/Default/Extensions"
+  local meta="${cache}/metadata.json"
+
+  [[ -f $pref && -f $meta ]] || return 0
+
+  printf 'Vivaldi: extensions_crx_cache から Default/Extensions を補完しています...\n' >&2
+  python3 - "$pref" "$cache" "$ext_root" "$meta" <<'PY'
+import io, json, shutil, sys, zipfile
+from pathlib import Path
+
+pref_path, cache, ext_root, meta_path = map(Path, sys.argv[1:5])
+pref = json.loads(pref_path.read_text(encoding="utf-8"))
+settings = pref.setdefault("extensions", {}).setdefault("settings", {})
+hashes = json.loads(meta_path.read_text(encoding="utf-8")).get("hashes") or {}
+restored = 0
+
+for digest, info in sorted(hashes.items()):
+    if not isinstance(info, dict):
+        continue
+    eid = info.get("appid")
+    if not eid:
+        continue
+    crx = cache / digest
+    if not crx.is_file():
+        continue
+    ent = settings.get(eid) if isinstance(settings.get(eid), dict) else {}
+    rel = ent.get("path") if isinstance(ent, dict) else None
+    if not isinstance(rel, str) or not rel or rel.startswith("/"):
+        data = crx.read_bytes()
+        idx = data.find(b"PK\x03\x04")
+        if idx < 0:
+            continue
+        man = json.loads(zipfile.ZipFile(io.BytesIO(data[idx:])).read("manifest.json"))
+        rel = f"{eid}/{man.get('version', '0')}_0"
+        settings.setdefault(eid, {})
+        if isinstance(settings[eid], dict):
+            settings[eid]["path"] = rel
+    dest = ext_root / rel
+    if dest.is_dir() and (dest / "manifest.json").is_file():
+        continue
+    data = crx.read_bytes()
+    idx = data.find(b"PK\x03\x04")
+    if idx < 0:
+        continue
+    if dest.exists():
+        shutil.rmtree(dest)
+    dest.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(io.BytesIO(data[idx:])) as z:
+        z.extractall(dest)
+    restored += 1
+    print(f"  {eid} → {rel}", flush=True)
+
+if restored:
+    pref_path.write_text(
+        json.dumps(pref, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
+print(f"Vivaldi extensions repaired from CRX cache: {restored}", flush=True)
+PY
+}
+
+scrub_new_device_structured() {
+  local stage_sys=$1 stage_home=$2
+  python3 - "$stage_sys" "$stage_home" <<'PYEOF'
+import json
+import os
+from pathlib import Path
+import re
+import sqlite3
+import stat
+import sys
+import tempfile
+
+stage_sys = Path(sys.argv[1])
+stage_home = Path(sys.argv[2])
+
+
+def ensure_writable_mode(path: Path) -> int:
+    st_mode = stat.S_IMODE(path.stat().st_mode)
+    if not (st_mode & stat.S_IWUSR):
+        os.chmod(path, st_mode | stat.S_IWUSR)
+    return st_mode
+
+
+def write_atomic_text(path: Path, text: str, mode: int) -> None:
+    fd, tmp_name = tempfile.mkstemp(dir=str(path.parent), prefix=f".{path.name}.scrub-")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="") as f:
+            f.write(text)
+        os.chmod(tmp_name, mode)
+        os.replace(tmp_name, path)
+    except Exception:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
+
+
+def scrub_nm_connections(nm_dir: Path) -> None:
+    if not nm_dir.is_dir():
+        return
+    pattern = re.compile(r"^\s*(?:interface-name|mac-address)\s*=")
+    for entry in nm_dir.iterdir():
+        if not entry.is_file() or entry.is_symlink():
+            continue
+        mode = ensure_writable_mode(entry)
+        try:
+            raw = entry.read_text(encoding="utf-8", errors="surrogateescape")
+        except OSError:
+            continue
+        lines = raw.splitlines(keepends=True)
+        filtered = [ln for ln in lines if not pattern.match(ln)]
+        if len(filtered) != len(lines):
+            write_atomic_text(entry, "".join(filtered), mode or 0o600)
+
+
+def scrub_json_file(path: Path, mutator) -> None:
+    if not path.is_file() or path.is_symlink():
+        return
+    mode = ensure_writable_mode(path)
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        print(f"警告: JSON の解析に失敗したためスキップします ({path}): {exc}", file=sys.stderr)
+        return
+    if not isinstance(data, dict):
+        return
+    if mutator(data):
+        write_atomic_text(
+            path,
+            json.dumps(data, ensure_ascii=False, separators=(",", ":")),
+            mode,
+        )
+
+
+def scrub_vivaldi_local_state(data: dict) -> bool:
+    changed = False
+    for key in ("user_experience_metrics", "signin"):
+        if key in data:
+            del data[key]
+            changed = True
+    viv = data.get("vivaldi")
+    if isinstance(viv, dict):
+        for key in ("unique_user_id", "CrashReportLastUuidSeen", "stats"):
+            if key in viv:
+                del viv[key]
+                changed = True
+    return changed
+
+
+def scrub_vivaldi_preferences(data: dict) -> bool:
+    changed = False
+    for key in (
+        "sync",
+        "invalidation",
+        "gcm",
+        "gaia_cookie",
+        "account_info",
+        "account_values",
+        "signin",
+        "google",
+        "enterprise_profile_guid",
+        "account_tracker_service_last_update",
+    ):
+        if key in data:
+            del data[key]
+            changed = True
+    viv = data.get("vivaldi")
+    if isinstance(viv, dict) and "vivaldi_account" in viv:
+        del viv["vivaldi_account"]
+        changed = True
+    return changed
+
+
+def scrub_cursor_storage_json(data: dict) -> bool:
+    keys = [k for k in list(data.keys()) if k.startswith("telemetry.")]
+    for k in keys:
+        del data[k]
+    return bool(keys)
+
+
+def scrub_cursor_state_db(db_path: Path) -> None:
+    if not db_path.is_file() or db_path.is_symlink():
+        return
+    ensure_writable_mode(db_path)
+    for suffix in ("-wal", "-shm"):
+        side = Path(str(db_path) + suffix)
+        if side.is_file() and not side.is_symlink():
+            ensure_writable_mode(side)
+    con = sqlite3.connect(str(db_path))
+    try:
+        cur = con.cursor()
+        row = cur.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='ItemTable'"
+        ).fetchone()
+        if not row:
+            return
+        cur.execute(
+            """
+            DELETE FROM ItemTable
+            WHERE key LIKE 'cursorAuth/%'
+               OR key LIKE 'secret://%'
+               OR key LIKE 'mcpOAuth.%'
+               OR key LIKE 'remoteAgentHost.%'
+               OR key LIKE 'cloudAgentRepository.%'
+               OR key LIKE 'agentData.cacheStorage.%'
+               OR key LIKE 'glass.cloudRepo%'
+               OR key LIKE 'cursor/glass.%'
+               OR key LIKE 'cursor/localLastActivity%'
+               OR key IN ('adminSettings.cached', 'adminSettings.cachedAuthId', 'glass.lastSignedInAuthId')
+            """
+        )
+        con.commit()
+        try:
+            cur.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        except sqlite3.DatabaseError:
+            pass
+    finally:
+        con.close()
+
+
+def count_unquoted_braces(line: str) -> tuple[int, int]:
+    opens = 0
+    closes = 0
+    in_quotes = False
+    escaped = False
+    for ch in line:
+        if escaped:
+            escaped = False
+            continue
+        if ch == "\\" and in_quotes:
+            escaped = True
+            continue
+        if ch == '"':
+            in_quotes = not in_quotes
+        elif not in_quotes:
+            if ch == "{":
+                opens += 1
+            elif ch == "}":
+                closes += 1
+    return opens, closes
+
+
+def scrub_steam_config_vdf(vdf_path: Path) -> None:
+    if not vdf_path.is_file() or vdf_path.is_symlink():
+        return
+    mode = ensure_writable_mode(vdf_path)
+    raw = vdf_path.read_text(encoding="utf-8", errors="surrogateescape")
+    lines = raw.splitlines(keepends=True)
+
+    out: list[str] = []
+    depth = 0
+    skip_target_depth: int | None = None
+    waiting_open = False
+    changed = False
+
+    block_re = re.compile(r'^\s*"(?:Accounts|ConnectCache)"\s*(\{?)\s*$')
+    inline_re = re.compile(r'^\s*"(?:Accounts|ConnectCache)"\s+"[^"]*"\s*$')
+
+    for line in lines:
+        opens, closes = count_unquoted_braces(line)
+        if skip_target_depth is not None:
+            depth += opens - closes
+            if waiting_open and opens > 0:
+                waiting_open = False
+            if not waiting_open and depth <= skip_target_depth:
+                skip_target_depth = None
+            continue
+
+        if depth == 4:
+            m_block = block_re.match(line)
+            if m_block:
+                changed = True
+                skip_target_depth = depth
+                depth += opens - closes
+                waiting_open = not bool(m_block.group(1))
+                if not waiting_open and depth <= skip_target_depth:
+                    skip_target_depth = None
+                continue
+            if inline_re.match(line):
+                changed = True
+                depth += opens - closes
+                continue
+
+        out.append(line)
+        depth += opens - closes
+
+    if changed:
+        write_atomic_text(vdf_path, "".join(out), mode)
+
+
+if stage_sys.is_dir():
+    scrub_nm_connections(stage_sys / "nm-connections")
+
+if stage_home.is_dir():
+    vivaldi_dir = stage_home / ".config" / "vivaldi"
+    scrub_json_file(vivaldi_dir / "Local State", scrub_vivaldi_local_state)
+    scrub_json_file(vivaldi_dir / "Default" / "Preferences", scrub_vivaldi_preferences)
+
+    cursor_gs = stage_home / ".config" / "Cursor" / "User" / "globalStorage"
+    scrub_json_file(cursor_gs / "storage.json", scrub_cursor_storage_json)
+    scrub_cursor_state_db(cursor_gs / "state.vscdb")
+
+    scrub_steam_config_vdf(stage_home / ".local" / "share" / "Steam" / "config" / "config.vdf")
+PYEOF
+}
+
+scrub_new_device_stage() {
+  local stage_root=${1%/} preserve_target_home=${2:-}
+  local stage_sys="${stage_root}/run/restic-backups-home/system"
+  local stage_home="${stage_root}/home/mitac"
+
+  printf '\n--new-device: 別端末と衝突する端末 ID・P2P 鍵・VPN/BT 状態・認証トークンを初期化しています...\n' >&2
+
+  if [[ -d $stage_sys ]]; then
+    local sub
+    for sub in tailscale cloudflare-warp bluetooth; do
+      remove_staged_path "${stage_sys}/${sub}"
+    done
+  fi
+
+  if [[ -d $stage_home ]]; then
+    if [[ -n $preserve_target_home ]] &&
+       [[ -d "${preserve_target_home}/MySettings/.git" || -d "${preserve_target_home}/MySettings/hosts" ]]; then
+      if [[ -e "${stage_home}/MySettings" || -L "${stage_home}/MySettings" ]]; then
+        printf '既存の %s/MySettings を保持するため、スナップショット側の MySettings は上書きしません。\n' "$preserve_target_home" >&2
+        remove_staged_path "${stage_home}/MySettings"
+      fi
+    fi
+
+    local -a remove_rel_paths=(
+      # Bitwarden CLI (rbw): keep current device registration/config, never clone device_id
+      ".local/share/rbw"
+      ".cache/rbw"
+      ".config/rbw"
+
+      # P2P / KVM / Remote desktop identities (keep lan-mouse config.toml, Parsec config.*, RQuickShare .settings.json)
+      ".local/share/app.uniclipboard.desktop"
+      ".local/state/app.uniclipboard.desktop"
+      ".config/lan-mouse/lan-mouse.pem"
+      ".local/share/org.localsend.localsend_app/shared_preferences.json"
+      ".local/share/dev.mandre.rquickshare/storage"
+      ".local/share/dev.mandre.rquickshare/mediakeys"
+      ".parsec-persistent"
+      ".parsec/user.bin"
+      ".parsec/appdata.json"
+      ".parsec/metrics_client.json"
+      ".parsec/lock"
+      ".parsec/log.txt"
+
+      # Vivaldi sync/account caches (keeps Bookmarks, Notes, Preferences UI/extensions)
+      ".config/vivaldi/Default/Sync App Settings"
+      ".config/vivaldi/Default/Sync Extension Settings"
+      ".config/vivaldi/Default/SyncedFiles"
+      ".config/vivaldi/Default/AccountBookmarks"
+      ".config/vivaldi/Default/Account Web Data"
+      ".config/vivaldi/Default/Account Web Data-journal"
+      ".config/vivaldi/Default/Login Data For Account"
+      ".config/vivaldi/Default/Login Data For Account-journal"
+      ".config/vivaldi/Default/trusted_vault.pb"
+      ".config/vivaldi/Default/Sessions"
+
+      # Cursor non-Chromium identity/host keys
+      ".config/Cursor/machineid"
+      ".config/Cursor/code.lock"
+      ".config/Cursor/User/globalStorage/anysphere.cursor-agent-host"
+      ".config/Cursor/User/globalStorage/mcp-oauth-attempts"
+
+      # Codex CLI auth & device identity (keeps config.toml, skills, plugins, sessions)
+      ".codex/auth.json"
+      ".codex/installation_id"
+      ".codex/.sqlite-maintenance.lock"
+      ".codex/ipc"
+      ".codex/tmp"
+      ".codex/.tmp"
+      ".codex/project-metadata-locks"
+      ".codex/thread-writer-locks"
+      ".codex/.codex-global-state.json"
+      ".codex/.codex-global-state.json.bak"
+
+      # Codex / ChatGPT desktop IDs
+      ".config/Codex/.codex-tpp-local-executor-installation-id"
+      ".config/Codex/Global Shortcuts Profile ID"
+      ".config/Codex/Local State"
+      ".config/Codex/artifact-sessions"
+
+      # Grok Bot tokens & persistence
+      ".config/Grok Bot/sand-secrets.json"
+      ".config/Grok Bot/sand-client-persistence"
+      ".config/Grok Bot/box-secrets-push-state.v1.json"
+      ".config/Grok Bot/desktop-status.json"
+
+      # Steam credentials (keeps libraryfolders.vdf / depots / ShaderCacheManager)
+      ".local/share/Steam/config/loginusers.vdf"
+      ".local/share/Steam/.crash"
+
+      # AI CLI OAuth / installation UUIDs
+      ".local/share/opencode/auth.json"
+      ".gemini/antigravity-cli/installation_id"
+      ".claude/.credentials.json"
+    )
+
+    local rel
+    for rel in "${remove_rel_paths[@]}"; do
+      remove_staged_path "${stage_home}/${rel}"
+    done
+
+    local -a chromium_dirs=(
+      ".config/vivaldi/Default"
+      ".config/Cursor"
+      ".config/Codex"
+      ".config/Codex/Default"
+      ".config/Grok Bot"
+      ".config/discord"
+    )
+    local cdir
+    for cdir in "${chromium_dirs[@]}"; do
+      purge_chromium_auth_artifacts "${stage_home}/${cdir}"
+    done
+
+    if [[ -d "${stage_home}/.config" ]]; then
+      find "${stage_home}/.config" -maxdepth 3 \
+        \( -name 'SingletonLock' -o -name 'SingletonSocket' -o -name 'SingletonCookie' \) \
+        -delete 2>/dev/null || true
+    fi
+
+    local -a glob_paths=(
+      "${stage_home}/.codex/..codex-global-state.json"*
+      "${stage_home}/.codex/state_"*.sqlite*
+      "${stage_home}/.local/share/Steam/ssfn"*
+      "${stage_home}/.mozilla/firefox/"*/signedInUser.json
+      "${stage_home}/.mozilla/firefox/"*/cookies.sqlite*
+      "${stage_home}/.mozilla/firefox/"*/.parentlock
+      "${stage_home}/.mozilla/firefox/"*/lock
+    )
+    local gp
+    for gp in "${glob_paths[@]}"; do
+      remove_staged_path "$gp"
+    done
+  fi
+
+  scrub_new_device_structured "$stage_sys" "$stage_home"
+}
+
+print_new_device_checklist() {
+  cat <<'EOF'
+
+新規端末 (--new-device) の初回サインイン・確認項目:
+  - ネットワーク: 保存済み Wi-Fi の interface-name / mac-address 縛りを解除済み（agenix 管理なら自動復元）
+  - VPN / Bluetooth: Tailscale（`tailscale-authkey.age` が無ければ `sudo tailscale up`）/ Cloudflare WARP / Bluetooth ペアリング
+  - 開発認証 / SSH: `agenix-master-key` 導入＋`rebuild` 後、gh / SSH 鍵 / AI 環境変数が自動展開
+  - ブラウザ・アプリ: Vivaldi (Vivaldi Sync 再サインイン) / Cursor / ChatGPT & Codex / Grok Bot / Discord / Steam
+  - P2P / KVM: UniClipboard / Lan Mouse / LocalSend / RQuickShare / Parsec
+  - バックアップ: `rebuild` 後に `backup status`（agenix 管理なら `rbw unlock` 不要で自動バックアップ可）
+EOF
+}
+
 main() {
   set -euo pipefail
   umask 077
-  if [[ ${1:-} == --help || ${1:-} == -h ]]; then
+  parse_args "$@"
+  if (( HELP_REQUESTED == 1 )); then
     usage
     return 0
   fi
-  (( $# <= 1 )) || fail '引数が多すぎます。--help を確認してください。'
-  local explicit_target=${1:-}
+  local explicit_target=$EXPLICIT_TARGET
   local root_prefix=${RESTORE_ROOT:-/}
   root_prefix=${root_prefix%/}
   local target_home="${root_prefix}/home/mitac"
@@ -1162,11 +1915,22 @@ main() {
       fail "一時ステージ用の親ディレクトリ（${default_stage_parent} または ${target_home}）に書き込み権限がありません。"
   fi
 
+  local resolved_repo
+  resolved_repo=$(resolve_repository "$FROM_HOST" "$EXPLICIT_REPO")
+
   check_platform
   ensure_tools "$@"
-  ensure_gdrive_remote
+  if (( AGENIX_ONLY == 1 )); then
+    maybe_bootstrap_agenix_from_rbw "$root_prefix" 1
+    printf '\nagenix マスター復号鍵の導入が完了しました: %s/etc/agenix/master.key\n' "${root_prefix%/}"
+    return 0
+  fi
+  if [[ $resolved_repo == rclone:gdrive:* ]]; then
+    ensure_gdrive_remote
+  fi
 
-  export RESTIC_REPOSITORY=rclone:gdrive:restic/mitac-home
+  export RESTIC_REPOSITORY="$resolved_repo"
+  printf '復元元リポジトリ: %s\n' "$RESTIC_REPOSITORY" >&2
 
   # 先にスナップショット ID を固定してから必要容量・復元を行う。
   local snapshot_id="" snapshots_json="" stats required_bytes available_bytes
@@ -1258,7 +2022,12 @@ main() {
       done
     fi
   else
-    snapshots_json=$(restic snapshots --json latest)
+    if ! snapshots_json=$(restic snapshots --json latest); then
+      if [[ -z $FROM_HOST && -z $EXPLICIT_REPO ]]; then
+        printf 'ヒント: %s を開けませんでした。別端末のバックアップからは --from <host> --new-device を指定してください。\n' "$RESTIC_REPOSITORY" >&2
+      fi
+      exit 1
+    fi
   fi
   snapshot_id=$(jq -er '.[0].id // empty' <<<"$snapshots_json") || fail '復元対象のスナップショットが見つかりませんでした。'
   [[ $snapshot_id =~ ^[0-9a-f]{64}$ ]] || fail '復元対象のスナップショットが見つかりませんでした。'
@@ -1323,12 +2092,21 @@ main() {
     mkdir -m 700 -- "$target"
     printf '展開先 (%s) へ検証付きで復元しています...\n' "$target" >&2
     restic restore "$snapshot_id" --target "$target" --verify
+    if (( NEW_DEVICE == 1 )); then
+      scrub_new_device_stage "$target" ""
+    fi
+    if [[ -d "${target}/home/mitac" ]]; then
+      repair_vivaldi_extensions_from_crx "${target}/home/mitac"
+    fi
     printf '%s\n' "$snapshot_id" > "$target/.restored-snapshot-id"
     printf '\n復元と検証が完了しました。\n'
     printf '展開先: %s\n' "$target"
     printf 'ホーム: %s/home/mitac\n' "$target"
     printf 'システム状態: %s/run/restic-backups-home/system\n' "$target"
     printf 'フォント: %s/home/mitac/Documents/hiragino-otf\n' "$target"
+    if (( NEW_DEVICE == 1 )); then
+      print_new_device_checklist
+    fi
     return 0
   fi
 
@@ -1338,8 +2116,16 @@ main() {
   printf '一時展開先 (%s) へ検証付きで展開しています...\n' "$stage_dir" >&2
   restic restore "$snapshot_id" --target "$stage_dir" --verify
 
+  if (( NEW_DEVICE == 1 )); then
+    scrub_new_device_stage "$stage_dir" "$target_home"
+  fi
+  if [[ -d "${stage_dir}/home/mitac" ]]; then
+    repair_vivaldi_extensions_from_crx "${stage_dir}/home/mitac"
+  fi
+
+  resolve_rclone_config
   local preserved_rclone=""
-  if (( GDRIVE_CONFIGURED_THIS_RUN == 1 )) && [[ -f $RCLONE_CONFIG ]]; then
+  if [[ -n ${RCLONE_CONFIG:-} && -f $RCLONE_CONFIG ]] && (( GDRIVE_CONFIGURED_THIS_RUN == 1 || NEW_DEVICE == 1 )); then
     preserved_rclone="${stage_dir}/.preserved-rclone.conf"
     cp -p -- "$RCLONE_CONFIG" "$preserved_rclone"
     chmod 600 -- "$preserved_rclone"
@@ -1368,13 +2154,24 @@ main() {
   if [[ -n $restore_home_mode ]]; then
     chmod "$restore_home_mode" -- "$target_home"
   fi
+  maybe_bootstrap_agenix_from_rbw "$root_prefix" 0
 
   printf '\n復元と検証が完了しました。\n'
   printf 'スナップショット: %s\n' "$snapshot_id"
   printf 'ホーム: %s\n' "$target_home"
-  printf 'システム状態: %s/etc/NetworkManager/system-connections, %s/var/lib/{bluetooth,cloudflare-warp,tailscale}\n' "$root_prefix" "$root_prefix"
+  if (( AGENIX_KEY_INSTALLED == 1 )); then
+    printf 'agenix マスター鍵: %s/etc/agenix/master.key\n' "$root_prefix"
+  fi
+  if (( NEW_DEVICE == 1 )); then
+    printf 'システム状態: %s/etc/NetworkManager/system-connections（tailscale / cloudflare-warp / bluetooth は --new-device により除外）\n' "$root_prefix"
+  else
+    printf 'システム状態: %s/etc/NetworkManager/system-connections, %s/var/lib/{bluetooth,cloudflare-warp,tailscale}\n' "$root_prefix" "$root_prefix"
+  fi
   printf 'フォント（バックアップ時）: %s/Documents/hiragino-otf\n' "$target_home"
   printf '%s/MySettings から NixOS を再ビルドする際、Documents/hiragino-otf がある場合は --impure を付けてください。\n' "$target_home"
+  if (( NEW_DEVICE == 1 )); then
+    print_new_device_checklist
+  fi
 }
 
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then

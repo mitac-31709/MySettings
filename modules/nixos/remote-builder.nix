@@ -5,8 +5,15 @@
 # authorized_keys, user in trusted-users. Key on this machine:
 #   ~/.ssh/id_wsl_builder (passphrase-less; nix-daemon cannot prompt).
 
-{ ... }:
+{ config, ... }:
 
+let
+  rootBuilderKey =
+    if config.age.secrets ? "id-wsl-builder-root" then
+      config.age.secrets."id-wsl-builder-root".path
+    else
+      "/home/mitac/.ssh/id_wsl_builder";
+in
 {
   # Tailscale MagicDNS is unreliable while Cloudflare WARP owns resolv.conf;
   # pin the stable CGNAT address (galleria-mitac).
@@ -30,7 +37,7 @@
     {
       hostName = "wsl-builder";
       sshUser = "mitac";
-      sshKey = "/home/mitac/.ssh/id_wsl_builder";
+      sshKey = rootBuilderKey;
       system = "x86_64-linux";
       # WSL is not NixOS; ssh-ng often breaks on non-interactive PATH.
       protocol = "ssh";

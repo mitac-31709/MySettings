@@ -2,6 +2,7 @@
   config,
   pkgs,
   lib,
+  flakeTarget ? "chromebook",
   ...
 }:
 let
@@ -15,6 +16,10 @@ let
   hasBtrfs = lib.any (fs: (fs.fsType or null) == "btrfs") (lib.attrValues config.fileSystems);
 in
 {
+  imports = [
+    ./secrets.nix
+  ];
+
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
@@ -29,7 +34,9 @@ in
   # module covers the initrd without boot.initrd.systemd.enable (removed).
   services.bootvine.enable = true;
 
-  networking.hostName = "NixOS";
+  # Distinct per-host hostname (chromebook / vaio) avoids Avahi/mDNS, Tailscale,
+  # RQuickShare, and Chromium SingletonLock collisions across machines.
+  networking.hostName = lib.mkDefault flakeTarget;
   networking.networkmanager.enable = true;
 
   # Avoid leaving networking down if activation stops NM then fails mid-switch

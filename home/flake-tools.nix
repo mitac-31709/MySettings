@@ -3,6 +3,7 @@
 # mitac.repoPath (default: lib/machine.nix).
 {
   config,
+  inputs,
   lib,
   pkgs,
   flakeTarget ? null,
@@ -11,6 +12,7 @@
 let
   machine = import ../lib/machine.nix;
   repoPath = config.mitac.repoPath;
+  agenixPkg = inputs.agenix.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
   pyBin =
     name: file:
@@ -53,6 +55,18 @@ let
   flakeUpdateCheck = wrap "flake-update-check" (
     netTools ++ [ pkgs.procps ]
   ) ../scripts/flake-update-check.sh;
+  secretsTool = wrap "secrets" [
+    agenixPkg
+    pkgs.age
+    pkgs.coreutils
+    pkgs.git
+    pkgs.gnugrep
+    pkgs.gnused
+    pkgs.jq
+    pkgs.nix
+    pkgs.python3
+    pkgs.rbw
+  ] ../scripts/secrets-tool.sh;
 in
 {
   options.mitac.repoPath = lib.mkOption {
@@ -83,6 +97,7 @@ in
         flakeUpdate
         flakeUpdateCursor
         flakeUpdateCheck
+        secretsTool
         waybarAiStatus
         ;
     };
@@ -91,6 +106,7 @@ in
       flakeUpdate
       flakeUpdateCursor
       flakeUpdateCheck
+      secretsTool
       waybarAiStatus
     ];
   };

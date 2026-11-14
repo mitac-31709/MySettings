@@ -3,9 +3,11 @@
 # Pieces:
 #   - restic  : encrypted, deduplicated, snapshot-based backup engine.
 #   - rclone  : Google Drive backend (restic talks to the "gdrive" remote).
-#   - rbw     : CLI Bitwarden client. The restic repository password (i.e. the
-#               encryption key) is stored in Bitwarden and fetched at runtime via
-#               `rbw get`, so no key material lives on disk or in the Nix store.
+#   - agenix  : provides the restic repository password and rclone.conf headlessly
+#               from `/run/agenix` (falls back to `rbw` / `~/.config/rclone` until migrated).
+#   - rbw     : CLI Bitwarden client. Also keeps a copy of `restic-home` in Bitwarden
+#               so snapshots stay inspectable from other devices without agenix, and
+#               provisions the shared agenix master key (`agenix-master-key`).
 #
 # Paths:
 #   - /home/mitac (with excludes for regenerable bulky trees; includes ~/MySettings)
@@ -13,16 +15,12 @@
 #       NetworkManager Wi-Fi profiles, Bluetooth pairings, Cloudflare WARP,
 #       Tailscale node state.
 #     (/etc/shadow is intentionally not backed up.)
-#
-# What is declarative (this file) vs. manual (secrets, kept out of the store):
-#   declarative : which paths, excludes, schedule, retention, the Google Drive
-#                 target, and that the key comes from Bitwarden.
-#   manual      : the rclone OAuth token for Google Drive and the Bitwarden login.
-# See README.md → "/home の暗号化バックアップ" for the one-time setup.
+# See README.md → "/home の暗号化バックアップ" for setup & secret sync.
 {
   config,
   lib,
   pkgs,
+  flakeTarget ? "mitac",
   ...
 }:
 
@@ -30,13 +28,25 @@ let
   user = "mitac";
   backupUnit = "restic-backups-home.service";
 
-  # Google Drive destination: rclone remote "gdrive" plus a subpath. The remote
-  # is configured out-of-band with `rclone config` (interactive OAuth).
-  repository = "rclone:gdrive:restic/mitac-home";
+  # Google Drive destination: rclone remote "gdrive" plus a per-host subpath
+  # (`<flakeTarget>-home`, e.g. chromebook-home / vaio-home) so multiple devices
+  # never fight over a single restic repo lock or overwrite each other's
+  # snapshots. The remote is configured out-of-band with `rclone config`.
+  repository = "rclone:gdrive:restic/${flakeTarget}-home";
 
-  # rclone config holding the Google Drive OAuth token. Kept outside the Nix
-  # store, readable by the backup user. Created with `rclone config`.
-  rcloneConfigFile = "/home/${user}/.config/rclone/rclone.conf";
+  # Persistent user rclone config (kept writable for `backup reconnect`).
+  userRcloneConfigFile = "/home/${user}/.config/rclone/rclone.conf";
+
+  # Declarative secrets managed by agenix when encrypted files exist under secrets/.
+  agenixResticPassword = config.age.secrets."restic-home-password".path or null;
+  agenixRcloneConf = config.age.secrets."rclone-conf".path or null;
+
+  # Systemd RuntimeDirectory copy (mode 0600): rclone rewrites its config file
+  # when refreshing an expired OAuth access token, so it must not point directly
+  # to read-only `/run/agenix/rclone-conf`.
+  runtimeRcloneConfigFile = "/run/restic-backups-home/rclone.conf";
+  rcloneConfigFile =
+    if agenixRcloneConf != null then runtimeRcloneConfigFile else userRcloneConfigFile;
 
   # Bitwarden item whose password field holds the restic encryption key
   # (client_id / client_secret / refresh_token can also be saved in its notes
@@ -95,7 +105,7 @@ let
 
   clearSystemStaging = pkgs.writeShellScript "restic-home-clear-system" ''
     set -eu
-    rm -rf "${stagingRoot}"
+    rm -rf "${stagingRoot}" "${runtimeRcloneConfigFile}"
   '';
 
   # Wrapper so systemd's minimal PATH still finds rbw-agent. Always talk to
@@ -331,119 +341,154 @@ let
   # NixOS names its auto-wrapper `restic-<name>`; we disable that and ship `backup`.
   # Meta subcommands are handled here; everything else is passed to restic.
   resticBackupCmd = pkgs.writeShellScriptBin "backup" ''
-    set -euo pipefail
+        set -euo pipefail
 
-    unit="${backupUnit}"
-    timer="restic-backups-home.timer"
-    remote_name="gdrive"
-    rclone_conf="${rcloneConfigFile}"
+        unit="${backupUnit}"
+        timer="restic-backups-home.timer"
+        remote_name="gdrive"
+        user_rclone_conf="${userRcloneConfigFile}"
+        agenix_rclone_conf=${
+          lib.escapeShellArg (if agenixRcloneConf != null then agenixRcloneConf else "")
+        }
+        agenix_pw_file=${
+          lib.escapeShellArg (if agenixResticPassword != null then agenixResticPassword else "")
+        }
 
-    # setuid sudo + packaged CLIs (restic-home-setup lives on the system profile).
-    PATH="${
-      lib.makeBinPath [
-        pkgs.rbw
-        pkgs.rclone
-        pkgs.jq
-        pkgs.openssh
-        pkgs.systemd
-        pkgs.coreutils
-      ]
-    }:/run/wrappers/bin:/run/current-system/sw/bin:$PATH"
+        # setuid sudo + packaged CLIs (restic-home-setup lives on the system profile).
+        PATH="${
+          lib.makeBinPath [
+            pkgs.rbw
+            pkgs.rclone
+            pkgs.jq
+            pkgs.openssh
+            pkgs.systemd
+            pkgs.coreutils
+          ]
+        }:/run/wrappers/bin:/run/current-system/sw/bin:$PATH"
 
-    usage() {
-      cat <<'EOF'
-backup — ホーム暗号化バックアップ CLI (restic / rclone / Bitwarden / systemd)
+        resolve_writable_rclone_conf() {
+          if [ -n "''${RCLONE_CONFIG:-}" ]; then
+            export RCLONE_CONFIG
+            return 0
+          fi
+          if [ -n "$agenix_rclone_conf" ] && [ -r "$agenix_rclone_conf" ]; then
+            local runtime_dir="''${XDG_RUNTIME_DIR:-/tmp}"
+            local runtime_conf="''${runtime_dir%/}/backup-rclone-$(id -u).conf"
+            install -m 0600 "$agenix_rclone_conf" "$runtime_conf"
+            export RCLONE_CONFIG="$runtime_conf"
+            return 0
+          fi
+          export RCLONE_CONFIG="$user_rclone_conf"
+        }
 
-使い方:
-  backup <command> [args…]
-  backup -h | --help | help
+        usage() {
+          cat <<'EOF'
+    backup — ホーム暗号化バックアップ CLI (restic / rclone / agenix / Bitwarden / systemd)
 
-基本ワークフロー:
-  backup unlock-key              rbw unlock（Bitwarden から restic 鍵を解錠）
-  backup setup                   対話式初回セットアップ (restic-home-setup)
-  backup reconnect               rclone OAuth 再接続 (gdrive:)
-  backup about                   Google Drive 疎通確認
-  backup run                     フルバックアップ開始 (systemd)
-  backup log                     進捗・ログを journal で追う
-  backup status                  unit / timer の状態を表示
+    使い方:
+      backup <command> [args…]
+      backup -h | --help | help
 
-確認・部分復元（リポジトリ＆暗号化鍵の環境変数読み込み済み）:
-  backup snapshots
-  backup ls latest
-  backup find NAME
-  backup restore latest --target /tmp/restore
-  backup unlock                  古い restic リポジトリロックを解除
+    基本ワークフロー:
+      backup unlock-key              rbw unlock（手動作業 / Bitwarden 用。agenix 利用時はタイマー実行に不要）
+      backup setup                   対話式初回セットアップ (restic-home-setup)
+      backup reconnect               rclone OAuth 再接続 (gdrive:)
+      backup about                   Google Drive 疎通確認
+      backup run                     フルバックアップ開始 (systemd)
+      backup log                     進捗・ログを journal で追う
+      backup status                  unit / timer の状態を表示
 
-注意:
-  - restore には必ず --target を指定する（省略すると /home/mitac を上書き）
-  - restic サブコマンドの詳細ヘルプ: backup <command> --help
-  - 上記以外の第1引数はそのまま restic へ渡されます
-EOF
-    }
+    確認・部分復元（リポジトリ＆暗号化鍵の環境変数読み込み済み）:
+      backup snapshots
+      backup ls latest
+      backup find NAME
+      backup restore latest --target /tmp/restore
+      backup unlock                  古い restic リポジトリロックを解除
 
-    cmd="''${1:-}"
-    case "$cmd" in
-      ""|-h|--help|help)
-        usage
-        exit 0
-        ;;
-      run|start)
-        shift
-        if systemctl --quiet is-active "$unit" 2>/dev/null; then
-          printf '%s は既に実行中です。\n' "$unit"
-        elif systemctl start "$unit" 2>/dev/null; then
-          printf '%s を開始しました。\n' "$unit"
-        else
-          sudo systemctl start "$unit"
-          printf '%s を開始しました（sudo 経由）。\n' "$unit"
-        fi
-        printf 'ログ確認: backup log\n'
-        ;;
-      log|logs)
-        shift
-        exec journalctl -u "$unit" -f "$@"
-        ;;
-      status)
-        shift
-        systemctl status "$unit" --no-pager "$@" || true
-        printf '\n'
-        systemctl status "$timer" --no-pager || true
-        ;;
-      setup)
-        shift
-        exec restic-home-setup "$@"
-        ;;
-      reconnect)
-        shift
-        export RCLONE_CONFIG="$rclone_conf"
-        rclone config reconnect "''${remote_name}:" "$@"
-        for arg in "$@"; do
-          case "$arg" in
-            -h|--help|--help=*) exit 0 ;;
-          esac
-        done
-        ${printRcloneBitwardenFields} "$remote_name" "${bitwardenItem}"
-        ;;
-      about)
-        shift
-        export RCLONE_CONFIG="$rclone_conf"
-        exec rclone about "''${remote_name}:" "$@"
-        ;;
-      unlock-key)
-        shift
-        exec rbw unlock "$@"
-        ;;
-      *)
-        set -a
-        # shellcheck disable=SC1091
-        source ${resticEnvFile}
-        export RESTIC_CACHE_DIR="/var/cache/restic-backups-home"
-        export RESTIC_REPOSITORY="${repository}"
-        export RCLONE_CONFIG="${rcloneConfigFile}"
-        export RESTIC_PROGRESS_FPS="0.2"
-        exec ${lib.getExe pkgs.restic} "$@"
-        ;;
-    esac
+    注意:
+      - restore には必ず --target を指定する（省略すると /home/mitac を上書き）
+      - restic サブコマンドの詳細ヘルプ: backup <command> --help
+      - 上記以外の第1引数はそのまま restic へ渡されます
+    EOF
+        }
+
+        cmd="''${1:-}"
+        case "$cmd" in
+          ""|-h|--help|help)
+            usage
+            exit 0
+            ;;
+          run|start)
+            shift
+            if systemctl --quiet is-active "$unit" 2>/dev/null; then
+              printf '%s は既に実行中です。\n' "$unit"
+            elif systemctl start "$unit" 2>/dev/null; then
+              printf '%s を開始しました。\n' "$unit"
+            else
+              sudo systemctl start "$unit"
+              printf '%s を開始しました（sudo 経由）。\n' "$unit"
+            fi
+            printf 'ログ確認: backup log\n'
+            ;;
+          log|logs)
+            shift
+            exec journalctl -u "$unit" -f "$@"
+            ;;
+          status)
+            shift
+            systemctl status "$unit" --no-pager "$@" || true
+            printf '\n'
+            systemctl status "$timer" --no-pager || true
+            ;;
+          setup)
+            shift
+            exec restic-home-setup "$@"
+            ;;
+          reconnect)
+            shift
+            mkdir -p "$(dirname "$user_rclone_conf")"
+            if [ ! -f "$user_rclone_conf" ] && [ -n "$agenix_rclone_conf" ] && [ -r "$agenix_rclone_conf" ]; then
+              install -m 0600 "$agenix_rclone_conf" "$user_rclone_conf"
+            fi
+            export RCLONE_CONFIG="$user_rclone_conf"
+            rclone config reconnect "''${remote_name}:" "$@"
+            for arg in "$@"; do
+              case "$arg" in
+                -h|--help|--help=*) exit 0 ;;
+              esac
+            done
+            ${printRcloneBitwardenFields} "$remote_name" "${bitwardenItem}"
+            printf '\nagenix の暗号化済み rclone.conf も更新してください:\n'
+            printf '  secrets import-rclone && rebuild\n'
+            ;;
+          about)
+            shift
+            resolve_writable_rclone_conf
+            exec rclone about "''${remote_name}:" "$@"
+            ;;
+          unlock-key)
+            shift
+            exec rbw unlock "$@"
+            ;;
+          *)
+            if [ -z "''${RESTIC_PASSWORD:-}" ] && [ -z "''${RESTIC_PASSWORD_FILE:-}" ] && [ -z "''${RESTIC_PASSWORD_COMMAND:-}" ]; then
+              if [ -n "$agenix_pw_file" ] && [ -r "$agenix_pw_file" ]; then
+                export RESTIC_PASSWORD_FILE="$agenix_pw_file"
+              else
+                set -a
+                # shellcheck disable=SC1091
+                source ${resticEnvFile}
+                set +a
+              fi
+            fi
+            export RESTIC_CACHE_DIR="/var/cache/restic-backups-home"
+            # Allow overriding RESTIC_REPOSITORY in the environment (e.g. to inspect another host's repo).
+            export RESTIC_REPOSITORY="''${RESTIC_REPOSITORY:-${repository}}"
+            resolve_writable_rclone_conf
+            export RESTIC_PROGRESS_FPS="0.2"
+            exec ${lib.getExe pkgs.restic} "$@"
+            ;;
+        esac
   '';
 
   # Interactive first-time setup: rclone gdrive remote, Bitwarden key, first backup.
@@ -466,7 +511,8 @@ EOF
       export PATH="/run/wrappers/bin:/run/current-system/sw/bin:$PATH"
 
       remote_name="gdrive"
-      rclone_conf="${rcloneConfigFile}"
+      rclone_conf="${userRcloneConfigFile}"
+      agenix_rclone_conf=${lib.escapeShellArg (if agenixRcloneConf != null then agenixRcloneConf else "")}
       bw_item="${bitwardenItem}"
       repo="${repository}"
       unit="${backupUnit}"
@@ -526,6 +572,10 @@ EOF
       step "1/3 Google Drive リモート ($remote_name)"
       export RCLONE_CONFIG="$rclone_conf"
       mkdir -p "$(dirname "$rclone_conf")"
+      if [ ! -f "$rclone_conf" ] && [ -n "$agenix_rclone_conf" ] && [ -r "$agenix_rclone_conf" ]; then
+        install -m 0600 "$agenix_rclone_conf" "$rclone_conf"
+        say "agenix の rclone-conf から $rclone_conf を展開しました。"
+      fi
 
       has_remote=0
       if [ -f "$rclone_conf" ] && rclone listremotes 2>/dev/null | grep -qx "''${remote_name}:"; then
@@ -605,6 +655,9 @@ EOF
       fi
 
       "${printRcloneBitwardenFields}" "$remote_name" "$bw_item"
+      say ""
+      say "agenix と同期する場合（自動バックアップの rbw ロック解除不要化）:"
+      say "  secrets import-restic && secrets import-rclone && rebuild"
 
       # Smoke-check: restic can decrypt the password command path via wrapper.
       if command -v backup >/dev/null 2>&1; then
@@ -718,12 +771,13 @@ in
       "/home/${user}/.config/Cursor/IndexedDB"
       "/home/${user}/.config/Cursor/logs"
 
-      # Vivaldi: regenerable caches, DRM/components, extensions, site WebStorage.
+      # Vivaldi: regenerable caches, DRM/components, site WebStorage.
+      # Keep Default/Extensions — Preferences still lists installs, and excluding
+      # the tree leaves every extension broken after restore (CRX cache alone is incomplete).
       "/home/${user}/.config/vivaldi/Default/Service Worker"
       "/home/${user}/.config/vivaldi/Default/GPUCache"
       "/home/${user}/.config/vivaldi/Default/Code Cache"
       "/home/${user}/.config/vivaldi/Default/Cache"
-      "/home/${user}/.config/vivaldi/Default/Extensions"
       "/home/${user}/.config/vivaldi/Default/WebStorage"
       "/home/${user}/.config/vivaldi/component_crx_cache"
       "/home/${user}/.config/vivaldi/WasmTtsEngine"
@@ -739,8 +793,22 @@ in
       "/home/${user}/.nix-profile"
     ];
 
-    # Provides RESTIC_PASSWORD_COMMAND → key stays in Bitwarden.
-    environmentFile = "${resticEnvFile}";
+    # Prefer agenix decrypted passwordFile (headless/timer-safe); fallback to Bitwarden rbw env until migrated.
+    passwordFile = lib.mkIf (agenixResticPassword != null) agenixResticPassword;
+    environmentFile = lib.mkIf (agenixResticPassword == null) "${resticEnvFile}";
+
+    # Copy decrypted rclone.conf to writable RuntimeDirectory before restic preStart
+    # so OAuth token refreshes succeed without failing on read-only /run/agenix.
+    backupPrepareCommand = lib.mkIf (agenixRcloneConf != null) ''
+      if [ -r ${lib.escapeShellArg agenixRcloneConf} ]; then
+        ${pkgs.coreutils}/bin/install -m 0600 ${lib.escapeShellArg agenixRcloneConf} ${lib.escapeShellArg runtimeRcloneConfigFile}
+      elif [ -r ${lib.escapeShellArg userRcloneConfigFile} ]; then
+        ${pkgs.coreutils}/bin/install -m 0600 ${lib.escapeShellArg userRcloneConfigFile} ${lib.escapeShellArg runtimeRcloneConfigFile}
+      else
+        echo "restic-home: ${agenixRcloneConf} is not readable (check /etc/agenix/master.key)" >&2
+        exit 1
+      fi
+    '';
 
     # Create the restic repository on Google Drive on first run.
     initialize = true;
@@ -784,6 +852,9 @@ in
           | grep -Eqi 'invalid_grant|token expired|couldn.t fetch token'; then
           fail_hint="GDrive OAuth失効。ConsoleでPublish後: backup reconnect"
         elif journalctl -u ${backupUnit} -n 40 -o cat --no-pager 2>/dev/null \
+          | grep -Eqi 'restic-home-password.*(no such file|permission denied)|/run/agenix'; then
+          fail_hint="agenix復号失敗。/etc/agenix/master.key 確認: secrets bootstrap && rebuild"
+        elif journalctl -u ${backupUnit} -n 40 -o cat --no-pager 2>/dev/null \
           | grep -Eqi 'pinentry cancelled|Resolving password failed'; then
           fail_hint="rbw がロック。先に: backup unlock-key"
         fi
@@ -799,6 +870,7 @@ in
     #   backup setup | unlock-key | run | log | about | reconnect
     #   backup snapshots
     #   backup restore latest --target /tmp/restore
+    #   RESTIC_REPOSITORY=rclone:gdrive:restic/vaio-home backup snapshots
   };
 
   # Systemd's default PATH for this unit does not include profile bins; restic

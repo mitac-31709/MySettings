@@ -7,6 +7,11 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Declarative age-encrypted secrets (decrypted at activation using Bitwarden-backed master key).
+    agenix = {
+      url = "github:ryantm/agenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     # Live systemd job tree on the boot console.
     # https://codeberg.org/wvhulle/bootvine/src/branch/main/docs/install.md
     bootvine = {
@@ -24,17 +29,17 @@
     # Vendor .debs (flake update re-fetches; see scripts/flake-update.sh).
     # Keep URL version in sync with uniclipboardVersion below (flake-update.sh).
     uniclipboard-deb = {
-      url = "https://github.com/UniClipboard/UniClipboard/releases/download/v1.6.1/UniClipboard_1.6.1_amd64.deb";
+      url = "https://github.com/UniClipboard/UniClipboard/releases/download/v1.6.2/UniClipboard_1.6.2_amd64.deb";
       flake = false;
     };
     # Keep URL version in sync with chatgptVersion below (flake-update.sh).
     chatgpt-deb = {
-      url = "https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.1103.32239_amd64.deb";
+      url = "https://persistent.oaistatic.com/codex-app-prod/linux/deb/pool/main/c/chatgpt/chatgpt_26.1111.21308_amd64.deb";
       flake = false;
     };
     # Keep URL version in sync with grokBotVersion below (flake-update.sh).
     grok-bot-deb = {
-      url = "https://downloads.cursor.com/grokbot/stable/676f0815a4013954f4c8e3f4ac413acfbac0376c/linux/x64/grok-bot_0.79.2_amd64.deb";
+      url = "https://downloads.cursor.com/grokbot/stable/83d46d618ef4c12afa17edd8e3c29d6caf046d17/linux/x64/grok-bot_1.1.0_amd64.deb";
       flake = false;
     };
   };
@@ -44,6 +49,7 @@
       self,
       nixpkgs,
       home-manager,
+      agenix,
       alsa-ucm-conf-cros,
       bootvine,
       ...
@@ -51,11 +57,11 @@
     let
       system = "x86_64-linux";
       # Must match inputs.uniclipboard-deb URL (updated by scripts/flake-update.sh).
-      uniclipboardVersion = "1.6.1";
+      uniclipboardVersion = "1.6.2";
       # Must match inputs.chatgpt-deb URL (updated by scripts/flake-update.sh).
-      chatgptVersion = "26.1103.32239";
+      chatgptVersion = "26.1111.21308";
       # Must match inputs.grok-bot-deb URL (updated by scripts/flake-update.sh).
-      grokBotVersion = "0.79.2";
+      grokBotVersion = "1.1.0";
 
       mkHost =
         {
@@ -68,6 +74,7 @@
           modules = [
             hostModule
             home-manager.nixosModules.home-manager
+            agenix.nixosModules.default
             bootvine.nixosModules.default
             {
               # Links this generation to a git commit (shows in
