@@ -3012,7 +3012,7 @@ class AgenixRestoreAndSecretsTest(unittest.TestCase):
             'cmd=${1:-}\n'
             'shift || true\n'
             'case "$cmd" in\n'
-            '  mkdir|chmod|cp|test|cat|find)\n'
+            '  mkdir|chmod|cp|test|cat|find|python3)\n'
             '    exec "$cmd" "$@"\n'
             '    ;;\n'
             '  chown)\n'
@@ -3273,8 +3273,10 @@ class AgenixRestoreAndSecretsTest(unittest.TestCase):
     def test_secrets_tool_end_to_end_init_import_check_and_bootstrap(self):
         repo = self.root / "repo"
         (repo / "secrets").mkdir(parents=True)
+        (repo / "scripts").mkdir(parents=True)
         (repo / "flake.nix").write_text("{ outputs = { ... }: {}; }\n", encoding="utf-8")
         shutil.copy2(AGENIX_RULES_SRC, repo / "secrets" / "agenix-rules.nix")
+        shutil.copy2(SECRETS_TOOL.parent / "nm-agenix-sync.py", repo / "scripts" / "nm-agenix-sync.py")
         (repo / "secrets" / "master-pubkey.txt").write_text("# empty placeholder\n", encoding="utf-8")
 
         self.write_rbw_config()
@@ -3293,6 +3295,32 @@ class AgenixRestoreAndSecretsTest(unittest.TestCase):
         ssh_pub_content = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITestBuilderKey mitac@builder\n"
         (ssh_dir / "id_wsl_builder").write_text(ssh_priv_content, encoding="utf-8")
         (ssh_dir / "id_wsl_builder.pub").write_text(ssh_pub_content, encoding="utf-8")
+
+        wol_cfg = self.home / ".config" / "wol-pc" / "config.env"
+        wol_cfg.parent.mkdir(parents=True, exist_ok=True)
+        wol_content = 'WOL_RELAY_HOST="raspberrypi"\nSSH_USER="mitac"\nSSH_PASSWORD="fake-wol-password"\n'
+        wol_cfg.write_text(wol_content, encoding="utf-8")
+
+        adb_dir = self.home / ".android"
+        adb_dir.mkdir(parents=True, exist_ok=True)
+        adb_priv_content = "-----BEGIN PRIVATE KEY-----\nfake-adb-key\n-----END PRIVATE KEY-----\n"
+        adb_pub_content = "QAAAtestAdbPubKey mitac@test\n"
+        (adb_dir / "adbkey").write_text(adb_priv_content, encoding="utf-8")
+        (adb_dir / "adbkey.pub").write_text(adb_pub_content, encoding="utf-8")
+
+        opencode_cfg = self.home / ".config" / "opencode" / "service.json"
+        opencode_cfg.parent.mkdir(parents=True, exist_ok=True)
+        opencode_content = '{"password":"fake-opencode-password"}\n'
+        opencode_cfg.write_text(opencode_content, encoding="utf-8")
+
+        nm_dir = self.root / "fake-nm-connections"
+        nm_dir.mkdir(parents=True, exist_ok=True)
+        (nm_dir / "TestWiFi.nmconnection").write_text(
+            "[connection]\nid=TestWiFi\nuuid=1111-2222\ntype=wifi\ninterface-name=wlp0s20f3\ntimestamp=12345\n\n"
+            "[wifi]\nssid=TestSSID\nmac-address=00:11:22:33:44:55\n\n"
+            "[wifi-security]\nkey-mgmt=wpa-psk\npsk=fake-wifi-psk\n",
+            encoding="utf-8",
+        )
 
         gh_token = "gho_fakeSecretGitHubToken12345"
         gh_shim = self.bin / "gh"
@@ -3346,16 +3374,31 @@ class AgenixRestoreAndSecretsTest(unittest.TestCase):
             (["import-rclone"], None),
             (["import-ssh"], None),
             (["import-gh"], None),
+            (["import-wol"], None),
+            (["import-adb"], None),
+            (["import-opencode"], None),
             (["set-tailscale-key"], ts_key + "\n"),
+            (["sync-wifi", "--nm-dir", str(nm_dir), "--lock-file", str(self.root / "sync.lock")], None),
         ]:
             r = run_secrets(*step_args, stdin_text=stdin_text)
             self.assertEqual(r.returncode, 0, f"{step_args}: {r.stdout}\n{r.stderr}")
-            for leak in (restic_pw, "secret-tok", "fake-builder-key", gh_token, ts_key, master_key_txt):
+            for leak in (
+                restic_pw,
+                "secret-tok",
+                "fake-builder-key",
+                gh_token,
+                ts_key,
+                "fake-wol-password",
+                "fake-adb-key",
+                "fake-opencode-password",
+                "fake-wifi-psk",
+                master_key_txt,
+            ):
                 self.assertNotIn(leak, r.stdout + r.stderr)
 
         check_res = run_secrets("check", "--decrypt")
         self.assertEqual(check_res.returncode, 0, check_res.stdout + check_res.stderr)
-        self.assertIn("作成済み 5/8 件", check_res.stdout)
+        self.assertIn(f"作成済み 9/{len(rules_obj)} 件", check_res.stdout)
 
         status_res = run_secrets("status")
         self.assertEqual(status_res.returncode, 0, status_res.stdout + status_res.stderr)
@@ -3369,6 +3412,9 @@ class AgenixRestoreAndSecretsTest(unittest.TestCase):
                 f"github.com:\n    git_protocol: https\n    user: mitac-test\n    oauth_token: {gh_token}\n    users:\n        mitac-test:\n",
                 gh_token,
             ),
+            "wol-pc-env.age": (wol_content, "fake-wol-password"),
+            "adbkey.age": (adb_priv_content, "fake-adb-key"),
+            "opencode-service.json.age": (opencode_content, "fake-opencode-password"),
             "tailscale-authkey.age": (ts_key, ts_key),
         }
         for filename, (expected_plain, forbidden_cipher) in expected_plaintexts.items():
@@ -3383,9 +3429,22 @@ class AgenixRestoreAndSecretsTest(unittest.TestCase):
             )
             self.assertEqual(decrypted, expected_plain)
 
+        nm_plain = subprocess.check_output(
+            ["age", "--decrypt", "-i", str(host_key), str(repo / "secrets" / "nm-connections.age")],
+            env=env,
+            text=True,
+        )
+        self.assertIn("TestSSID", nm_plain)
+        self.assertNotIn("interface-name=", nm_plain)
+        self.assertNotIn("mac-address=", nm_plain)
+
         self.assertEqual(
             (repo / "secrets" / "id-wsl-builder.pub").read_text(encoding="utf-8"),
             ssh_pub_content,
+        )
+        self.assertEqual(
+            (repo / "secrets" / "adbkey.pub").read_text(encoding="utf-8"),
+            adb_pub_content,
         )
 
         other_root = self.root / "other-mnt"
